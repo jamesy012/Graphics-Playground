@@ -1,0 +1,18 @@
+[submodule "Source/Libraries/stb"]
+	path = Source/Libraries/stb
+	url = https://github.com/nothings/stb.git
+[submodule "Source/Libraries/glfw"]
+	path = Source/Libraries/glfw
+	url = https://github.com/glfw/glfw.git
+[submodule "Source/LibrariesVulkanMemoryAllocator"]
+	path = Source/LibrariesVulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "Source/Libraries/VulkanMemoryAllocator"]
+	path = Source/Libraries/VulkanMemoryAllocator
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+[submodule "Source/Libraries/imgui"]
+	path = Source/Libraries/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "Source/Libraries/glm"]
+	path = Source/Libraries/glm
+	url = https://github.com/g-truc/glm.git
