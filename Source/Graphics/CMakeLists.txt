@@ -1,0 +1,20 @@
+set(GRAPHICS_SOURCE 
+"${CMAKE_CURRENT_SOURCE_DIR}/Graphics.h"
+"${CMAKE_CURRENT_SOURCE_DIR}/Graphics.cpp" 
+"${CMAKE_CURRENT_SOURCE_DIR}/SwapChain.h" 
+"${CMAKE_CURRENT_SOURCE_DIR}/SwapChain.cpp" 
+"${CMAKE_CURRENT_SOURCE_DIR}/FrameBuffer.h" 
+"${CMAKE_CURRENT_SOURCE_DIR}/FrameBuffer.cpp" 
+"${CMAKE_CURRENT_SOURCE_DIR}/Window.h" 
+"${CMAKE_CURRENT_SOURCE_DIR}/Window.cpp" 
+"${CMAKE_CURRENT_SOURCE_DIR}/Devices.h" 
+"${CMAKE_CURRENT_SOURCE_DIR}/Devices.cpp" 
+CACHE INTERNAL "")
+
+
+
+set(EXTERNAL_LINK_LIBRARIES ${EXTERNAL_LINK_LIBRARIES} Vulkan::Vulkan CACHE INTERNAL "")
+include_directories(AFTER ${VULKAN_PATH}/Include)
+
+#source_group("Graphics2" ${GRAPHICS_SOURCE} )
+message("Added Graphics Folder with ${GRAPHICS_SOURCE}")
