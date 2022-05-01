@@ -6,6 +6,7 @@
 
 class Window;
 class Devices;
+class SwapChain;
 
 static VkAllocationCallbacks* CreateAllocationCallbacks() {
 	VkAllocationCallbacks callback;
@@ -37,6 +38,9 @@ public:
 	void AddWindow(Window* aWindow);
 
 	std::vector<VkSurfaceKHR> mSurfaces;
+
+	const VkDevice GetDevice() const;
+	const VkPhysicalDevice GetPhysicalDevice() const;
 private:
 	bool CreateInstance();
 
@@ -50,4 +54,5 @@ private:
 
 
 	Devices* mDevicesHandler;
+	SwapChain* mSwapChain;
 };

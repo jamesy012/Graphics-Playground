@@ -3,6 +3,7 @@
 #include "PlatformDebug.h"
 #include "Window.h"
 #include "Devices.h"
+#include "SwapChain.h"
 
 #pragma warning( push )
 #pragma warning( disable: 26812 )
@@ -92,8 +93,11 @@ bool Graphics::StartUp() {
 bool Graphics::Initalize() {
 	ASSERT(gVkInstance != VK_NULL_HANDLE);
 
-	mDevicesHandler = new Devices();
+	mDevicesHandler = new Devices(mSurfaces[0]);
 	mDevicesHandler->Setup();
+
+	mSwapChain = new SwapChain(mDevicesHandler->GetPrimaryDeviceData());
+	mSwapChain->Setup();
 
 	return false;
 }
@@ -126,6 +130,14 @@ void Graphics::AddWindow(Window* aWindow) {
 	if (surface) {
 		mSurfaces.push_back(surface);
 	}
+}
+
+const VkDevice Graphics::GetDevice() const {
+	return mDevicesHandler->GetPrimaryDevice();
+}
+
+const VkPhysicalDevice Graphics::GetPhysicalDevice() const {
+	return mDevicesHandler->GetPrimaryPhysicalDevice();
 }
 
 bool Graphics::CreateInstance() {

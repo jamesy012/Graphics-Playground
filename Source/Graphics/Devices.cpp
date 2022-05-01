@@ -1,8 +1,5 @@
 #include "Devices.h"
 
-#include <vulkan/vulkan.h>
-#include <vector>
-
 #include "Graphics.h"
 #include "PlatformDebug.h"
 
@@ -16,40 +13,6 @@ const char* gDeviceExtensions[] = {
 extern VkInstance gVkInstance;
 extern Graphics* gGraphics;
 
-struct DeviceData {
-	VkPhysicalDevice mPhysicalDevice;
-	VkDevice mDevice;
-	struct Queue {
-		struct QueueFamilys {
-			VkQueueFamilyProperties mProperties;
-			bool mGraphics : 1;
-			bool mCompute : 1;
-			bool mTransfer : 1;
-			bool mPresent : 1;
-		};
-		std::vector<QueueFamilys> mQueueFamilies;
-		struct QueueIndex {
-			int8_t mQueueFamily = -1;
-			VkQueue mQueue;
-		};
-		QueueIndex mGraphicsQueue;
-		QueueIndex mComputeQueue;
-		QueueIndex mTransferQueue;
-		QueueIndex mPresentQueue;
-	} mQueue;
-
-	struct SwapChain {
-		VkSurfaceCapabilitiesKHR capabilities;
-		std::vector<VkSurfaceFormatKHR> formats{};
-		std::vector<VkPresentModeKHR> presentModes{};
-	} mSwapChain;
-
-	std::vector<VkExtensionProperties> mExtensions;
-	std::vector<VkLayerProperties> mLayers;
-
-	VkPhysicalDeviceFeatures mDeviceFeatures;
-	VkPhysicalDeviceProperties mDeviceProperties;
-};
 std::vector<DeviceData> gDevices(0);
 
 bool Devices::Setup() {
@@ -65,12 +28,11 @@ bool Devices::Setup() {
 
 	gDevices.resize(deviceCount);
 
-	VkSurfaceKHR surface = gGraphics->mSurfaces[0];
-
 	//data gather
 	for (int i = 0; i < deviceCount; i++) {
 		DeviceData& device = gDevices[i];
 		device.mPhysicalDevice = devices[i];
+		device.mSurfaceUsed = mSurface;
 
 		//queues
 		{
@@ -95,7 +57,7 @@ bool Devices::Setup() {
 					device.mQueue.mQueueFamilies[q].mTransfer = true;
 				}
 				VkBool32 presentSupport = false;
-				vkGetPhysicalDeviceSurfaceSupportKHR(device.mPhysicalDevice, q, surface, &presentSupport);
+				vkGetPhysicalDeviceSurfaceSupportKHR(device.mPhysicalDevice, q, device.mSurfaceUsed, &presentSupport);
 				if (presentSupport) {
 					device.mQueue.mQueueFamilies[q].mPresent = true;
 				}
@@ -119,27 +81,27 @@ bool Devices::Setup() {
 
 		//swapchain check
 		{
-			vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.mPhysicalDevice, surface,
+			vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.mPhysicalDevice, device.mSurfaceUsed,
 				&device.mSwapChain.capabilities);
 
 			uint32_t formatCount;
-			vkGetPhysicalDeviceSurfaceFormatsKHR(device.mPhysicalDevice, surface, &formatCount,
+			vkGetPhysicalDeviceSurfaceFormatsKHR(device.mPhysicalDevice, device.mSurfaceUsed, &formatCount,
 				nullptr);
 
 			if (formatCount != 0) {
 				device.mSwapChain.formats.resize(formatCount);
-				vkGetPhysicalDeviceSurfaceFormatsKHR(device.mPhysicalDevice, surface, &formatCount,
+				vkGetPhysicalDeviceSurfaceFormatsKHR(device.mPhysicalDevice, device.mSurfaceUsed, &formatCount,
 					device.mSwapChain.formats.data());
 			}
 
 			uint32_t presentModeCount;
-			vkGetPhysicalDeviceSurfacePresentModesKHR(device.mPhysicalDevice, surface,
+			vkGetPhysicalDeviceSurfacePresentModesKHR(device.mPhysicalDevice, device.mSurfaceUsed,
 				&presentModeCount, nullptr);
 
 			if (presentModeCount != 0) {
 				device.mSwapChain.presentModes.resize(presentModeCount);
 				vkGetPhysicalDeviceSurfacePresentModesKHR(
-					device.mPhysicalDevice, surface, &presentModeCount, device.mSwapChain.presentModes.data());
+					device.mPhysicalDevice, device.mSurfaceUsed, &presentModeCount, device.mSwapChain.presentModes.data());
 			}
 		}
 
@@ -177,7 +139,7 @@ bool Devices::Setup() {
 
 	std::vector<VkDeviceQueueCreateInfo> queues;
 	float queuePriority[10];
-	std::fill_n(queuePriority, sizeof(queuePriority), 1.0f);
+	std::fill_n(queuePriority, 10, 1.0f);
 	{
 		int numQueues = selectedDevice.mQueue.mQueueFamilies.size();
 		uint8_t* uniqueQueues = new uint8_t[numQueues];
@@ -232,4 +194,20 @@ bool Devices::Setup() {
 	}
 
 	return true;
+}
+
+const DeviceData& Devices::GetPrimaryDeviceData() const {
+	return gDevices[0];
+}
+
+const VkDevice Devices::GetPrimaryDevice() const {
+	return GetPrimaryDeviceData().mDevice;
+}
+
+const VkPhysicalDevice Devices::GetPrimaryPhysicalDevice() const {
+	return GetPrimaryDeviceData().mPhysicalDevice;
+}
+
+const VkSurfaceKHR Devices::GetPrimarySurface() const {
+	return GetPrimaryDeviceData().mSurfaceUsed;
 }
