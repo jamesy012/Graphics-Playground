@@ -18,7 +18,25 @@ set("SOURCE_COMBINED" ${SOURCE_FILES} ${GRAPHICS_SOURCE})
 add_executable(GraphicsPlayground ${SOURCE_COMBINED})
 
 target_include_directories(GraphicsPlayground PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_WINDOWS=1)
+
+set(PLATFORM_WINDOWS 0)
+set(PLATFORM_APPLE 0)
+set(PLATFORM_LINUX 0)
+
+if(WIN32)
+set(PLATFORM_WINDOWS 1)
+endif()
+if(APPLE)
+set(PLATFORM_APPLE 1)
+endif()
+if(UNIX AND NOT APPLE)  # for Linux, BSD, Solaris, Minix
+set(PLATFORM_LINUX 1)
+endif()
+
+target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_NAME=${CMAKE_SYSTEM_NAME})
+target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_WINDOWS=${PLATFORM_WINDOWS})
+target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_APPLE=${PLATFORM_APPLE})
+target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_LINUX=${PLATFORM_LINUX})
 
 target_include_directories(GraphicsPlayground PRIVATE ${EXTERNAL_INCLUDE_LIBRARIES})
 target_link_libraries(GraphicsPlayground ${EXTERNAL_LINK_LIBRARIES})

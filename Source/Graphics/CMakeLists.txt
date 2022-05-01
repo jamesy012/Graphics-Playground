@@ -1,3 +1,5 @@
+set("Graphics_Vulkan" ON CACHE BOOL "Enables Vulkan")
+
 set(GRAPHICS_SOURCE 
 "${CMAKE_CURRENT_SOURCE_DIR}/Graphics.h"
 "${CMAKE_CURRENT_SOURCE_DIR}/Graphics.cpp" 
