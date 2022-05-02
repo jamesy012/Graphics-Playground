@@ -1,4 +1,3 @@
-add_subdirectory(Libraries)
 
 set("SOURCE_FILES" 
  "main.cpp"
@@ -16,6 +15,8 @@ message("Added EXTERNAL_LINK_LIBRARIES Folder with ${EXTERNAL_LINK_LIBRARIES}")
 
 set("SOURCE_COMBINED" ${SOURCE_FILES} ${GRAPHICS_SOURCE})
 add_executable(GraphicsPlayground ${SOURCE_COMBINED})
+
+add_subdirectory(Libraries)
 
 target_include_directories(GraphicsPlayground PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -38,5 +39,6 @@ target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_WINDOWS=${PLATFORM
 target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_APPLE=${PLATFORM_APPLE})
 target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_LINUX=${PLATFORM_LINUX})
 
+message(${EXTERNAL_INCLUDE_LIBRARIES})
 target_include_directories(GraphicsPlayground PRIVATE ${EXTERNAL_INCLUDE_LIBRARIES})
 target_link_libraries(GraphicsPlayground ${EXTERNAL_LINK_LIBRARIES})

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "vulkan/vulkan.h"
+#include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 
 #include <vector>
 
@@ -55,4 +56,7 @@ private:
 
 	Devices* mDevicesHandler;
 	SwapChain* mSwapChain;
+
+  	VmaAllocator mAllocator;
+
 };

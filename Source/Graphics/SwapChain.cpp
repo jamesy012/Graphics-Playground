@@ -65,16 +65,22 @@ void SwapChain::Setup() {
 
     createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+#if PLATFORM_WINDOWS
     createInfo.presentMode = VK_PRESENT_MODE_MAILBOX_KHR;
+#elif PLATFORM_APPLE
+    createInfo.presentMode = VK_PRESENT_MODE_FIFO_KHR;
+#endif
     createInfo.clipped = VK_TRUE;
 
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
     {
         std::vector<uint32_t> queueFamilies;
+        bool uniqueQueues = true;
         auto addQueue = [&](int8_t aFamily) {
             for (int i = 0; i < queueFamilies.size(); i++) {
                 if (queueFamilies[i] == aFamily) {
+                    uniqueQueues = false;
                     return;
                 }
             }
@@ -84,7 +90,7 @@ void SwapChain::Setup() {
         addQueue(mAttachedDevice.mQueue.mGraphicsQueue.mQueueFamily);
         addQueue(mAttachedDevice.mQueue.mPresentQueue.mQueueFamily);
 
-        if (queueFamilies.size() > 1) {
+        if (!uniqueQueues) {
             createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
             createInfo.queueFamilyIndexCount = queueFamilies.size();
             createInfo.pQueueFamilyIndices = queueFamilies.data();

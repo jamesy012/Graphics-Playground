@@ -7,22 +7,40 @@ struct DeviceData {
 	VkPhysicalDevice mPhysicalDevice;
 	VkDevice mDevice;
 	struct Queue {
+		enum class QueueTypes{
+			GRAPHICS,
+			COMPUTE,
+			TRANSFER,
+			PRESENT,
+			NUM
+		};
 		struct QueueFamilys {
 			VkQueueFamilyProperties mProperties;
-			bool mGraphics : 1;
-			bool mCompute : 1;
-			bool mTransfer : 1;
-			bool mPresent : 1;
+			union {
+				struct {
+					bool mGraphics : 1;
+					bool mCompute : 1;
+					bool mTransfer : 1;
+					bool mPresent : 1;
+				};
+				uint8_t mQueueTypeFlags;
+			};
+			uint8_t mUsedQueues;
 		};
 		std::vector<QueueFamilys> mQueueFamilies;
 		struct QueueIndex {
 			int8_t mQueueFamily = -1;
 			VkQueue mQueue;
 		};
-		QueueIndex mGraphicsQueue;
-		QueueIndex mComputeQueue;
-		QueueIndex mTransferQueue;
-		QueueIndex mPresentQueue;
+		//union {
+			struct {
+				QueueIndex mGraphicsQueue;
+				QueueIndex mComputeQueue;
+				QueueIndex mTransferQueue;
+				QueueIndex mPresentQueue;
+			};
+		//	QueueIndex mQueues[(int)QueueTypes::NUM];
+		//};
 	} mQueue;
 
 	struct SwapChain {

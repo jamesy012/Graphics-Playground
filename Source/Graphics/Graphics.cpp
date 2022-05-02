@@ -8,6 +8,13 @@
 #pragma warning( push )
 #pragma warning( disable: 26812 )
 
+#if defined(VK_API_VERSION_1_3)
+#define VULKAN_VERSION VK_API_VERSION_1_3
+#else
+#define VULKAN_VERSION VK_API_VERSION_1_1
+#endif
+
+
 Graphics* gGraphics = nullptr;
 
 const bool gEnableValidation = true;
@@ -96,8 +103,28 @@ bool Graphics::Initalize() {
 	mDevicesHandler = new Devices(mSurfaces[0]);
 	mDevicesHandler->Setup();
 
+	//vma
+	{
+		VmaAllocatorCreateInfo createInfo{};
+		createInfo.vulkanApiVersion = VULKAN_VERSION;
+		createInfo.device = GetDevice();
+		createInfo.instance = gVkInstance;
+		createInfo.physicalDevice = GetPhysicalDevice();
+		createInfo.pAllocationCallbacks = GetAllocationCallback();
+
+		vmaCreateAllocator(&createInfo, &mAllocator);
+  	}
+
 	mSwapChain = new SwapChain(mDevicesHandler->GetPrimaryDeviceData());
 	mSwapChain->Setup();
+
+	//commandpool/commandbuffers
+
+	//frame syncing? merge into swapchain?
+
+	//imgui
+
+	//descriptor sets?
 
 	return false;
 }
@@ -149,7 +176,7 @@ bool Graphics::CreateInstance() {
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
 	appInfo.pEngineName = nullptr;
 	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion = VK_API_VERSION_1_3;
+	appInfo.apiVersion = VULKAN_VERSION;
 
 	VkInstanceCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;

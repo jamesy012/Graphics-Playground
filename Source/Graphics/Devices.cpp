@@ -63,18 +63,22 @@ bool Devices::Setup() {
 				}
 			}
 
-			for (int q = 0; q < queueFamilyCount; q++) {
-				if (device.mQueue.mGraphicsQueue.mQueueFamily == -1 && device.mQueue.mQueueFamilies[q].mGraphics) {
-					device.mQueue.mGraphicsQueue.mQueueFamily = q;
+			auto GetQueueFamily = [&](const DeviceData::Queue::QueueTypes aType, uint8_t aQueueFamily) {
+				const uint8_t queueIndex = static_cast<uint8_t>(aType);
+				//cant seem to use a union?
+				DeviceData::Queue::QueueIndex& queue = *((&device.mQueue.mGraphicsQueue)+queueIndex);
+				DeviceData::Queue::QueueFamilys& family = device.mQueue.mQueueFamilies[aQueueFamily];
+				if(queue.mQueueFamily == -1 && family.mQueueTypeFlags & 1 << queueIndex && family.mProperties.queueCount != family.mUsedQueues){
+					queue.mQueueFamily = aQueueFamily;
+					family.mUsedQueues++;
 				}
-				if (device.mQueue.mComputeQueue.mQueueFamily == -1 && device.mQueue.mQueueFamilies[q].mCompute) {
-					device.mQueue.mComputeQueue.mQueueFamily = q;
-				}
-				if (device.mQueue.mTransferQueue.mQueueFamily == -1 && device.mQueue.mQueueFamilies[q].mTransfer) {
-					device.mQueue.mTransferQueue.mQueueFamily = q;
-				}
-				if (device.mQueue.mPresentQueue.mQueueFamily == -1 && device.mQueue.mQueueFamilies[q].mPresent) {
-					device.mQueue.mPresentQueue.mQueueFamily = q;
+			};
+
+			//GetQueueFamily(DeviceData::Queue::QueueTypes::GRAPHICS, 0);
+
+			for (int q = 0; q < (int)DeviceData::Queue::QueueTypes::NUM; q++) {
+				for (int f = 0; f < queueFamilyCount; f++) {
+					GetQueueFamily((DeviceData::Queue::QueueTypes)q,f);
 				}
 			}
 		}

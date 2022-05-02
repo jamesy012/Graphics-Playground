@@ -2,7 +2,11 @@
 
 #include <stdarg.h>
 
+#if PLATFORM_WINDOWS
 #include <Windows.h>
+#endif
+
+#include <cstring>
 #include <cstdio>
 
 #if PLATFORM_WINDOWS

@@ -1,6 +1,9 @@
 set(IMGUI_PATH "imgui")
-set(STB_PATH "stb")
-set(VMA_PATH "VulkanMemoryAllocator/include")
+set(STB_PATH "stb ")
+set(VMA_PATH "VulkanMemoryAllocator/include ")
+
+target_include_directories(GraphicsPlayground PRIVATE ${STB_PATH})
+target_include_directories(GraphicsPlayground PRIVATE ${VMA_PATH})
 
 set(IMGUI_SOURCES
     "${IMGUI_PATH}/imgui.cpp"
@@ -30,6 +33,7 @@ set(IMGUI_HEADERS
 #add_subdirectory(assimp EXCLUDE_FROM_ALL)
 add_subdirectory(glfw EXCLUDE_FROM_ALL)
 add_subdirectory(glm EXCLUDE_FROM_ALL)
+add_subdirectory(VulkanMemoryAllocator EXCLUDE_FROM_ALL)
 
 #add_subdirectory(Libraries/googleTest EXCLUDE_FROM_ALL)
 #set(BUILD_SHARED_LIBS OFF)
@@ -38,7 +42,7 @@ add_subdirectory(glm EXCLUDE_FROM_ALL)
 #add_subdirectory(Libraries/SPIRV-Tools EXCLUDE_FROM_ALL)
 #add_subdirectory(Libraries/shaderc EXCLUDE_FROM_ALL)
 
-set(EXTERNAL_INCLUDE_LIBRARIES ${STB_PATH} ${VMA_PATH}
+set(EXTERNAL_INCLUDE_LIBRARIES ${EXTERNAL_INCLUDE_LIBRARIES} ${STB_PATH} ${VMA_PATH}
 CACHE INTERNAL "")
 
 set(EXTERNAL_LINK_LIBRARIES
@@ -46,4 +50,5 @@ ${EXTERNAL_LINK_LIBRARIES}
 #assimp 
 glfw 
 glm
+VulkanMemoryAllocator
 CACHE INTERNAL "") 
