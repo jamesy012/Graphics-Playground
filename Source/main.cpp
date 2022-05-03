@@ -2,6 +2,8 @@
 #include "Graphics/Graphics.h"
 #include "PlatformDebug.h"
 
+#include "Graphics/RenderPass.h"
+
 int main() {
 
 	Window window;
@@ -12,6 +14,9 @@ int main() {
 	gfx.StartUp();
 	gfx.AddWindow(&window);
 	gfx.Initalize();
+
+	RenderPass test;
+	test.Create();
 
     while (!window.ShouldClose()) {
         window.Update();

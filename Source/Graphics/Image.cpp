@@ -31,5 +31,5 @@ void Image::CreateVkImageView(VkFormat aFormat) {
 	colorRange.levelCount = 1;
 	createInfo.subresourceRange = colorRange;
 
-	vkCreateImageView(gGraphics->GetDevice(), &createInfo, GetAllocationCallback(), &mImageView);
+	vkCreateImageView(gGraphics->GetVkDevice(), &createInfo, GetAllocationCallback(), &mImageView);
 }

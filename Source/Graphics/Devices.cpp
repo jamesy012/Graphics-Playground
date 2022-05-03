@@ -200,6 +200,41 @@ bool Devices::Setup() {
 	return true;
 }
 
+void Devices::CreateCommandPools() {
+
+	VkCommandPoolCreateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	createInfo.flags = 0;
+
+	createInfo.queueFamilyIndex = GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueueFamily;
+	vkCreateCommandPool(GetPrimaryDevice(), &createInfo, GetAllocationCallback(), &mCommandPoolGraphics);
+
+	createInfo.queueFamilyIndex = GetPrimaryDeviceData().mQueue.mComputeQueue.mQueueFamily;
+	vkCreateCommandPool(GetPrimaryDevice(), &createInfo, GetAllocationCallback(), &mCommandPoolCompute);
+
+	createInfo.queueFamilyIndex = GetPrimaryDeviceData().mQueue.mTransferQueue.mQueueFamily;
+	vkCreateCommandPool(GetPrimaryDevice(), &createInfo, GetAllocationCallback(), &mCommandPoolTransfer);
+
+}
+void Devices::CreateCommandBuffers(const uint8_t aNumBuffers) {
+	mGraphicsCommandBuffers.resize(aNumBuffers);
+	mComputeCommandBuffers.resize(aNumBuffers);
+	mTransferCommandBuffers.resize(aNumBuffers);
+
+	VkCommandBufferAllocateInfo createInfo = {};
+	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	createInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	createInfo.commandBufferCount = aNumBuffers;
+
+	createInfo.commandPool = mCommandPoolGraphics;
+	vkAllocateCommandBuffers(GetPrimaryDevice(), &createInfo, mGraphicsCommandBuffers.data());
+	createInfo.commandPool = mCommandPoolCompute;
+	vkAllocateCommandBuffers(GetPrimaryDevice(), &createInfo, mComputeCommandBuffers.data());
+	createInfo.commandPool = mCommandPoolTransfer;
+	vkAllocateCommandBuffers(GetPrimaryDevice(), &createInfo, mTransferCommandBuffers.data());
+
+}
+
 const DeviceData& Devices::GetPrimaryDeviceData() const {
 	return gDevices[0];
 }

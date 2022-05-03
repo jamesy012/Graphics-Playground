@@ -102,25 +102,24 @@ bool Graphics::Initalize() {
 
 	mDevicesHandler = new Devices(mSurfaces[0]);
 	mDevicesHandler->Setup();
+	mDevicesHandler->CreateCommandPools();
+
+	mSwapChain = new SwapChain(mDevicesHandler->GetPrimaryDeviceData());
+	mSwapChain->Setup();
+
+	mDevicesHandler->CreateCommandBuffers(mSwapChain->GetNumBuffers());
 
 	//vma
 	{
 		VmaAllocatorCreateInfo createInfo{};
 		createInfo.vulkanApiVersion = VULKAN_VERSION;
-		createInfo.device = GetDevice();
+		createInfo.device = GetVkDevice();
 		createInfo.instance = gVkInstance;
-		createInfo.physicalDevice = GetPhysicalDevice();
+		createInfo.physicalDevice = GetVkPhysicalDevice();
 		createInfo.pAllocationCallbacks = GetAllocationCallback();
 
 		vmaCreateAllocator(&createInfo, &mAllocator);
   	}
-
-	mSwapChain = new SwapChain(mDevicesHandler->GetPrimaryDeviceData());
-	mSwapChain->Setup();
-
-	//commandpool/commandbuffers
-
-	//frame syncing? merge into swapchain?
 
 	//imgui
 
@@ -159,12 +158,20 @@ void Graphics::AddWindow(Window* aWindow) {
 	}
 }
 
-const VkDevice Graphics::GetDevice() const {
+const VkDevice Graphics::GetVkDevice() const {
 	return mDevicesHandler->GetPrimaryDevice();
 }
 
-const VkPhysicalDevice Graphics::GetPhysicalDevice() const {
+const VkPhysicalDevice Graphics::GetVkPhysicalDevice() const {
 	return mDevicesHandler->GetPrimaryPhysicalDevice();
+}
+
+const Devices* Graphics::GetMainDevice() const {
+	return mDevicesHandler;
+}
+
+const SwapChain* Graphics::GetMainSwapChain() const {
+	return mSwapChain;
 }
 
 bool Graphics::CreateInstance() {

@@ -62,11 +62,23 @@ class Devices {
 public:
 	Devices(const VkSurfaceKHR aSurface) : mSurface(aSurface) {};
 	bool Setup();
+	void CreateCommandPools();
+	void CreateCommandBuffers(const uint8_t aNumBuffers);
 
 	const DeviceData& GetPrimaryDeviceData() const;
 	const VkDevice GetPrimaryDevice() const;
 	const VkPhysicalDevice GetPrimaryPhysicalDevice() const;
 	const VkSurfaceKHR GetPrimarySurface() const;
 private:
+
 	VkSurfaceKHR mSurface;
+
+	//should be in DeviceData? / Combine below
+	VkCommandPool mCommandPoolGraphics;
+	VkCommandPool mCommandPoolCompute;
+	VkCommandPool mCommandPoolTransfer;
+
+	std::vector<VkCommandBuffer> mGraphicsCommandBuffers;
+	std::vector<VkCommandBuffer> mComputeCommandBuffers;
+	std::vector<VkCommandBuffer> mTransferCommandBuffers;
 };

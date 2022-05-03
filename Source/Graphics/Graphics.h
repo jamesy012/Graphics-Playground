@@ -40,8 +40,10 @@ public:
 
 	std::vector<VkSurfaceKHR> mSurfaces;
 
-	const VkDevice GetDevice() const;
-	const VkPhysicalDevice GetPhysicalDevice() const;
+	const VkDevice GetVkDevice() const;
+	const VkPhysicalDevice GetVkPhysicalDevice() const;
+	const Devices* GetMainDevice() const;
+	const SwapChain* GetMainSwapChain() const;
 private:
 	bool CreateInstance();
 
@@ -60,3 +62,5 @@ private:
   	VmaAllocator mAllocator;
 
 };
+
+extern Graphics* gGraphics;
