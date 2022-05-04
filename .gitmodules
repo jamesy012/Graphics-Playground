@@ -16,3 +16,6 @@
 [submodule "Source/Libraries/glm"]
 	path = Source/Libraries/glm
 	url = https://github.com/g-truc/glm.git
+[submodule "Source/Libraries/OpenXR-SDK"]
+	path = Source/Libraries/OpenXR-SDK
+	url = https://github.com/KhronosGroup/OpenXR-SDK.git

@@ -1,5 +1,7 @@
 #include "Graphics.h"
 
+#include <string>
+
 #include "PlatformDebug.h"
 #include "Window.h"
 #include "Devices.h"
@@ -14,6 +16,13 @@
 #define VULKAN_VERSION VK_API_VERSION_1_1
 #endif
 
+#if defined(ENABLE_XR)
+#include <openxr/openxr.h>
+#include <openxr/openxr_platform.h>
+XrInstance gXrInstance;
+XrSystemId gXrSystemId;
+std::vector<XrExtensionProperties> mXrInstanceExtensions;
+#endif
 
 Graphics* gGraphics = nullptr;
 
@@ -74,6 +83,47 @@ bool Graphics::StartUp() {
 		LOG::Log("Version: %i.%i.%i\n", VK_VERSION_MAJOR(version),
 			VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
 	}
+
+	//XR
+#if defined(ENABLE_XR)
+	{
+		LOG::Log("Loading OpenXR sdk: ");
+		uint32_t version = XR_CURRENT_API_VERSION;
+		LOG::Log("Version: %i.%i.%i\n", XR_VERSION_MAJOR(version),
+			XR_VERSION_MINOR(version), XR_VERSION_PATCH(version));
+
+		XrResult xrResult;
+		uint32_t extensionCount = 0;
+		xrResult = xrEnumerateInstanceExtensionProperties(NULL, 0, &extensionCount, NULL);
+		mXrInstanceExtensions.resize(extensionCount);
+		
+		for (int i = 0; i < extensionCount; i++) {
+			mXrInstanceExtensions[i].type = XR_TYPE_EXTENSION_PROPERTIES;
+		}
+		
+		xrResult = xrEnumerateInstanceExtensionProperties(NULL, extensionCount, &extensionCount, mXrInstanceExtensions.data());
+
+		std::vector<const char*> extensions = { XR_KHR_VULKAN_ENABLE_EXTENSION_NAME };
+
+
+		XrInstanceCreateInfo create = {};
+		create.type = XR_TYPE_INSTANCE_CREATE_INFO;
+		create.applicationInfo.apiVersion = XR_CURRENT_API_VERSION;
+		create.applicationInfo.applicationVersion = 1;
+		create.applicationInfo.applicationName;
+		strcpy(create.applicationInfo.applicationName, "Graphics-Playground");
+		create.enabledExtensionCount = extensions.size();
+		create.enabledExtensionNames = extensions.data();
+		xrCreateInstance(&create, &gXrInstance);
+
+		XrSystemGetInfo systemGet = {};
+		systemGet.type = XR_TYPE_SYSTEM_GET_INFO;
+		systemGet.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
+		systemGet.next = NULL;
+
+		xrResult = xrGetSystem(gXrInstance, &systemGet, &gXrSystemId);
+	}
+#endif
 
 	//instance data
 	{
@@ -199,6 +249,7 @@ bool Graphics::CreateInstance() {
 	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo = &appInfo;
 
+	std::vector<std::string> extensionsTemp;
 	std::vector<const char*> extensions;
 	std::vector<const char*> layers;
 
@@ -208,6 +259,31 @@ bool Graphics::CreateInstance() {
 		const char** glfwExtentensions = Window::GetGLFWVulkanExtentensions(&extensionCount);
 		extensions.assign(glfwExtentensions, glfwExtentensions + extensionCount);
 	}
+
+#if defined(ENABLE_XR)
+	//openXR
+	{
+		PFN_xrGetVulkanInstanceExtensionsKHR xrGetVulkanInstanceExtensionsKHR;
+		xrGetInstanceProcAddr(gXrInstance, "xrGetVulkanInstanceExtensionsKHR", (PFN_xrVoidFunction*)&xrGetVulkanInstanceExtensionsKHR);
+
+		uint32_t extensionCount = 0;
+		XrResult xrResult;
+		xrResult = xrGetVulkanInstanceExtensionsKHR(gXrInstance, gXrSystemId, 0, &extensionCount, NULL);
+		char* xrExtensions = new char[extensionCount];
+		xrResult = xrGetVulkanInstanceExtensionsKHR(gXrInstance, gXrSystemId, extensionCount, &extensionCount, xrExtensions);
+
+		int lastPoint = 0;
+		for (int i = 0; i < extensionCount; i++) {
+			if (xrExtensions[i] == ' ') {
+				xrExtensions[i] = '\0';
+				extensionsTemp.push_back(&xrExtensions[lastPoint]);
+				lastPoint = i+1;
+			}
+		}
+		extensionsTemp.push_back(&xrExtensions[lastPoint]);
+		delete[] xrExtensions;
+	}
+#endif
 
 	//Debug validation
 	VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
@@ -235,6 +311,10 @@ bool Graphics::CreateInstance() {
 		extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	}
 
+	//copy over any temporary strings
+	for (int i = 0; i < extensionsTemp.size(); i++) {
+		extensions.push_back(extensionsTemp[i].c_str());
+	}
 
 	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 	createInfo.ppEnabledExtensionNames = extensions.data();
