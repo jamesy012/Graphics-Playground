@@ -9,6 +9,26 @@ set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
 add_subdirectory(Source)
 
+
+set(PLATFORM_WINDOWS 0)
+set(PLATFORM_APPLE 0)
+set(PLATFORM_LINUX 0)
+
+if(WIN32)
+set(PLATFORM_WINDOWS 1)
+endif()
+if(APPLE)
+set(PLATFORM_APPLE 1)
+endif()
+if(UNIX AND NOT APPLE)  # for Linux, BSD, Solaris, Minix
+set(PLATFORM_LINUX 1)
+endif()
+
+target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_NAME=${CMAKE_SYSTEM_NAME})
+target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_WINDOWS=${PLATFORM_WINDOWS})
+target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_APPLE=${PLATFORM_APPLE})
+target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_LINUX=${PLATFORM_LINUX})
+
 #set(IMGUI_PATH "Libraries/imgui")
 #set(STB_PATH "Libraries/stb")
 #set(VMA_PATH "Libraries/VulkanMemoryAllocator/include")

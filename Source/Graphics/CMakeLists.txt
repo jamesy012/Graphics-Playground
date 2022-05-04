@@ -14,13 +14,15 @@ set(GRAPHICS_SOURCE
 "${CMAKE_CURRENT_SOURCE_DIR}/Image.h" 
 "${CMAKE_CURRENT_SOURCE_DIR}/Image.cpp" 
 "${CMAKE_CURRENT_SOURCE_DIR}/RenderPass.h" 
-"${CMAKE_CURRENT_SOURCE_DIR}/RenderPass.cpp" 
-CACHE INTERNAL "")
+"${CMAKE_CURRENT_SOURCE_DIR}/RenderPass.cpp" )
 
 
-
-set(EXTERNAL_LINK_LIBRARIES ${EXTERNAL_LINK_LIBRARIES} Vulkan::Vulkan CACHE INTERNAL "")
+target_sources(GraphicsPlayground PRIVATE ${GRAPHICS_SOURCE})
+target_link_libraries(GraphicsPlayground Vulkan::Vulkan)
 include_directories(AFTER ${VULKAN_PATH}/Include)
+
+find_package(Vulkan REQUIRED)
+
 
 #source_group("Graphics2" ${GRAPHICS_SOURCE} )
 message("Added Graphics Folder with ${GRAPHICS_SOURCE}")

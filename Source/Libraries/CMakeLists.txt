@@ -1,9 +1,7 @@
-set(IMGUI_PATH "imgui")
-set(STB_PATH "stb ")
-set(VMA_PATH "VulkanMemoryAllocator/include ")
+#~~~ IMGUI
+   message("Adding ImGui")
 
-target_include_directories(GraphicsPlayground PRIVATE ${STB_PATH})
-target_include_directories(GraphicsPlayground PRIVATE ${VMA_PATH})
+set(IMGUI_PATH "imgui")
 
 set(IMGUI_SOURCES
     "${IMGUI_PATH}/imgui.cpp"
@@ -28,11 +26,26 @@ set(IMGUI_HEADERS
     CACHE INTERNAL ""
 )
 
-#Other
+#~~~ Other sub directories
+
+#~ OpenXR
+set("Enable_VR" OFF CACHE BOOL "Enables Open XR")
+if(${Enable_VR})
+   message("Adding OpenXR")
+   set("OpenXR-Link" openxr_loader)
+   target_compile_definitions(GraphicsPlayground PUBLIC ENABLE_XR)
+   if(${Graphics_Vulkan})
+      target_compile_definitions(GraphicsPlayground PUBLIC XR_USE_GRAPHICS_API_VULKAN)
+   endif()
+   add_subdirectory(OpenXR-SDK)
+endif()
 
 #add_subdirectory(assimp EXCLUDE_FROM_ALL)
+   message("Adding GLFW")
 add_subdirectory(glfw EXCLUDE_FROM_ALL)
+   message("Adding GLM")
 add_subdirectory(glm EXCLUDE_FROM_ALL)
+   message("Adding VMA")
 add_subdirectory(VulkanMemoryAllocator EXCLUDE_FROM_ALL)
 
 #add_subdirectory(Libraries/googleTest EXCLUDE_FROM_ALL)
@@ -42,13 +55,16 @@ add_subdirectory(VulkanMemoryAllocator EXCLUDE_FROM_ALL)
 #add_subdirectory(Libraries/SPIRV-Tools EXCLUDE_FROM_ALL)
 #add_subdirectory(Libraries/shaderc EXCLUDE_FROM_ALL)
 
-set(EXTERNAL_INCLUDE_LIBRARIES ${EXTERNAL_INCLUDE_LIBRARIES} ${STB_PATH} ${VMA_PATH}
-CACHE INTERNAL "")
+#~~~ Target links
+   message("Linking Targets")
 
-set(EXTERNAL_LINK_LIBRARIES
-${EXTERNAL_LINK_LIBRARIES} 
+target_include_directories(GraphicsPlayground PRIVATE "stb")
+target_include_directories(GraphicsPlayground PRIVATE "VulkanMemoryAllocator/include")
+
+target_link_libraries(GraphicsPlayground
 #assimp 
 glfw 
 glm
 VulkanMemoryAllocator
-CACHE INTERNAL "") 
+${OpenXR-Link}
+) 
