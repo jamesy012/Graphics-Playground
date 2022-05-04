@@ -1,4 +1,4 @@
-#include "SwapChain.h"
+#include "Swapchain.h"
 
 #include "PlatformDebug.h"
 #include "Graphics.h"
@@ -6,16 +6,16 @@
 extern VkInstance gVkInstance;
 extern Graphics* gGraphics;
 
-struct SwapChainSupportDetails {
+struct SwapchainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities{};
     std::vector<VkSurfaceFormatKHR> formats{};
     std::vector<VkPresentModeKHR> presentModes{};
 };
 
-void SwapChain::Setup() {
+void Swapchain::Setup() {
     const VkSurfaceKHR deviceSurface = mAttachedDevice.mSurfaceUsed;
 
-    SwapChainSupportDetails swapChainSupport;
+    SwapchainSupportDetails swapChainSupport;
 
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mAttachedDevice.mPhysicalDevice, deviceSurface,
         &swapChainSupport.capabilities);
@@ -54,13 +54,15 @@ void SwapChain::Setup() {
         imageCount = swapChainSupport.capabilities.maxImageCount;
     }
 
+    mSwapchainSize = swapChainSupport.capabilities.currentExtent;
+
     VkSwapchainCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     createInfo.surface = deviceSurface;
 
     createInfo.minImageCount = imageCount;
     createInfo.imageFormat = mColorFormat;
-    createInfo.imageExtent = swapChainSupport.capabilities.currentExtent;
+    createInfo.imageExtent = mSwapchainSize;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage =
         VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -106,36 +108,36 @@ void SwapChain::Setup() {
         }
     }
 
-    vkCreateSwapchainKHR(mAttachedDevice.mDevice, &createInfo, nullptr, &mSwapChain);
+    vkCreateSwapchainKHR(mAttachedDevice.mDevice, &createInfo, nullptr, &mSwapchain);
 
 
     SetupImages();
     SetupSyncObjects();
 }
 
-void SwapChain::SetupImages() {
-    if (mSwapChain == VK_NULL_HANDLE) {
+void Swapchain::SetupImages() {
+    if (mSwapchain == VK_NULL_HANDLE) {
         ASSERT(false);
         return;
     }
 
     uint32_t numImages;
-    vkGetSwapchainImagesKHR(mAttachedDevice.mDevice, mSwapChain, &numImages, nullptr);
+    vkGetSwapchainImagesKHR(mAttachedDevice.mDevice, mSwapchain, &numImages, nullptr);
 
     mNumImages = numImages;
-    mSwapChainImages.resize(numImages);
+    mSwapchainImages.resize(numImages);
     mFrameInfo.resize(numImages);
 
     std::vector<VkImage> vulkanImages(numImages);
-    vkGetSwapchainImagesKHR(mAttachedDevice.mDevice, mSwapChain, &numImages, vulkanImages.data());
+    vkGetSwapchainImagesKHR(mAttachedDevice.mDevice, mSwapchain, &numImages, vulkanImages.data());
 
     for (int i = 0; i < numImages; i++) {
-        mFrameInfo[i].mSwapChainImage.CreateFromVkImage(vulkanImages[i], VK_FORMAT_B8G8R8A8_UNORM);
-        mSwapChainImages[i] = &mFrameInfo[i].mSwapChainImage;
+        mFrameInfo[i].mSwapchainImage.CreateFromVkImage(vulkanImages[i], VK_FORMAT_B8G8R8A8_UNORM, mSwapchainSize);
+        mSwapchainImages[i] = &mFrameInfo[i].mSwapchainImage;
     }
 }
 
-void SwapChain::SetupSyncObjects() {
+void Swapchain::SetupSyncObjects() {
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -149,4 +151,15 @@ void SwapChain::SetupSyncObjects() {
         vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, nullptr, &data.mPresent);
         vkCreateFence(mAttachedDevice.mDevice, &fenceInfo, nullptr, &data.mInFlight);
     }
+}
+
+
+const int Swapchain::GetNextImage() {
+    return 0;
+}
+
+void Swapchain::PresentImage(const int aIndex) {
+    VkPresentInfoKHR presentInfo = {};
+    presentInfo.sType = 0;
+    vkQueuePresentKHR(mPresent, 0);
 }

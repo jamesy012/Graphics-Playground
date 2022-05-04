@@ -2,7 +2,11 @@
 #include "Graphics/Graphics.h"
 #include "PlatformDebug.h"
 
+#include "Graphics/Swapchain.h"
 #include "Graphics/RenderPass.h"
+#include "Graphics/Framebuffer.h"
+
+#include <vulkan/vulkan.h>
 
 int main() {
 
@@ -17,6 +21,12 @@ int main() {
 
 	RenderPass test;
 	test.Create();
+
+	Framebuffer fbTest[3];
+	for(int i = 0;i<3;i++) {
+		fbTest[i].Create(gfx.GetMainSwapchain()->GetImage(i), test);
+	}
+
 
     while (!window.ShouldClose()) {
         window.Update();

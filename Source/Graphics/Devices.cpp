@@ -86,16 +86,16 @@ bool Devices::Setup() {
 		//swapchain check
 		{
 			vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device.mPhysicalDevice, device.mSurfaceUsed,
-				&device.mSwapChain.capabilities);
+				&device.mSwapchain.capabilities);
 
 			uint32_t formatCount;
 			vkGetPhysicalDeviceSurfaceFormatsKHR(device.mPhysicalDevice, device.mSurfaceUsed, &formatCount,
 				nullptr);
 
 			if (formatCount != 0) {
-				device.mSwapChain.formats.resize(formatCount);
+				device.mSwapchain.formats.resize(formatCount);
 				vkGetPhysicalDeviceSurfaceFormatsKHR(device.mPhysicalDevice, device.mSurfaceUsed, &formatCount,
-					device.mSwapChain.formats.data());
+					device.mSwapchain.formats.data());
 			}
 
 			uint32_t presentModeCount;
@@ -103,9 +103,9 @@ bool Devices::Setup() {
 				&presentModeCount, nullptr);
 
 			if (presentModeCount != 0) {
-				device.mSwapChain.presentModes.resize(presentModeCount);
+				device.mSwapchain.presentModes.resize(presentModeCount);
 				vkGetPhysicalDeviceSurfacePresentModesKHR(
-					device.mPhysicalDevice, device.mSurfaceUsed, &presentModeCount, device.mSwapChain.presentModes.data());
+					device.mPhysicalDevice, device.mSurfaceUsed, &presentModeCount, device.mSwapchain.presentModes.data());
 			}
 		}
 

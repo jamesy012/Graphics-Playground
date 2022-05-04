@@ -7,7 +7,7 @@
 
 class Window;
 class Devices;
-class SwapChain;
+class Swapchain;
 
 static VkAllocationCallbacks* CreateAllocationCallbacks() {
 	VkAllocationCallbacks callback;
@@ -30,6 +30,7 @@ public:
 	Graphics() {};
 	~Graphics() {};
 
+//~~~ creation/destruction
 	//starts vulkan
 	bool StartUp();
 	//starts to set up vulkan objects, Device/Swapchain/Command buffers
@@ -38,12 +39,15 @@ public:
 
 	void AddWindow(Window* aWindow);
 
-	std::vector<VkSurfaceKHR> mSurfaces;
+//~~~ Frame Management
+	void StartNewFrame();
+	void EndFrame();
 
+//~~~ Helpers
 	const VkDevice GetVkDevice() const;
 	const VkPhysicalDevice GetVkPhysicalDevice() const;
 	const Devices* GetMainDevice() const;
-	const SwapChain* GetMainSwapChain() const;
+	const Swapchain* GetMainSwapchain() const;
 private:
 	bool CreateInstance();
 
@@ -55,9 +59,10 @@ private:
 	std::vector<VkExtensionProperties> mInstanceExtensions;
 	std::vector<VkExtensionProperties> mDeviceExtensions;
 
+	std::vector<VkSurfaceKHR> mSurfaces;
 
 	Devices* mDevicesHandler;
-	SwapChain* mSwapChain;
+	Swapchain* mSwapchain;
 
   	VmaAllocator mAllocator;
 

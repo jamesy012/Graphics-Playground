@@ -5,13 +5,15 @@
 
 extern Graphics* gGraphics;
 
-void Image::CreateFromVkImage(VkImage aImage, VkFormat aFormat) {
+void Image::CreateFromVkImage(VkImage aImage, VkFormat aFormat, VkExtent2D aSize) {
 	if (aImage == VK_NULL_HANDLE) {
 		ASSERT(false);
 		return;
 	}
 
 	mImage = aImage;
+	mSize = aSize;
+
 
 	CreateVkImageView(aFormat);
 }

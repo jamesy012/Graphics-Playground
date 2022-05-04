@@ -5,11 +5,15 @@
 
 #include <vector>
 #include "Image.h"
+#include "Framebuffer.h"
 
-class SwapChain {
+class Swapchain {
 public:
-	SwapChain(const DeviceData& aDevice) : mAttachedDevice(aDevice) {};
+	Swapchain(const DeviceData& aDevice) : mAttachedDevice(aDevice) {};
 	void Setup();
+
+	const int GetNextImage();
+	void PresentImage(const int aIndex);
 
 	const inline uint8_t GetNumBuffers() const {
 		return mNumImages;
@@ -17,16 +21,24 @@ public:
 	const inline VkFormat GetColorFormat() const {
 		return mColorFormat;
 	}
+
+	const Image& GetImage(uint8_t aIndex) const {
+		return mFrameInfo[aIndex].mSwapchainImage;		
+	}
+	const VkExtent2D& GetSize() const {
+		return mSwapchainSize;		
+	}
 private:
 	void SetupImages();
 	void SetupSyncObjects();
 
-	VkSwapchainKHR mSwapChain;
+	VkSwapchainKHR mSwapchain;
 	const DeviceData& mAttachedDevice;
 	VkFormat mColorFormat;
 
 	struct PerFrameInfo{
-		Image mSwapChainImage;
+		Image mSwapchainImage;
+		//Framebuffer mSwapChainFB;
 
 		VkFence mInFlight;
 		VkSemaphore mPresent;
@@ -37,6 +49,8 @@ private:
 	std::vector<PerFrameInfo> mFrameInfo;
 
 	//remove?
-	std::vector<Image*> mSwapChainImages;
+	std::vector<Image*> mSwapchainImages;
+
+	VkExtent2D mSwapchainSize;
 
 };

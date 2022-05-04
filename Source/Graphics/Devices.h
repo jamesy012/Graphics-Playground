@@ -47,7 +47,7 @@ struct DeviceData {
 		VkSurfaceCapabilitiesKHR capabilities;
 		std::vector<VkSurfaceFormatKHR> formats{};
 		std::vector<VkPresentModeKHR> presentModes{};
-	} mSwapChain;
+	} mSwapchain;
 
 	std::vector<VkExtensionProperties> mExtensions;
 	std::vector<VkLayerProperties> mLayers;

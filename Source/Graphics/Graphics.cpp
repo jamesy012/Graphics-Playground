@@ -3,7 +3,7 @@
 #include "PlatformDebug.h"
 #include "Window.h"
 #include "Devices.h"
-#include "SwapChain.h"
+#include "Swapchain.h"
 
 #pragma warning( push )
 #pragma warning( disable: 26812 )
@@ -104,10 +104,10 @@ bool Graphics::Initalize() {
 	mDevicesHandler->Setup();
 	mDevicesHandler->CreateCommandPools();
 
-	mSwapChain = new SwapChain(mDevicesHandler->GetPrimaryDeviceData());
-	mSwapChain->Setup();
+	mSwapchain = new Swapchain(mDevicesHandler->GetPrimaryDeviceData());
+	mSwapchain->Setup();
 
-	mDevicesHandler->CreateCommandBuffers(mSwapChain->GetNumBuffers());
+	mDevicesHandler->CreateCommandBuffers(mSwapchain->GetNumBuffers());
 
 	//vma
 	{
@@ -158,6 +158,16 @@ void Graphics::AddWindow(Window* aWindow) {
 	}
 }
 
+void Graphics::StartNewFrame() {
+
+}
+
+void Graphics::EndFrame() {
+
+
+	mSwapchain->PresentImage(-1);
+}
+
 const VkDevice Graphics::GetVkDevice() const {
 	return mDevicesHandler->GetPrimaryDevice();
 }
@@ -170,8 +180,8 @@ const Devices* Graphics::GetMainDevice() const {
 	return mDevicesHandler;
 }
 
-const SwapChain* Graphics::GetMainSwapChain() const {
-	return mSwapChain;
+const Swapchain* Graphics::GetMainSwapchain() const {
+	return mSwapchain;
 }
 
 bool Graphics::CreateInstance() {
