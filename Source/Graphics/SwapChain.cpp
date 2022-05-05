@@ -80,11 +80,9 @@ void Swapchain::Setup() {
 
     {
         std::vector<uint32_t> queueFamilies;
-        bool uniqueQueues = true;
         auto addQueue = [&](int8_t aFamily) {
             for (int i = 0; i < queueFamilies.size(); i++) {
                 if (queueFamilies[i] == aFamily) {
-                    uniqueQueues = false;
                     return;
                 }
             }
@@ -96,7 +94,7 @@ void Swapchain::Setup() {
         addQueue(mAttachedDevice.mQueue.mTransferQueue.mQueueFamily);
         addQueue(mAttachedDevice.mQueue.mPresentQueue.mQueueFamily);
 
-        if (!uniqueQueues) {
+        if (queueFamilies.size() > 1) {
             createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
             createInfo.queueFamilyIndexCount = queueFamilies.size();
             createInfo.pQueueFamilyIndices = queueFamilies.data();
@@ -140,26 +138,26 @@ void Swapchain::SetupImages() {
 void Swapchain::SetupSyncObjects() {
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, nullptr, &mRenderSemaphore);
-    vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, nullptr, &mPresentSemaphore);
 
     VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
+    vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, nullptr, &mRenderSemaphore);
+    vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, nullptr, &mPresentSemaphore);
     for (size_t i = 0; i < GetNumBuffers(); i++) {
         PerFrameInfo& data = mFrameInfo[i];
-        vkCreateFence(mAttachedDevice.mDevice, &fenceInfo, nullptr, &data.mInFlight);
+        vkCreateFence(mAttachedDevice.mDevice, &fenceInfo, nullptr, &data.mSubmitFence);
     }
 }
 
 
 const uint32_t Swapchain::GetNextImage() {
-
+    
     VkResult result = vkAcquireNextImageKHR(mAttachedDevice.mDevice, mSwapchain, UINT64_MAX, mPresentSemaphore, nullptr, &mImageIndex);
 
-    vkWaitForFences(mAttachedDevice.mDevice, 1, &mFrameInfo[mImageIndex].mInFlight, VK_TRUE, UINT64_MAX);
-	vkResetFences(mAttachedDevice.mDevice, 1, &mFrameInfo[mImageIndex].mInFlight);
+   //result = vkWaitForFences(mAttachedDevice.mDevice, 1, &mFrameInfo[mImageIndex].mSubmitFence, VK_TRUE, UINT64_MAX);
+   //result = vkResetFences(mAttachedDevice.mDevice, 1, &mFrameInfo[mImageIndex].mSubmitFence);
 
     return mImageIndex;
 }
@@ -177,7 +175,11 @@ void Swapchain::SubmitQueue(VkQueue aQueue, std::vector<VkCommandBuffer> aComman
 
     const VkPipelineStageFlags flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     submitInfo.pWaitDstStageMask = &flags;
-    vkQueueSubmit(aQueue, 1, &submitInfo, mFrameInfo[mImageIndex].mInFlight);
+    //vkQueueSubmit(aQueue, 1, &submitInfo, mFrameInfo[mImageIndex].mSubmitFence);
+    vkQueueSubmit(aQueue, 1, &submitInfo, VK_NULL_HANDLE);
+
+    vkQueueWaitIdle(aQueue);
+
 }
 
 void Swapchain::PresentImage() {
@@ -192,4 +194,6 @@ void Swapchain::PresentImage() {
     presentInfo.swapchainCount = 1;
     
     vkQueuePresentKHR(mAttachedDevice.mQueue.mPresentQueue.mQueue, &presentInfo);
+
+
 }

@@ -44,7 +44,7 @@ private:
 		Image mSwapchainImage;
 		//Framebuffer mSwapChainFB;
 
-		VkFence mInFlight;
+		VkFence mSubmitFence;
 	};
 	VkSemaphore mRenderSemaphore;
 	VkSemaphore mPresentSemaphore;
