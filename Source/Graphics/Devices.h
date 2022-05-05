@@ -69,6 +69,10 @@ public:
 	const VkDevice GetPrimaryDevice() const;
 	const VkPhysicalDevice GetPrimaryPhysicalDevice() const;
 	const VkSurfaceKHR GetPrimarySurface() const;
+
+	const VkCommandBuffer GetGraphicsCB(const uint8_t aIndex) const {
+		return mGraphicsCommandBuffers[aIndex];
+	}
 private:
 
 	VkSurfaceKHR mSurface;

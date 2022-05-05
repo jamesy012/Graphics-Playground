@@ -10,6 +10,9 @@
 
 int main() {
 
+	//vs code is annoying, doesnt clear the last output
+	LOG::LogLine("--------------------------------");
+
 	Window window;
 	window.Create(500, 500, "Graphics Playground");
 
@@ -30,6 +33,14 @@ int main() {
 
     while (!window.ShouldClose()) {
         window.Update();
+
+		gfx.StartNewFrame();
+
+		test.Begin(gfx.GetCurrentGraphicsCommandBuffer(), fbTest[gfx.GetCurrentImageIndex()]);
+
+		test.End(gfx.GetCurrentGraphicsCommandBuffer());
+		
+		gfx.EndFrame();
     }
 
 	return 0;

@@ -10,9 +10,9 @@ public:
     void Create(const Image& aImage, const RenderPass& mRenderPassTemplate);
 
     const VkFramebuffer GetFramebuffer() const { return mFramebuffer; }
-    const VkExtent2D GetSize() const { return VkExtent2D(); }
+    const VkExtent2D GetSize() const { return mSize; }
 
 private:
     VkFramebuffer mFramebuffer;
-
+    VkExtent2D mSize;
 };

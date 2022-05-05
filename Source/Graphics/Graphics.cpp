@@ -209,13 +209,30 @@ void Graphics::AddWindow(Window* aWindow) {
 }
 
 void Graphics::StartNewFrame() {
+	mFrameCounter++;
+	uint32_t index = mSwapchain->GetNextImage();
 
+	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(index);
+	VkCommandBufferBeginInfo info = {};
+	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	vkBeginCommandBuffer(graphics, &info);
 }
 
 void Graphics::EndFrame() {
+	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(mSwapchain->GetImageIndex());
+	vkEndCommandBuffer(graphics);
 
+	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, {graphics});
 
-	mSwapchain->PresentImage(-1);
+	mSwapchain->PresentImage();
+}
+
+const uint32_t Graphics::GetCurrentImageIndex() const {
+	return mSwapchain->GetImageIndex();
+}
+
+VkCommandBuffer Graphics::GetCurrentGraphicsCommandBuffer() const {
+	return GetMainDevice()->GetGraphicsCB(GetCurrentImageIndex());
 }
 
 const VkDevice Graphics::GetVkDevice() const {

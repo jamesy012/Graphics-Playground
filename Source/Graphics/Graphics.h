@@ -43,6 +43,11 @@ public:
 	void StartNewFrame();
 	void EndFrame();
 
+	const uint32_t GetCurrentImageIndex() const;
+	const uint32_t GetFrameCount() const { return mFrameCounter; }
+
+	VkCommandBuffer GetCurrentGraphicsCommandBuffer() const;
+
 //~~~ Helpers
 	const VkDevice GetVkDevice() const;
 	const VkPhysicalDevice GetVkPhysicalDevice() const;
@@ -65,6 +70,8 @@ private:
 	Swapchain* mSwapchain;
 
   	VmaAllocator mAllocator;
+
+	uint32_t mFrameCounter = 0;
 
 };
 

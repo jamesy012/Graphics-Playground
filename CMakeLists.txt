@@ -6,10 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
-
-add_subdirectory(Source)
-
-
+#~~~ Get Platform
 set(PLATFORM_WINDOWS 0)
 set(PLATFORM_APPLE 0)
 set(PLATFORM_LINUX 0)
@@ -24,10 +21,15 @@ if(UNIX AND NOT APPLE)  # for Linux, BSD, Solaris, Minix
 set(PLATFORM_LINUX 1)
 endif()
 
+#~~~ make project
+add_subdirectory(Source)
+
+#~~~ Apply Platform to project
 target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_NAME=${CMAKE_SYSTEM_NAME})
 target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_WINDOWS=${PLATFORM_WINDOWS})
 target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_APPLE=${PLATFORM_APPLE})
 target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_LINUX=${PLATFORM_LINUX})
+
 
 #set(IMGUI_PATH "Libraries/imgui")
 #set(STB_PATH "Libraries/stb")

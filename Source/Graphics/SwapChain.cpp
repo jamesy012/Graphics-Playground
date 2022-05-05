@@ -140,6 +140,8 @@ void Swapchain::SetupImages() {
 void Swapchain::SetupSyncObjects() {
     VkSemaphoreCreateInfo semaphoreInfo{};
     semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, nullptr, &mRenderSemaphore);
+    vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, nullptr, &mPresentSemaphore);
 
     VkFenceCreateInfo fenceInfo{};
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -147,19 +149,47 @@ void Swapchain::SetupSyncObjects() {
 
     for (size_t i = 0; i < GetNumBuffers(); i++) {
         PerFrameInfo& data = mFrameInfo[i];
-        vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, nullptr, &data.mImageReady);
-        vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, nullptr, &data.mPresent);
         vkCreateFence(mAttachedDevice.mDevice, &fenceInfo, nullptr, &data.mInFlight);
     }
 }
 
 
-const int Swapchain::GetNextImage() {
-    return 0;
+const uint32_t Swapchain::GetNextImage() {
+
+    VkResult result = vkAcquireNextImageKHR(mAttachedDevice.mDevice, mSwapchain, UINT64_MAX, mPresentSemaphore, nullptr, &mImageIndex);
+
+    vkWaitForFences(mAttachedDevice.mDevice, 1, &mFrameInfo[mImageIndex].mInFlight, VK_TRUE, UINT64_MAX);
+	vkResetFences(mAttachedDevice.mDevice, 1, &mFrameInfo[mImageIndex].mInFlight);
+
+    return mImageIndex;
 }
 
-void Swapchain::PresentImage(const int aIndex) {
+void Swapchain::SubmitQueue(VkQueue aQueue, std::vector<VkCommandBuffer> aCommands) {
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.pSignalSemaphores = &mRenderSemaphore;
+    submitInfo.signalSemaphoreCount = 1;
+    submitInfo.pWaitSemaphores = &mPresentSemaphore;
+    submitInfo.waitSemaphoreCount = 1;
+
+    submitInfo.pCommandBuffers = aCommands.data();
+    submitInfo.commandBufferCount = aCommands.size();
+
+    const VkPipelineStageFlags flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    submitInfo.pWaitDstStageMask = &flags;
+    vkQueueSubmit(aQueue, 1, &submitInfo, mFrameInfo[mImageIndex].mInFlight);
+}
+
+void Swapchain::PresentImage() {
     VkPresentInfoKHR presentInfo = {};
-    presentInfo.sType = 0;
-    vkQueuePresentKHR(mPresent, 0);
+    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = &mRenderSemaphore;
+
+    presentInfo.pImageIndices = &mImageIndex;
+
+    presentInfo.pSwapchains = &mSwapchain;
+    presentInfo.swapchainCount = 1;
+    
+    vkQueuePresentKHR(mAttachedDevice.mQueue.mPresentQueue.mQueue, &presentInfo);
 }

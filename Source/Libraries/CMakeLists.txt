@@ -11,9 +11,8 @@ set(IMGUI_SOURCES
     "${IMGUI_PATH}/imgui_widgets.cpp"
     "${IMGUI_PATH}/backends/imgui_impl_glfw.cpp"
     "${IMGUI_PATH}/backends/imgui_impl_vulkan.cpp"
-    CACHE INTERNAL ""
 )
-
+ 
 set(IMGUI_HEADERS
     "${IMGUI_PATH}/imconfig.h"
     "${IMGUI_PATH}/imgui.h"
@@ -23,14 +22,13 @@ set(IMGUI_HEADERS
     "${IMGUI_PATH}/imstb_truetype.h"
     "${IMGUI_PATH}/backends/imgui_impl_glfw.h"
     "${IMGUI_PATH}/backends/imgui_impl_vulkan.h"
-    CACHE INTERNAL ""
 )
 
 #~~~ Other sub directories
 
 #~ OpenXR
-set("Enable_VR" OFF CACHE BOOL "Enables Open XR")
-if(${Enable_VR})
+set("GraphicsPlayground_Enable_VR" OFF CACHE BOOL "Enables Open XR")
+if(${GraphicsPlayground_Enable_VR})
    message("Adding OpenXR")
    set("OpenXR-Link" openxr_loader)
    target_compile_definitions(GraphicsPlayground PUBLIC ENABLE_XR)

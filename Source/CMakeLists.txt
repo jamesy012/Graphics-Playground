@@ -7,8 +7,7 @@ set("SOURCE_FILES"
 
 source_group("Test" ${SOURCE_FILES})
 
-set("SOURCE_COMBINED" ${SOURCE_FILES} ${GRAPHICS_SOURCE})
-add_executable(GraphicsPlayground ${SOURCE_COMBINED})
+add_executable(GraphicsPlayground ${SOURCE_FILES})
 
 add_subdirectory(Graphics)
 add_subdirectory(Libraries)

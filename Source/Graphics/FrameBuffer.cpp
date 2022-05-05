@@ -23,4 +23,7 @@ void Framebuffer::Create(const Image& aImage, const RenderPass& mRenderPassTempl
     info.flags = 0;
 
     vkCreateFramebuffer(gGraphics->GetVkDevice(), &info, GetAllocationCallback(), &mFramebuffer);
+
+    mSize.width = info.width;
+    mSize.height = info.height;
 }

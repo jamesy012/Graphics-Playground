@@ -33,13 +33,11 @@ void RenderPass::Create() {
     vkCreateRenderPass(gGraphics->GetVkDevice(), &create, GetAllocationCallback(), &mRenderPass);
 
 }
-
+#include <math.h>
 void RenderPass::Begin(VkCommandBuffer aBuffer, Framebuffer& aFramebuffer) {
 
     std::vector<VkClearValue> clearColors(1);
-    float clearCol[4] = {0,1,0,1};
-    memcpy(clearColors[0].color.float32, clearCol, sizeof(float)*4);
-    
+	clearColors[0].color = { { ((sin((300+gGraphics->GetFrameCount()/500.0f))) + 1) / 2.0f, ((sin((12+gGraphics->GetFrameCount()/280.0f))) + 1) / 2.0f, 0.0f, 1.0f } };
 
     VkRenderPassBeginInfo renderBegin{};
     renderBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -52,10 +50,10 @@ void RenderPass::Begin(VkCommandBuffer aBuffer, Framebuffer& aFramebuffer) {
     renderBegin.renderArea.extent = aFramebuffer.GetSize();
 
     vkCmdBeginRenderPass(aBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
-    //VkViewport viewport = GetViewport();
-    //VkRect2D scissor = { {}, GetSize() };
-    //vkCmdSetViewport(aBuffer, 0, 1, &viewport);
-    //vkCmdSetScissor(aBuffer, 0, 1, &scissor);
+    VkRect2D scissor = { {}, gGraphics->GetMainSwapchain()->GetSize() };
+    VkViewport viewport = {0.0f,0.0f,(float)scissor.extent.width, (float)scissor.extent.height, 0.0f, 1.0f};
+    vkCmdSetScissor(aBuffer, 0, 1, &scissor);
+    vkCmdSetViewport(aBuffer, 0, 1, &viewport);
 }
 
 void RenderPass::End(VkCommandBuffer aBuffer) {
