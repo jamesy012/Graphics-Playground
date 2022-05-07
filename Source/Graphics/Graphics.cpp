@@ -7,6 +7,8 @@
 #include "Devices.h"
 #include "Swapchain.h"
 
+#include "imgui.h"
+
 #pragma warning( push )
 #pragma warning( disable: 26812 )
 
@@ -172,6 +174,7 @@ bool Graphics::Initalize() {
   	}
 
 	//imgui
+	ImGui::CreateContext();
 
 	//descriptor sets?
 

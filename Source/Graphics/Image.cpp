@@ -3,6 +3,9 @@
 #include "PlatformDebug.h"
 #include "Graphics.h"
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 extern Graphics* gGraphics;
 
 void Image::CreateFromVkImage(VkImage aImage, VkFormat aFormat, VkExtent2D aSize) {
@@ -13,7 +16,6 @@ void Image::CreateFromVkImage(VkImage aImage, VkFormat aFormat, VkExtent2D aSize
 
 	mImage = aImage;
 	mSize = aSize;
-
 
 	CreateVkImageView(aFormat);
 }

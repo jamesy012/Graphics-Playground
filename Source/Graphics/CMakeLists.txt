@@ -1,3 +1,5 @@
+message("Adding Graphics")
+
 set("GraphicsPlayground_Graphics_Vulkan" ON CACHE BOOL "Enables Vulkan")
 
 set(GRAPHICS_SOURCE 
@@ -17,9 +19,10 @@ set(GRAPHICS_SOURCE
 "${CMAKE_CURRENT_SOURCE_DIR}/RenderPass.cpp" )
 
 if(${GraphicsPlayground_Graphics_Vulkan})
+    message("Adding Vulkan")
     find_package(Vulkan REQUIRED)
     target_link_libraries(GraphicsPlayground Vulkan::Vulkan)
+    include_directories(AFTER ${VULKAN_PATH}/Include)
 endif()
 
 target_sources(GraphicsPlayground PRIVATE ${GRAPHICS_SOURCE})
-include_directories(AFTER ${VULKAN_PATH}/Include)

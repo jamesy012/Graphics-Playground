@@ -37,7 +37,8 @@ void RenderPass::Create() {
 void RenderPass::Begin(VkCommandBuffer aBuffer, Framebuffer& aFramebuffer) {
 
     std::vector<VkClearValue> clearColors(1);
-	clearColors[0].color = { { float((sin((300+gGraphics->GetFrameCount()/500.0f))) + 1) / 2.0f, float((sin((12+gGraphics->GetFrameCount()/280.0f))) + 1) / 2.0f, 0.0f, 1.0f } };
+	//clearColors[0].color = { { float((sin((300+gGraphics->GetFrameCount()/500.0f))) + 1) / 2.0f, float((sin((12+gGraphics->GetFrameCount()/280.0f))) + 1) / 2.0f, 0.0f, 1.0f } };
+	clearColors[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 
     VkRenderPassBeginInfo renderBegin{};
     renderBegin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
