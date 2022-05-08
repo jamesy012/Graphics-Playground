@@ -6,8 +6,12 @@
 #include "Window.h"
 #include "Devices.h"
 #include "Swapchain.h"
+#include "Buffer.h"
+#include "Helpers.h"
 
+#if defined(ENABLE_IMGUI)
 #include "imgui.h"
+#endif
 
 #pragma warning( push )
 #pragma warning( disable: 26812 )
@@ -43,6 +47,48 @@ PFN_vkCmdBeginDebugUtilsLabelEXT gfDebugMarkerBegin;
 PFN_vkCmdEndDebugUtilsLabelEXT gfDebugMarkerEnd;
 PFN_vkCmdInsertDebugUtilsLabelEXT gfDebugMarkerInsert;
 
+bool getVkInstanceProcAddr(void* aFunc, const char* aName) {
+	PFN_vkVoidFunction* func = (PFN_vkVoidFunction*)aFunc;
+	*func = vkGetInstanceProcAddr(gVkInstance, aName);
+	ASSERT(*func != nullptr);
+	return *func != nullptr;
+};
+
+#if defined(ENABLE_XR)
+XrDebugUtilsMessengerEXT gXrDebugMessenger = VK_NULL_HANDLE;
+
+static XRAPI_ATTR XrBool32 XRAPI_CALL
+XrDebugCallback(XrDebugUtilsMessageSeverityFlagsEXT              messageSeverity,
+	XrDebugUtilsMessageTypeFlagsEXT                  messageTypes,
+	const XrDebugUtilsMessengerCallbackDataEXT* callbackData,
+	void* userData) {
+
+	const char* severityText[4] = { "VERBOSE",
+		"INFO",
+		"WARNING",
+		"ERROR" };
+	const char* typeText[4] = {
+		"GENERAL",
+		"VALIDATION",
+		"PERFORMANCE",
+		"CONFORMANCE" };
+	LOG::Log("XR_DEBUG %s: (%s) (%s/%s)\n\t %s\n", callbackData->messageId, callbackData->functionName, severityText[messageSeverity], typeText[messageTypes],
+		callbackData->message);
+
+	//if (callbackData->messageId != 0) {
+	//	ASSERT("XR Error");
+	//}
+
+	return VK_FALSE;
+}
+
+bool getXrInstanceProcAddr(void* aFunc, const char* aName) {
+	PFN_xrVoidFunction* func = (PFN_xrVoidFunction*)aFunc;
+	xrGetInstanceProcAddr(gXrInstance, aName, func);
+	ASSERT(*func != nullptr);
+	return *func != nullptr;
+};
+#endif
 
 bool CheckVkResult(VkResult aResult) {
 	switch (aResult) {
@@ -59,7 +105,7 @@ bool VkResultToBool(VkResult aResult) {
 }
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL
-DebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+VkDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT messageType,
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 	void* pUserData) {
@@ -98,15 +144,41 @@ bool Graphics::StartUp() {
 		uint32_t extensionCount = 0;
 		xrResult = xrEnumerateInstanceExtensionProperties(NULL, 0, &extensionCount, NULL);
 		mXrInstanceExtensions.resize(extensionCount);
-		
+
 		for (int i = 0; i < extensionCount; i++) {
 			mXrInstanceExtensions[i].type = XR_TYPE_EXTENSION_PROPERTIES;
 		}
-		
+
 		xrResult = xrEnumerateInstanceExtensionProperties(NULL, extensionCount, &extensionCount, mXrInstanceExtensions.data());
 
-		std::vector<const char*> extensions = { XR_KHR_VULKAN_ENABLE_EXTENSION_NAME };
+		std::vector<const char*> extensions;// = { XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME };
 
+		auto optionalXrExtension = [&](const char* aExtension) {
+			for (int i = 0; i < extensionCount; i++) {
+				if (strcmp(aExtension, mXrInstanceExtensions[i].extensionName) == 0) {
+					extensions.push_back(aExtension);
+					return true;
+				}
+			}
+			return false;
+		};
+
+		auto requireXrExtension = [&](const char* aExtension) {
+			if (optionalXrExtension(aExtension)) {
+				return true;
+			}
+			ASSERT(false);
+			return false;
+		};
+
+		//if (optionalXrExtension(XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME) == false) {
+		//	requireXrExtension(XR_KHR_VULKAN_ENABLE_EXTENSION_NAME);
+		//}
+		//requireXrExtension(XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME);
+		requireXrExtension(XR_KHR_VULKAN_ENABLE_EXTENSION_NAME);
+		optionalXrExtension(XR_KHR_VISIBILITY_MASK_EXTENSION_NAME);
+		optionalXrExtension(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
+		optionalXrExtension(XR_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 		XrInstanceCreateInfo create = {};
 		create.type = XR_TYPE_INSTANCE_CREATE_INFO;
@@ -117,6 +189,26 @@ bool Graphics::StartUp() {
 		create.enabledExtensionCount = extensions.size();
 		create.enabledExtensionNames = extensions.data();
 		xrCreateInstance(&create, &gXrInstance);
+
+		XrDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+		debugCreateInfo.type =
+			XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		debugCreateInfo.messageSeverities =
+			//XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		debugCreateInfo.messageTypes = XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+			XR_DEBUG_UTILS_MESSAGE_TYPE_CONFORMANCE_BIT_EXT;
+		debugCreateInfo.userCallback = XrDebugCallback;
+		debugCreateInfo.next = nullptr;
+
+		PFN_xrCreateDebugUtilsMessengerEXT xrCreateDebugUtilsMessengerEXT;
+		if (getXrInstanceProcAddr(&xrCreateDebugUtilsMessengerEXT, "xrCreateDebugUtilsMessengerEXT")) {
+			xrCreateDebugUtilsMessengerEXT(gXrInstance, &debugCreateInfo, &gXrDebugMessenger);
+		}
 
 		XrSystemGetInfo systemGet = {};
 		systemGet.type = XR_TYPE_SYSTEM_GET_INFO;
@@ -171,10 +263,12 @@ bool Graphics::Initalize() {
 		createInfo.pAllocationCallbacks = GetAllocationCallback();
 
 		vmaCreateAllocator(&createInfo, &mAllocator);
-  	}
+	}
 
 	//imgui
-	ImGui::CreateContext();
+#if defined(ENABLE_IMGUI)
+	CreateImGui();
+#endif
 
 	//descriptor sets?
 
@@ -191,6 +285,20 @@ bool Graphics::Destroy() {
 			func(gVkInstance, gDebugMessenger, GetAllocationCallback());
 		}
 	}
+
+	vmaDestroyAllocator(mAllocator);
+	mAllocator = VK_NULL_HANDLE;
+
+	mSwapchain->Destroy();
+
+	mDevicesHandler->Destroy();
+
+#if defined(ENABLE_XR)
+	if (gXrInstance) {
+		xrDestroyInstance(gXrInstance);
+		gXrInstance = XR_NULL_HANDLE;
+	}
+#endif
 
 	if (gVkInstance) {
 		vkDestroyInstance(gVkInstance, GetAllocationCallback());
@@ -225,7 +333,7 @@ void Graphics::EndFrame() {
 	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(mSwapchain->GetImageIndex());
 	vkEndCommandBuffer(graphics);
 
-	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, {graphics});
+	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, { graphics });
 
 	mSwapchain->PresentImage();
 }
@@ -236,6 +344,44 @@ const uint32_t Graphics::GetCurrentImageIndex() const {
 
 VkCommandBuffer Graphics::GetCurrentGraphicsCommandBuffer() const {
 	return GetMainDevice()->GetGraphicsCB(GetCurrentImageIndex());
+}
+
+OneTimeCommandBuffer Graphics::AllocateGraphicsCommandBuffer() {
+	VkCommandBufferAllocateInfo allocateInfo = {};
+	allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocateInfo.commandPool = mDevicesHandler->GetGraphicsPool();
+	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocateInfo.commandBufferCount = 1;
+
+	VkCommandBuffer buffer;
+	vkAllocateCommandBuffers(GetVkDevice(), &allocateInfo, &buffer);
+
+	VkCommandBufferBeginInfo beginInfo = {};
+	beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+	vkBeginCommandBuffer(buffer, &beginInfo);
+
+	VkFenceCreateInfo fenceInfo = {};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+	VkFence fence;
+	vkCreateFence(GetVkDevice(), &fenceInfo, GetAllocationCallback(), &fence);
+
+	return { buffer, fence };
+}
+
+void Graphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer) {
+	vkEndCommandBuffer(aBuffer);
+
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.pCommandBuffers = &aBuffer.mBuffer;
+
+	vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, 1, &submitInfo, aBuffer.mFence);
+	vkWaitForFences(GetVkDevice(), 1, &aBuffer.mFence, true, UINT64_MAX);
+
+	vkDestroyFence(GetVkDevice(), aBuffer.mFence, GetAllocationCallback());
+	vkFreeCommandBuffers(GetVkDevice(), mDevicesHandler->GetGraphicsPool(), 1, &aBuffer.mBuffer);
 }
 
 const VkDevice Graphics::GetVkDevice() const {
@@ -252,6 +398,10 @@ const Devices* Graphics::GetMainDevice() const {
 
 const Swapchain* Graphics::GetMainSwapchain() const {
 	return mSwapchain;
+}
+
+const VkFormat Graphics::GetMainFormat() const {
+	return GetMainSwapchain()->GetColorFormat();
 }
 
 bool Graphics::CreateInstance() {
@@ -284,20 +434,20 @@ bool Graphics::CreateInstance() {
 	//openXR
 	{
 		PFN_xrGetVulkanInstanceExtensionsKHR xrGetVulkanInstanceExtensionsKHR;
-		xrGetInstanceProcAddr(gXrInstance, "xrGetVulkanInstanceExtensionsKHR", (PFN_xrVoidFunction*)&xrGetVulkanInstanceExtensionsKHR);
+		getXrInstanceProcAddr(&xrGetVulkanInstanceExtensionsKHR, "xrGetVulkanInstanceExtensionsKHR");
 
-		uint32_t extensionCount = 0;
+		uint32_t extensionBufferSize = 0;
 		XrResult xrResult;
-		xrResult = xrGetVulkanInstanceExtensionsKHR(gXrInstance, gXrSystemId, 0, &extensionCount, NULL);
-		char* xrExtensions = new char[extensionCount];
-		xrResult = xrGetVulkanInstanceExtensionsKHR(gXrInstance, gXrSystemId, extensionCount, &extensionCount, xrExtensions);
+		xrResult = xrGetVulkanInstanceExtensionsKHR(gXrInstance, gXrSystemId, 0, &extensionBufferSize, NULL);
+		char* xrExtensions = new char[extensionBufferSize];
+		xrResult = xrGetVulkanInstanceExtensionsKHR(gXrInstance, gXrSystemId, extensionBufferSize, &extensionBufferSize, xrExtensions);
 
 		int lastPoint = 0;
-		for (int i = 0; i < extensionCount; i++) {
+		for (int i = 0; i < extensionBufferSize; i++) {
 			if (xrExtensions[i] == ' ') {
 				xrExtensions[i] = '\0';
 				extensionsTemp.push_back(&xrExtensions[lastPoint]);
-				lastPoint = i+1;
+				lastPoint = i + 1;
 			}
 		}
 		extensionsTemp.push_back(&xrExtensions[lastPoint]);
@@ -319,7 +469,7 @@ bool Graphics::CreateInstance() {
 			debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
 				VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 				VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-			debugCreateInfo.pfnUserCallback = DebugCallback;
+			debugCreateInfo.pfnUserCallback = VkDebugCallback;
 			debugCreateInfo.pNext = nullptr;
 
 			layers.push_back(VK_LAYER_KHRONOS_validation);
@@ -346,27 +496,45 @@ bool Graphics::CreateInstance() {
 	CheckVkResult(result);
 
 	if (gInstanceValidationEnabled) {
-		auto getInstanceProcAddr = [](void* aFunc, const char* aName) {
-			PFN_vkVoidFunction* func = (PFN_vkVoidFunction*)aFunc;
-			*func = vkGetInstanceProcAddr(gVkInstance, aName);
-			ASSERT(*func != nullptr);
-			return *func != nullptr;
-		};
-
 		PFN_vkCreateDebugUtilsMessengerEXT vkCreateDebugUtilsMessengerEXT;
-		if (getInstanceProcAddr(&vkCreateDebugUtilsMessengerEXT, "vkCreateDebugUtilsMessengerEXT")) {
+		if (getVkInstanceProcAddr(&vkCreateDebugUtilsMessengerEXT, "vkCreateDebugUtilsMessengerEXT")) {
 			vkCreateDebugUtilsMessengerEXT(gVkInstance, &debugCreateInfo, GetAllocationCallback(),
 				&gDebugMessenger);
 		}
 
-		getInstanceProcAddr(&gfDebugMarkerSetObjectName, "vkSetDebugUtilsObjectNameEXT");
-		getInstanceProcAddr(&gfDebugMarkerBegin, "vkCmdBeginDebugUtilsLabelEXT");
-		getInstanceProcAddr(&gfDebugMarkerEnd, "vkCmdEndDebugUtilsLabelEXT");
-		getInstanceProcAddr(&gfDebugMarkerInsert, "vkCmdInsertDebugUtilsLabelEXT");
+		getVkInstanceProcAddr(&gfDebugMarkerSetObjectName, "vkSetDebugUtilsObjectNameEXT");
+		getVkInstanceProcAddr(&gfDebugMarkerBegin, "vkCmdBeginDebugUtilsLabelEXT");
+		getVkInstanceProcAddr(&gfDebugMarkerEnd, "vkCmdEndDebugUtilsLabelEXT");
+		getVkInstanceProcAddr(&gfDebugMarkerInsert, "vkCmdInsertDebugUtilsLabelEXT");
 	}
 
 	return VkResultToBool(result);
 }
+
+#if defined(ENABLE_IMGUI)
+bool Graphics::CreateImGui() {
+	ImGui::CreateContext();
+
+	ImGuiIO& io = ImGui::GetIO();
+
+	unsigned char* fontData;
+	int fontWidth;
+	int fontHeight;
+	int fontBytes;
+	io.Fonts->GetTexDataAsRGBA32(&fontData, &fontWidth, &fontHeight, &fontBytes);
+	const int bufferSize = fontWidth * fontHeight * sizeof(unsigned char) * fontBytes;
+	ImageSize size(fontWidth, fontHeight);
+
+	Buffer fontBuffer;
+	fontBuffer.CreateFromData(bufferSize, fontData);
+
+	mImGuiFontImage.CreateFromBuffer(fontBuffer, VK_FORMAT_R8G8B8A8_UNORM, size);
+
+	fontBuffer.Destroy();
+
+	return true;
+}
+#endif
 
 bool Graphics::HasInstanceExtension(const char* aExtension) const {
 	for (int i = 0; i < mInstanceExtensions.size(); i++) {

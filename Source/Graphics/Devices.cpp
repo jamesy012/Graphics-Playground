@@ -200,6 +200,9 @@ bool Devices::Setup() {
 	return true;
 }
 
+void Devices::Destroy() {
+}
+
 void Devices::CreateCommandPools() {
 
 	VkCommandPoolCreateInfo createInfo = {};

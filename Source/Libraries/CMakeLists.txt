@@ -10,6 +10,7 @@ if(${GraphicsPlayground_Graphics_Vulkan})
 target_compile_definitions(GraphicsPlayground PUBLIC XR_USE_GRAPHICS_API_VULKAN)
 endif()
 add_subdirectory(OpenXR-SDK)
+target_include_directories(GraphicsPlayground PRIVATE "OpenXR-SDK/include")
 endif()
 
 #~~~ Other sub directories
@@ -63,6 +64,7 @@ if(GraphicsPlayground_Enable_ImGui)
 
    target_sources(GraphicsPlayground PRIVATE ${IMGUI_SOURCES} ${IMGUI_HEADERS})
    target_include_directories(GraphicsPlayground PRIVATE ${IMGUI_PATH})
+   #target_include_directories(GraphicsPlayground PRIVATE ${IMGUI_PATH}/imgui.h)
    target_include_directories(GraphicsPlayground PRIVATE ${IMGUI_PATH}/backends)
 endif()
 

@@ -5,6 +5,8 @@
 
 #include <vector>
 
+#include "Image.h"
+
 class Window;
 class Devices;
 class Swapchain;
@@ -24,6 +26,12 @@ static VkAllocationCallbacks* GetAllocationCallback() {
 	static VkAllocationCallbacks* allocationCallback = CreateAllocationCallbacks();
 	return allocationCallback;
 }
+
+struct OneTimeCommandBuffer {
+	VkCommandBuffer mBuffer;
+	VkFence mFence;
+	operator VkCommandBuffer() { return mBuffer; }
+};
 
 class Graphics {
 public:
@@ -48,13 +56,26 @@ public:
 
 	VkCommandBuffer GetCurrentGraphicsCommandBuffer() const;
 
+	OneTimeCommandBuffer AllocateGraphicsCommandBuffer();
+	//submits and finish's the command buffer
+	void EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer);
+
 //~~~ Helpers
 	const VkDevice GetVkDevice() const;
 	const VkPhysicalDevice GetVkPhysicalDevice() const;
 	const Devices* GetMainDevice() const;
 	const Swapchain* GetMainSwapchain() const;
+
+	const VkFormat GetMainFormat() const;
+	const VmaAllocator GetAllocator() const { return mAllocator; }
 private:
 	bool CreateInstance();
+#if defined(ENABLE_IMGUI)
+	bool CreateImGui();
+
+	Image mImGuiFontImage;
+
+#endif
 
 	bool HasInstanceExtension(const char* aExtension) const;
 	bool HasInstanceLayer(const char* aLayer) const;

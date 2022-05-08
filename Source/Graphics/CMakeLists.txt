@@ -5,6 +5,7 @@ set("GraphicsPlayground_Graphics_Vulkan" ON CACHE BOOL "Enables Vulkan")
 set(GRAPHICS_SOURCE 
 "${CMAKE_CURRENT_SOURCE_DIR}/Graphics.h"
 "${CMAKE_CURRENT_SOURCE_DIR}/Graphics.cpp" 
+"${CMAKE_CURRENT_SOURCE_DIR}/Helpers.h" 
 "${CMAKE_CURRENT_SOURCE_DIR}/Swapchain.h" 
 "${CMAKE_CURRENT_SOURCE_DIR}/Swapchain.cpp" 
 "${CMAKE_CURRENT_SOURCE_DIR}/Framebuffer.h" 
@@ -16,7 +17,9 @@ set(GRAPHICS_SOURCE
 "${CMAKE_CURRENT_SOURCE_DIR}/Image.h" 
 "${CMAKE_CURRENT_SOURCE_DIR}/Image.cpp" 
 "${CMAKE_CURRENT_SOURCE_DIR}/RenderPass.h" 
-"${CMAKE_CURRENT_SOURCE_DIR}/RenderPass.cpp" )
+"${CMAKE_CURRENT_SOURCE_DIR}/RenderPass.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/Buffer.h" 
+"${CMAKE_CURRENT_SOURCE_DIR}/Buffer.cpp" )
 
 if(${GraphicsPlayground_Graphics_Vulkan})
     message("Adding Vulkan")

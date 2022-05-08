@@ -62,6 +62,8 @@ class Devices {
 public:
 	Devices(const VkSurfaceKHR aSurface) : mSurface(aSurface) {};
 	bool Setup();
+	void Destroy();
+
 	void CreateCommandPools();
 	void CreateCommandBuffers(const uint8_t aNumBuffers);
 
@@ -72,6 +74,9 @@ public:
 
 	const VkCommandBuffer GetGraphicsCB(const uint8_t aIndex) const {
 		return mGraphicsCommandBuffers[aIndex];
+	}
+	const VkCommandPool GetGraphicsPool() const {
+		return mCommandPoolGraphics;
 	}
 private:
 

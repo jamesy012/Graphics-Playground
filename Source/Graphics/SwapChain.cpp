@@ -113,6 +113,9 @@ void Swapchain::Setup() {
     SetupSyncObjects();
 }
 
+void Swapchain::Destroy() {
+}
+
 void Swapchain::SetupImages() {
     if (mSwapchain == VK_NULL_HANDLE) {
         ASSERT(false);
@@ -143,11 +146,11 @@ void Swapchain::SetupSyncObjects() {
     fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
     fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-    vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, nullptr, &mRenderSemaphore);
-    vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, nullptr, &mPresentSemaphore);
+    vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, GetAllocationCallback(), &mRenderSemaphore);
+    vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, GetAllocationCallback(), &mPresentSemaphore);
     for (size_t i = 0; i < GetNumBuffers(); i++) {
         PerFrameInfo& data = mFrameInfo[i];
-        vkCreateFence(mAttachedDevice.mDevice, &fenceInfo, nullptr, &data.mSubmitFence);
+        vkCreateFence(mAttachedDevice.mDevice, &fenceInfo, GetAllocationCallback(), &data.mSubmitFence);
     }
 }
 

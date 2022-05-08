@@ -11,6 +11,7 @@ class Swapchain {
 public:
 	Swapchain(const DeviceData& aDevice) : mAttachedDevice(aDevice) {};
 	void Setup();
+	void Destroy();
 
 	const uint32_t GetImageIndex() const {
 		return mImageIndex;

@@ -16,8 +16,8 @@ void Framebuffer::Create(const Image& aImage, const RenderPass& mRenderPassTempl
     info.attachmentCount = 1;
     info.pAttachments = &attachments;
 
-    info.height = aImage.GetImageSize().height;
-    info.width = aImage.GetImageSize().width;
+    info.height = aImage.GetImageSize().mHeight;
+    info.width = aImage.GetImageSize().mWidth;
     info.layers = 1;
 
     info.flags = 0;

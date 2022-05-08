@@ -5,6 +5,7 @@
 #include "Graphics/Swapchain.h"
 #include "Graphics/RenderPass.h"
 #include "Graphics/Framebuffer.h"
+#include "Graphics/Image.h"
 
 #include <vulkan/vulkan.h>
 
@@ -21,6 +22,10 @@ int main() {
 	gfx.StartUp();
 	gfx.AddWindow(&window);
 	gfx.Initalize();
+
+	Image img;
+	img.CreateVkImage(gfx.GetMainFormat(), gfx.GetMainSwapchain()->GetSize());
+	img.Destroy();
 
 	RenderPass test;
 	test.Create();
@@ -42,6 +47,8 @@ int main() {
 		
 		gfx.EndFrame();
     }
+
+	gfx.Destroy();
 
 	return 0;
 }

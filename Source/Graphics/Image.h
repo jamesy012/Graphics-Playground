@@ -1,20 +1,37 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
+#include "Helpers.h"
+
+class Buffer;
 
 class Image {
 public:
+	Image() {}
+	~Image() {}
 
-	void CreateFromVkImage(VkImage aImage, VkFormat aFormat, VkExtent2D aSize);
+	void CreateVkImage(const VkFormat aFormat, const ImageSize aSize);
+	void CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, const ImageSize aSize);
+	void CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, const ImageSize aSize);
+
+	void Destroy();
+
+	void ChangeImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aNewLayout, VkPipelineStageFlags aSrcStageMask, VkPipelineStageFlags aDstStageMask);
 
 	const VkImage GetImage() const { return mImage; }
 	const VkImageView GetImageView() const { return mImageView; }
-	const VkExtent2D GetImageSize() const { return mSize; }
+	const ImageSize GetImageSize() const { return mSize; }
 
 private:
-	void CreateVkImageView(VkFormat aFormat);
+	void CreateVkImageView(const VkFormat aFormat);
 
 	VkImage mImage;
 	VkImageView mImageView;
-	VkExtent2D mSize;
+
+	ImageSize mSize;
+	VkImageLayout mLayout;
+
+	VmaAllocation mAllocation;
+	VmaAllocationInfo mAllocationInfo;
 };
