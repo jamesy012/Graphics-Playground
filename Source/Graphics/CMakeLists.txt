@@ -24,8 +24,43 @@ set(GRAPHICS_SOURCE
 if(${GraphicsPlayground_Graphics_Vulkan})
     message("Adding Vulkan")
     find_package(Vulkan REQUIRED)
-    target_link_libraries(GraphicsPlayground Vulkan::Vulkan)
-    include_directories(AFTER ${VULKAN_PATH}/Include)
+    message(STATUS ${Vulkan_FOUND})
+    message(STATUS ${Vulkan_INCLUDE_DIRS})
+    message(STATUS ${Vulkan_LIBRARIES})
+    message(STATUS ${Vulkan_VERSION})
+    message(STATUS ${Vulkan_INCLUDE_DIR})
+    message(STATUS ${Vulkan_LIBRARY})
+    message(STATUS ${Vulkan_GLSLC_EXECUTABLE})
+    message(STATUS ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE})
+    target_link_libraries(GraphicsPlayground ${Vulkan_LIBRARYS})
+    include_directories(AFTER ${Vulkan_INCLUDE_DIRS})
+
+    file(GLOB_RECURSE GLSL_SOURCE_FILES
+    "${PROJECT_SOURCE_DIR}/Shaders/*.frag"  
+    "${PROJECT_SOURCE_DIR}/Shaders/*.vert"
+    "${PROJECT_SOURCE_DIR}/Shaders/*.comp"
+    )
+
+    message("setting up shader compiling")
+    foreach(SHADER ${GLSL_SOURCE_FILES})
+      get_filename_component(FILE_NAME ${SHADER} NAME)
+       set(SPIRV "${PROJECT_SOURCE_DIR}/WorkDir/Shaders/${FILE_NAME}.spv")
+       message(STATUS "compiling ${SHADER} to ${SPIRV}")
+       add_custom_command(
+          OUTPUT ${SPIRV}
+          COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/WorkDir/Shaders/"
+          COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${SHADER}" -o "${SPIRV}"
+          DEPENDS ${SHADER})
+        list(APPEND SPIRV_BINARY_FILES ${SPIRV})
+    endforeach()
+
+    add_custom_target(
+    Shaders 
+    DEPENDS ${SPIRV_BINARY_FILES}
+    SOURCES ${GLSL_SOURCE_FILES}
+    )
+
+    add_dependencies(GraphicsPlayground Shaders)
 endif()
 
 target_sources(GraphicsPlayground PRIVATE ${GRAPHICS_SOURCE})

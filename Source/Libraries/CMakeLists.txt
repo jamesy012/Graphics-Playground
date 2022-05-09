@@ -7,10 +7,11 @@ message("Adding OpenXR")
 set("OpenXR-Link" openxr_loader)
 target_compile_definitions(GraphicsPlayground PUBLIC ENABLE_XR)
 if(${GraphicsPlayground_Graphics_Vulkan})
-target_compile_definitions(GraphicsPlayground PUBLIC XR_USE_GRAPHICS_API_VULKAN)
+   target_compile_definitions(GraphicsPlayground PUBLIC XR_USE_GRAPHICS_API_VULKAN)
 endif()
+#find_package(OpenXR)
 add_subdirectory(OpenXR-SDK)
-target_include_directories(GraphicsPlayground PRIVATE "OpenXR-SDK/include")
+target_include_directories(GraphicsPlayground PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/OpenXR-SDK/include")
 endif()
 
 #~~~ Other sub directories
