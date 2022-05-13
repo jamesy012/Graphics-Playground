@@ -3,6 +3,8 @@ set("SOURCE_FILES"
  "main.cpp"
  "PlatformDebug.cpp" 
  "PlatformDebug.h"
+ "Engine/FileIO.cpp" 
+ "Engine/FileIO.h"
 )
 
 source_group("Test" ${SOURCE_FILES})

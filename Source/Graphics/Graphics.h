@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "Image.h"
+#include "Pipeline.h"
 
 class Window;
 class Devices;
@@ -74,7 +75,7 @@ private:
 	bool CreateImGui();
 
 	Image mImGuiFontImage;
-
+	Pipeline mImGuiPipeline;
 #endif
 
 	bool HasInstanceExtension(const char* aExtension) const;

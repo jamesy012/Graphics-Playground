@@ -8,6 +8,7 @@
 #include "Swapchain.h"
 #include "Buffer.h"
 #include "Helpers.h"
+#include "Pipeline.h"
 
 #if defined(ENABLE_IMGUI)
 #include "imgui.h"
@@ -131,7 +132,7 @@ bool Graphics::StartUp() {
 		LOG::Log("Version: %i.%i.%i\n", VK_VERSION_MAJOR(version),
 			VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
 	}
-
+	
 	//XR
 #if defined(ENABLE_XR)
 	{
@@ -531,6 +532,12 @@ bool Graphics::CreateImGui() {
 	mImGuiFontImage.CreateFromBuffer(fontBuffer, VK_FORMAT_R8G8B8A8_UNORM, size);
 
 	fontBuffer.Destroy();
+
+	Pipeline imguiPipeline;
+	imguiPipeline.AddShader("WorkDir/Shaders/imgui.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	imguiPipeline.AddShader("WorkDir/Shaders/imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+
+	imguiPipeline.Create();
 
 	return true;
 }

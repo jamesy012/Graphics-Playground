@@ -19,7 +19,10 @@ set(GRAPHICS_SOURCE
 "${CMAKE_CURRENT_SOURCE_DIR}/RenderPass.h" 
 "${CMAKE_CURRENT_SOURCE_DIR}/RenderPass.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Buffer.h" 
-"${CMAKE_CURRENT_SOURCE_DIR}/Buffer.cpp" )
+"${CMAKE_CURRENT_SOURCE_DIR}/Buffer.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/Pipeline.h" 
+"${CMAKE_CURRENT_SOURCE_DIR}/Pipeline.cpp"
+ )
 
 if(${GraphicsPlayground_Graphics_Vulkan})
     message("Adding Vulkan")
@@ -48,8 +51,10 @@ if(${GraphicsPlayground_Graphics_Vulkan})
        message(STATUS "compiling ${SHADER} to ${SPIRV}")
        add_custom_command(
           OUTPUT ${SPIRV}
-          COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BINARY_DIR}/WorkDir/Shaders/"
-          COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${SHADER}" -o "${SPIRV}"
+          COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_SOURCE_DIR}/WorkDir/"
+          COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_SOURCE_DIR}/WorkDir/Shaders/"
+          #COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${SHADER}" -o "${SPIRV}"
+          COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${SHADER}" -o "${SPIRV}" -g
           DEPENDS ${SHADER})
         list(APPEND SPIRV_BINARY_FILES ${SPIRV})
     endforeach()

@@ -89,9 +89,9 @@ void Swapchain::Setup() {
             queueFamilies.push_back(aFamily);
         };
         
-        addQueue(mAttachedDevice.mQueue.mGraphicsQueue.mQueueFamily);
-        addQueue(mAttachedDevice.mQueue.mComputeQueue.mQueueFamily);
-        addQueue(mAttachedDevice.mQueue.mTransferQueue.mQueueFamily);
+        //addQueue(mAttachedDevice.mQueue.mGraphicsQueue.mQueueFamily);
+        //addQueue(mAttachedDevice.mQueue.mComputeQueue.mQueueFamily);
+        //addQueue(mAttachedDevice.mQueue.mTransferQueue.mQueueFamily);
         addQueue(mAttachedDevice.mQueue.mPresentQueue.mQueueFamily);
 
         if (queueFamilies.size() > 1) {
