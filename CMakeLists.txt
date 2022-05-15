@@ -21,6 +21,12 @@ if(UNIX AND NOT APPLE)  # for Linux, BSD, Solaris, Minix
 set(PLATFORM_LINUX 1)
 endif()
 
+message(STATUS ${CMAKE_GENERATOR})
+
+set(WORK_DIR_FOLDER_REL "../")
+get_filename_component(WORK_DIR_FOLDER "${CMAKE_BINARY_DIR}/${WORK_DIR_FOLDER_REL}" ABSOLUTE)
+message("BUILD_OUTPUT ${WORK_DIR_FOLDER}")
+
 #~~~ make project
 add_subdirectory(Source)
 
@@ -30,6 +36,16 @@ target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_WINDOWS=${PLATFORM
 target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_APPLE=${PLATFORM_APPLE})
 target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_LINUX=${PLATFORM_LINUX})
 
+#need a better way to determin this.. or make them work the same?
+if (CMAKE_GENERATOR MATCHES "Ninja")
+message(STATUS "using visual studio as generator")
+message("setting WORK_DIR_REL to \"${WORK_DIR_FOLDER_REL}/../\"")
+target_compile_definitions(GraphicsPlayground PUBLIC WORK_DIR_REL=\"${WORK_DIR_FOLDER_REL}/../\")
+else()
+message(STATUS "using visual studio code")
+message("setting WORK_DIR_REL to \"${WORK_DIR_FOLDER_REL}\"")
+target_compile_definitions(GraphicsPlayground PUBLIC WORK_DIR_REL=\"${WORK_DIR_FOLDER_REL}\")
+endif()
 
 #set(IMGUI_PATH "Libraries/imgui")
 #set(STB_PATH "Libraries/stb")

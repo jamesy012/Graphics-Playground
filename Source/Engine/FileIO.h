@@ -13,11 +13,11 @@ namespace FileIO {
     };
 
     struct File {
-        Path mPath;
-        std::string mData;
-        size_t mSize;
 
-        const uint32_t* GetAsUInt32();
+        Path mPath;
+        char* mData = nullptr;
+        size_t mSize = 0;
     };
     File LoadFile(Path aPath);
+    void UnloadFile(File aFile);
 };

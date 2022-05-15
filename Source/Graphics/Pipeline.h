@@ -11,7 +11,7 @@ class Pipeline {
 public:
     bool AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage);
 
-    bool Create();
+    bool Create(VkRenderPass aPass);
 
 private:
     std::vector<VkPipelineShaderStageCreateInfo> mShaders;

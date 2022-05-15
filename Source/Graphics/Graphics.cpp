@@ -9,6 +9,7 @@
 #include "Buffer.h"
 #include "Helpers.h"
 #include "Pipeline.h"
+#include "RenderPass.h"
 
 #if defined(ENABLE_IMGUI)
 #include "imgui.h"
@@ -534,10 +535,13 @@ bool Graphics::CreateImGui() {
 	fontBuffer.Destroy();
 
 	Pipeline imguiPipeline;
-	imguiPipeline.AddShader("WorkDir/Shaders/imgui.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	imguiPipeline.AddShader("WorkDir/Shaders/imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	imguiPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/imgui.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	imguiPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
 
-	imguiPipeline.Create();
+	RenderPass test;
+	test.Create();
+
+	imguiPipeline.Create(test.GetRenderPass());
 
 	return true;
 }

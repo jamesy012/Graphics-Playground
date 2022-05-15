@@ -30,15 +30,15 @@ struct DeviceData {
 		std::vector<QueueFamilys> mQueueFamilies;
 		struct QueueIndex {
 			int8_t mQueueFamily = -1;
-			VkQueue mQueue;
+			VkQueue mQueue = VK_NULL_HANDLE;
 		};
 		//union {
-			struct {
+			//struct {
 				QueueIndex mGraphicsQueue;
 				QueueIndex mComputeQueue;
 				QueueIndex mTransferQueue;
 				QueueIndex mPresentQueue;
-			};
+			//};
 		//	QueueIndex mQueues[(int)QueueTypes::NUM];
 		//};
 	} mQueue;

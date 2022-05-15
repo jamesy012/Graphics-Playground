@@ -1,4 +1,5 @@
 #version 450 core
+#extension GL_KHR_vulkan_glsl : enable
 
 layout(location = 0) in struct { vec4 Color; vec2 UV; } In;
 

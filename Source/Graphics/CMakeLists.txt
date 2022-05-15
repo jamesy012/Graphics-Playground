@@ -47,12 +47,12 @@ if(${GraphicsPlayground_Graphics_Vulkan})
     message("setting up shader compiling")
     foreach(SHADER ${GLSL_SOURCE_FILES})
       get_filename_component(FILE_NAME ${SHADER} NAME)
-       set(SPIRV "${PROJECT_SOURCE_DIR}/WorkDir/Shaders/${FILE_NAME}.spv")
+       set(SPIRV "${WORK_DIR_FOLDER}/WorkDir/Shaders/${FILE_NAME}.spv")
        message(STATUS "compiling ${SHADER} to ${SPIRV}")
        add_custom_command(
           OUTPUT ${SPIRV}
-          COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_SOURCE_DIR}/WorkDir/"
-          COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_SOURCE_DIR}/WorkDir/Shaders/"
+          COMMAND ${CMAKE_COMMAND} -E make_directory "${WORK_DIR_FOLDER}/WorkDir/"
+          COMMAND ${CMAKE_COMMAND} -E make_directory "${WORK_DIR_FOLDER}/WorkDir/Shaders/"
           #COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${SHADER}" -o "${SPIRV}"
           COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${SHADER}" -o "${SPIRV}" -g
           DEPENDS ${SHADER})

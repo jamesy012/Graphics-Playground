@@ -1,5 +1,7 @@
 #include "Devices.h"
 
+#include <cstring> //memset
+
 #include "Graphics.h"
 #include "PlatformDebug.h"
 
