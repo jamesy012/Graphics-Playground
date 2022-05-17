@@ -280,6 +280,33 @@ bool Graphics::Initalize() {
 	mFramebuffer[1].Create(mSwapchain->GetImage(1), mRenderPass);
 	mFramebuffer[2].Create(mSwapchain->GetImage(2), mRenderPass);
 
+	mTestVertBuffer.Create(BufferType::VERTEX, 4 * sizeof(ImDrawVert));
+	mTestIndexBuffer.Create(BufferType::INDEX, 6 * sizeof(ImDrawIdx));
+
+	ImDrawVert* vertexData = (ImDrawVert*)mTestVertBuffer.Map();
+	ImDrawIdx* indexData = (ImDrawIdx*)mTestIndexBuffer.Map();
+
+	vertexData[0].pos = ImVec2(0,0);
+	vertexData[0].col = INT32_MAX;
+	vertexData[1].pos = ImVec2(0,1);
+	vertexData[1].col = INT32_MAX;
+	vertexData[2].pos = ImVec2(1,0);
+	vertexData[2].col = INT32_MAX;
+	vertexData[3].pos = ImVec2(1,1);
+	vertexData[3].col = INT32_MAX;
+	indexData[0] = 0;
+	indexData[1] = 1;
+	indexData[2] = 2;	
+	indexData[3] = 2;
+	indexData[4] = 1;
+	indexData[5] = 3;
+
+	mTestVertBuffer.Flush();
+	mTestIndexBuffer.Flush();
+
+	mTestVertBuffer.UnMap();
+	mTestIndexBuffer.UnMap();
+
 	//imgui
 #if defined(ENABLE_IMGUI)
 	CreateImGui();
@@ -599,6 +626,7 @@ void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
 	mImGuiVertBuffer.UnMap();
 	mImGuiIndexBuffer.UnMap();
 
+	mRenderPass.Begin(aBuffer, mFramebuffer[GetCurrentImageIndex()]);
 
 	//vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 	vkCmdBindPipeline(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mImGuiPipeline.GetPipeline());
@@ -606,9 +634,23 @@ void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
 	//VkViewport viewport = vks::initializers::viewport(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y, 0.0f, 1.0f);
 	//vkCmdSetViewport(aBuffer, 0, 1, &viewport);
 
+
+
+	{
+		VkDeviceSize offsets[1] = { 0 };
+		vkCmdBindVertexBuffers(aBuffer, 0, 1, mTestVertBuffer.GetBufferRef(), offsets);
+		vkCmdBindIndexBuffer(aBuffer, mTestIndexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT16);
+
+		gImGuiPushConstant.mScale = glm::vec2(1);
+		gImGuiPushConstant.mUv = glm::vec2(0);//glm::vec2(-1.0f);
+		vkCmdPushConstants(aBuffer, mImGuiPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ImGuiPushConstant), &gImGuiPushConstant);
+
+		vkCmdDrawIndexed(aBuffer, 6, 1, 0, 0, 0);
+	}
+
 	// UI scale and translate via push constants
 	gImGuiPushConstant.mScale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
-	gImGuiPushConstant.mUv = glm::vec2(1);//glm::vec2(-1.0f);
+	gImGuiPushConstant.mUv = glm::vec2(-1.5f);//glm::vec2(-1.0f);
 	vkCmdPushConstants(aBuffer, mImGuiPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ImGuiPushConstant), &gImGuiPushConstant);
 
 	// Render commands
@@ -616,7 +658,6 @@ void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
 	int32_t indexOffset = 0;
 
 	if (imDrawData->CmdListsCount > 0) {
-		mRenderPass.Begin(aBuffer, mFramebuffer[GetCurrentImageIndex()]);
 
 		VkDeviceSize offsets[1] = { 0 };
 		vkCmdBindVertexBuffers(aBuffer, 0, 1, mImGuiVertBuffer.GetBufferRef(), offsets);
@@ -639,15 +680,15 @@ void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
 				scissorRect.offset.y = std::max((int32_t)(pcmd->ClipRect.y), 0);
 				scissorRect.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
 				scissorRect.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y);
-				vkCmdSetScissor(aBuffer, 0, 1, &scissorRect);
+				//vkCmdSetScissor(aBuffer, 0, 1, &scissorRect);
 				vkCmdDrawIndexed(aBuffer, pcmd->ElemCount, 1, indexOffset, vertexOffset, 0);
 				indexOffset += pcmd->ElemCount;
 			}
 			vertexOffset += cmd_list->VtxBuffer.Size;
 		}
 
-		mRenderPass.End(aBuffer);
 	}
+		mRenderPass.End(aBuffer);
 
 
 }

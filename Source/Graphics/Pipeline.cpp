@@ -60,8 +60,8 @@ bool Pipeline::Create(VkRenderPass aPass) {
 		vertexInfo.pVertexBindingDescriptions = &vertexBinding;
 		vertexInfo.pVertexAttributeDescriptions = vertexAttribute.data();
 		vertexInfo.vertexAttributeDescriptionCount = vertexAttribute.size();
-	}	
-	
+	}
+
 	//~~~ Input Assembly
 	VkPipelineInputAssemblyStateCreateInfo inputAssemblyInfo = {};
 	{
@@ -73,6 +73,7 @@ bool Pipeline::Create(VkRenderPass aPass) {
 	VkPipelineViewportStateCreateInfo viewportInfo = {};
 	{
 		viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewportInfo.scissorCount = 1;
 		viewportInfo.viewportCount = 1;
 	}
 
@@ -93,21 +94,35 @@ bool Pipeline::Create(VkRenderPass aPass) {
 	VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
 	{
 		depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencilState.depthTestEnable = false;
+		depthStencilState.depthWriteEnable = false;
+		depthStencilState.depthCompareOp = VK_COMPARE_OP_ALWAYS;
+		depthStencilState.back.compareOp = VK_COMPARE_OP_ALWAYS;
 	}
 
 	//~~~ Color Blend State
 	VkPipelineColorBlendStateCreateInfo colorBlendState = {};
+	VkPipelineColorBlendAttachmentState blendAttachmentState = {};
 	{
+		blendAttachmentState.blendEnable = VK_TRUE;
+		blendAttachmentState.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+		blendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+		blendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		blendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;
+		blendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		blendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+		blendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
 		colorBlendState.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-        colorBlendState.pAttachments;
+		colorBlendState.attachmentCount = 1;
+		colorBlendState.pAttachments = &blendAttachmentState;
 	}
 
 	//~~~ Dynamic States
 	VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
-    const VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT,VK_DYNAMIC_STATE_SCISSOR};
+	const VkDynamicState dynamicStates[] = { VK_DYNAMIC_STATE_VIEWPORT,VK_DYNAMIC_STATE_SCISSOR };
 	{
 		dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-		dynamicStateInfo.dynamicStateCount = sizeof(dynamicStates)/sizeof(VkDynamicState);
+		dynamicStateInfo.dynamicStateCount = sizeof(dynamicStates) / sizeof(VkDynamicState);
 		dynamicStateInfo.pDynamicStates = dynamicStates;
 	}
 
@@ -131,8 +146,8 @@ bool Pipeline::Create(VkRenderPass aPass) {
 		{
 			pushRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			struct test {
-                glm::vec2 mScale;
-                glm::vec2 mUv;
+				glm::vec2 mScale;
+				glm::vec2 mUv;
 			};
 			pushRange.size = sizeof(test);
 		}
@@ -174,10 +189,10 @@ bool Pipeline::Create(VkRenderPass aPass) {
 	return false;
 }
 
-void Pipeline::Begin(VkCommandBuffer aBuffer){
-    vkCmdBindPipeline(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
+void Pipeline::Begin(VkCommandBuffer aBuffer) {
+	vkCmdBindPipeline(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
 }
 
-void Pipeline::End(VkCommandBuffer aBuffer){
+void Pipeline::End(VkCommandBuffer aBuffer) {
 
 }

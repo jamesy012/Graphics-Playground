@@ -84,6 +84,9 @@ private:
 	Buffer mImGuiIndexBuffer;
 #endif
 
+	Buffer mTestVertBuffer;
+	Buffer mTestIndexBuffer;
+
 	RenderPass mRenderPass;
 	Framebuffer mFramebuffer[3];
 
