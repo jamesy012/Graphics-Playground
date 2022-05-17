@@ -69,6 +69,14 @@ bool Pipeline::Create(VkRenderPass aPass) {
 		inputAssemblyInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 	}
 
+	//~~~ Viewport State
+	VkPipelineViewportStateCreateInfo viewportInfo = {};
+	{
+		viewportInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+		viewportInfo.viewportCount = 1;
+	}
+
+
 	//~~~ Rasterization
 	VkPipelineRasterizationStateCreateInfo rasterizationInfo = {};
 	{
@@ -81,8 +89,29 @@ bool Pipeline::Create(VkRenderPass aPass) {
 		rasterizationInfo.lineWidth = 1.0f;
 	}
 
+	//~~~ Depth Stencil State
+	VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
+	{
+		depthStencilState.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+	}
+
+	//~~~ Color Blend State
+	VkPipelineColorBlendStateCreateInfo colorBlendState = {};
+	{
+		colorBlendState.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+        colorBlendState.pAttachments;
+	}
+
+	//~~~ Dynamic States
+	VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
+    const VkDynamicState dynamicStates[] = {VK_DYNAMIC_STATE_VIEWPORT,VK_DYNAMIC_STATE_SCISSOR};
+	{
+		dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+		dynamicStateInfo.dynamicStateCount = sizeof(dynamicStates)/sizeof(VkDynamicState);
+		dynamicStateInfo.pDynamicStates = dynamicStates;
+	}
+
 	//~~~ Layout
-	VkPipelineLayout pipelineLayout;
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	{
 		VkDescriptorSetLayoutBinding binding = {};
@@ -102,8 +131,8 @@ bool Pipeline::Create(VkRenderPass aPass) {
 		{
 			pushRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 			struct test {
-				glm::vec4 Color;
-				glm::vec2 UV;
+                glm::vec2 mScale;
+                glm::vec2 mUv;
 			};
 			pushRange.size = sizeof(test);
 		}
@@ -113,9 +142,11 @@ bool Pipeline::Create(VkRenderPass aPass) {
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
 		pipelineLayoutInfo.pSetLayouts = &setLayout;
 		pipelineLayoutInfo.setLayoutCount = 1;
+		pipelineLayoutInfo.pSetLayouts = 0;
+		pipelineLayoutInfo.setLayoutCount = 0;//temp to remove descriptor set
 
 		vkCreatePipelineLayout(gGraphics->GetVkDevice(), &pipelineLayoutInfo,
-			GetAllocationCallback(), &pipelineLayout);
+			GetAllocationCallback(), &mPipelineLayout);
 	}
 
 	//~~~ VkGraphicsPipelineCreateInfo
@@ -128,17 +159,25 @@ bool Pipeline::Create(VkRenderPass aPass) {
 	createInfo.pVertexInputState = &vertexInfo;
 	createInfo.pInputAssemblyState = &inputAssemblyInfo;
 	createInfo.pTessellationState = 0;
-	createInfo.pViewportState = 0;
+	createInfo.pViewportState = &viewportInfo;
 	createInfo.pRasterizationState = &rasterizationInfo;
 	createInfo.pMultisampleState = 0;
-	createInfo.pDepthStencilState = 0;
-	createInfo.pColorBlendState = 0;
-	createInfo.pDynamicState = 0;
-	createInfo.layout = pipelineLayout;
+	createInfo.pDepthStencilState = &depthStencilState;
+	createInfo.pColorBlendState = &colorBlendState;
+	createInfo.pDynamicState = &dynamicStateInfo;
+	createInfo.layout = mPipelineLayout;
 	createInfo.renderPass = aPass;
 
 	vkCreateGraphicsPipelines(gGraphics->GetVkDevice(), pipelineCache, 1,
 		&createInfo, GetAllocationCallback(), &mPipeline);
 
 	return false;
+}
+
+void Pipeline::Begin(VkCommandBuffer aBuffer){
+    vkCmdBindPipeline(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
+}
+
+void Pipeline::End(VkCommandBuffer aBuffer){
+
 }

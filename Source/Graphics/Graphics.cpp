@@ -2,6 +2,8 @@
 
 #include <string>
 
+#include <glm/glm.hpp>
+
 #include "PlatformDebug.h"
 #include "Window.h"
 #include "Devices.h"
@@ -13,6 +15,12 @@
 
 #if defined(ENABLE_IMGUI)
 #include "imgui.h"
+
+struct ImGuiPushConstant {
+	glm::vec2 mScale;
+	glm::vec2 mUv;
+} gImGuiPushConstant;
+
 #endif
 
 #pragma warning( push )
@@ -267,6 +275,11 @@ bool Graphics::Initalize() {
 		vmaCreateAllocator(&createInfo, &mAllocator);
 	}
 
+	mRenderPass.Create();
+	mFramebuffer[0].Create(mSwapchain->GetImage(0), mRenderPass);
+	mFramebuffer[1].Create(mSwapchain->GetImage(1), mRenderPass);
+	mFramebuffer[2].Create(mSwapchain->GetImage(2), mRenderPass);
+
 	//imgui
 #if defined(ENABLE_IMGUI)
 	CreateImGui();
@@ -322,6 +335,10 @@ void Graphics::AddWindow(Window* aWindow) {
 }
 
 void Graphics::StartNewFrame() {
+#if defined(ENABLE_IMGUI)
+	ImGui::NewFrame();
+#endif
+
 	mFrameCounter++;
 	uint32_t index = mSwapchain->GetNextImage();
 
@@ -333,6 +350,13 @@ void Graphics::StartNewFrame() {
 
 void Graphics::EndFrame() {
 	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(mSwapchain->GetImageIndex());
+
+#if defined(ENABLE_IMGUI)
+	ImGui::EndFrame();
+	ImGui::Render();
+	RenderImGui(graphics);
+#endif
+
 	vkEndCommandBuffer(graphics);
 
 	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, { graphics });
@@ -519,6 +543,9 @@ bool Graphics::CreateImGui() {
 
 	ImGuiIO& io = ImGui::GetIO();
 
+	io.DisplaySize = ImVec2(GetMainSwapchain()->GetSize().width, GetMainSwapchain()->GetSize().height);
+	io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
+
 	unsigned char* fontData;
 	int fontWidth;
 	int fontHeight;
@@ -528,23 +555,103 @@ bool Graphics::CreateImGui() {
 	ImageSize size(fontWidth, fontHeight);
 
 	Buffer fontBuffer;
-	fontBuffer.CreateFromData(bufferSize, fontData);
+	fontBuffer.CreateFromData(BufferType::STAGING, bufferSize, fontData);
 
 	mImGuiFontImage.CreateFromBuffer(fontBuffer, VK_FORMAT_R8G8B8A8_UNORM, size);
 
 	fontBuffer.Destroy();
 
-	Pipeline imguiPipeline;
-	imguiPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/imgui.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	imguiPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	mImGuiPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/imgui.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	mImGuiPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
 
-	RenderPass test;
-	test.Create();
+	mImGuiPipeline.Create(mRenderPass.GetRenderPass());
 
-	imguiPipeline.Create(test.GetRenderPass());
+	mImGuiVertBuffer.Create(BufferType::VERTEX, 0);
+	mImGuiIndexBuffer.Create(BufferType::INDEX, 0);
 
 	return true;
 }
+
+void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
+	ImGuiIO& io = ImGui::GetIO();
+	ImDrawData* imDrawData = ImGui::GetDrawData();
+
+	VkDeviceSize vertexBufferSize = imDrawData->TotalVtxCount * sizeof(ImDrawVert);
+	VkDeviceSize indexBufferSize = imDrawData->TotalIdxCount * sizeof(ImDrawIdx);
+
+	mImGuiVertBuffer.Resize(vertexBufferSize, false);
+	mImGuiIndexBuffer.Resize(indexBufferSize, false);
+
+	ImDrawVert* vertexData = (ImDrawVert*)mImGuiVertBuffer.Map();
+	ImDrawIdx* indexData = (ImDrawIdx*)mImGuiIndexBuffer.Map();
+
+	for (int n = 0; n < imDrawData->CmdListsCount; n++) {
+		const ImDrawList* cmd_list = imDrawData->CmdLists[n];
+		memcpy(vertexData, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+		memcpy(indexData, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+		vertexData += cmd_list->VtxBuffer.Size;
+		indexData += cmd_list->IdxBuffer.Size;
+	}
+
+	mImGuiVertBuffer.Flush();
+	mImGuiIndexBuffer.Flush();
+
+	mImGuiVertBuffer.UnMap();
+	mImGuiIndexBuffer.UnMap();
+
+
+	//vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+	vkCmdBindPipeline(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mImGuiPipeline.GetPipeline());
+
+	//VkViewport viewport = vks::initializers::viewport(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y, 0.0f, 1.0f);
+	//vkCmdSetViewport(aBuffer, 0, 1, &viewport);
+
+	// UI scale and translate via push constants
+	gImGuiPushConstant.mScale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
+	gImGuiPushConstant.mUv = glm::vec2(1);//glm::vec2(-1.0f);
+	vkCmdPushConstants(aBuffer, mImGuiPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ImGuiPushConstant), &gImGuiPushConstant);
+
+	// Render commands
+	int32_t vertexOffset = 0;
+	int32_t indexOffset = 0;
+
+	if (imDrawData->CmdListsCount > 0) {
+		mRenderPass.Begin(aBuffer, mFramebuffer[GetCurrentImageIndex()]);
+
+		VkDeviceSize offsets[1] = { 0 };
+		vkCmdBindVertexBuffers(aBuffer, 0, 1, mImGuiVertBuffer.GetBufferRef(), offsets);
+		vkCmdBindIndexBuffer(aBuffer, mImGuiIndexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT16);
+
+		VkViewport viewport = {};
+		viewport.width = mSwapchain->GetSize().width;
+		viewport.height = mSwapchain->GetSize().height;
+		viewport.maxDepth = 1.0f;
+		vkCmdSetViewport(aBuffer, 0, 1, &viewport);
+
+		for (int32_t i = 0; i < imDrawData->CmdListsCount; i++)
+		{
+			const ImDrawList* cmd_list = imDrawData->CmdLists[i];
+			for (int32_t j = 0; j < cmd_list->CmdBuffer.Size; j++)
+			{
+				const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[j];
+				VkRect2D scissorRect;
+				scissorRect.offset.x = std::max((int32_t)(pcmd->ClipRect.x), 0);
+				scissorRect.offset.y = std::max((int32_t)(pcmd->ClipRect.y), 0);
+				scissorRect.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
+				scissorRect.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y);
+				vkCmdSetScissor(aBuffer, 0, 1, &scissorRect);
+				vkCmdDrawIndexed(aBuffer, pcmd->ElemCount, 1, indexOffset, vertexOffset, 0);
+				indexOffset += pcmd->ElemCount;
+			}
+			vertexOffset += cmd_list->VtxBuffer.Size;
+		}
+
+		mRenderPass.End(aBuffer);
+	}
+
+
+}
+
 #endif
 
 bool Graphics::HasInstanceExtension(const char* aExtension) const {

@@ -8,6 +8,7 @@
 #include "Graphics/Image.h"
 
 #include <vulkan/vulkan.h>
+#include <imgui.h>
 
 int main() {
 
@@ -27,23 +28,12 @@ int main() {
 	img.CreateVkImage(gfx.GetMainFormat(), gfx.GetMainSwapchain()->GetSize());
 	img.Destroy();
 
-	RenderPass test;
-	test.Create();
-
-	Framebuffer fbTest[3];
-	for(int i = 0;i<3;i++) {
-		fbTest[i].Create(gfx.GetMainSwapchain()->GetImage(i), test);
-	}
-
-
     while (!window.ShouldClose()) {
         window.Update();
 
 		gfx.StartNewFrame();
 
-		test.Begin(gfx.GetCurrentGraphicsCommandBuffer(), fbTest[gfx.GetCurrentImageIndex()]);
-
-		test.End(gfx.GetCurrentGraphicsCommandBuffer());
+		ImGui::ShowDemoWindow();
 		
 		gfx.EndFrame();
     }

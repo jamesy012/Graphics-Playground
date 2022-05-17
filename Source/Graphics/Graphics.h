@@ -7,6 +7,9 @@
 
 #include "Image.h"
 #include "Pipeline.h"
+#include "Buffer.h"
+#include "RenderPass.h"
+#include "Framebuffer.h"
 
 class Window;
 class Devices;
@@ -73,10 +76,16 @@ private:
 	bool CreateInstance();
 #if defined(ENABLE_IMGUI)
 	bool CreateImGui();
+	void RenderImGui(VkCommandBuffer aBuffer);
 
 	Image mImGuiFontImage;
 	Pipeline mImGuiPipeline;
+	Buffer mImGuiVertBuffer;
+	Buffer mImGuiIndexBuffer;
 #endif
+
+	RenderPass mRenderPass;
+	Framebuffer mFramebuffer[3];
 
 	bool HasInstanceExtension(const char* aExtension) const;
 	bool HasInstanceLayer(const char* aLayer) const;

@@ -1,23 +1,47 @@
 #include "Buffer.h"
 
 #include "Graphics.h"
+#include "PlatformDebug.h"
+
+VkBufferUsageFlags GetUsageFromType(const BufferType aType){
+	switch(aType){
+		case BufferType::IMAGE:
+			return VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+		break;
+		case BufferType::STAGING:
+			return VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		break;
+		case BufferType::VERTEX:
+			return VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		break;
+		case BufferType::INDEX:
+			return VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		break;
+	}
+	return 0;
+}
 
 void Buffer::Destroy() {
-	if (mAllocation) {
+	if (mAllocation && mBuffer) {
 		vmaDestroyBuffer(gGraphics->GetAllocator(), mBuffer, mAllocation);
 		mAllocation = VK_NULL_HANDLE;
 		mBuffer = VK_NULL_HANDLE;
 	}
 }
 
-void Buffer::CreateFromData(const VkDeviceSize aSize, void* aData) {
+void Buffer::Create(const BufferType aType, const VkDeviceSize aSize) {
+	mType = aType;
+
+	if(aSize == 0){
+		return;
+	}
 
 	VkBufferCreateInfo bufferInfo = {};
 	bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 	bufferInfo.size = aSize;
 
 	//customize...
-	bufferInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+	bufferInfo.usage = GetUsageFromType(aType);
 
 	VmaAllocationCreateInfo allocationInfo = {};
 
@@ -29,11 +53,41 @@ void Buffer::CreateFromData(const VkDeviceSize aSize, void* aData) {
 
 	vmaCreateBuffer(gGraphics->GetAllocator(), &bufferInfo, &allocationInfo, &mBuffer, &mAllocation, &mAllocationInfo);
 
-	void* data;
-	vmaMapMemory(gGraphics->GetAllocator(), mAllocation, &data);
+}
+
+void Buffer::CreateFromData(const BufferType aType, const VkDeviceSize aSize, void* aData) {
+	Create(aType, aSize);
+
+	void* data = Map();
 
 	//comes premapped due to VMA_ALLOCATION_CREATE_MAPPED_BIT
 	memcpy(data, aData, mAllocationInfo.size);
 
+	UnMap();
+}
+
+void Buffer::Resize(const VkDeviceSize aSize, const bool aKeepData){
+	ASSERT(aKeepData == false);
+
+	Destroy();
+	Create(mType, aSize);
+}
+
+void Buffer::Flush() {
+	vmaFlushAllocation(gGraphics->GetAllocator(), mAllocation, 0, VK_WHOLE_SIZE);
+}
+
+void Buffer::Flush(Buffer& aBuffers, uint8_t aCount) {
+	ASSERT(false);
+	vmaFlushAllocations(gGraphics->GetAllocator(), 0, 0, 0, 0);
+}
+
+void* Buffer::Map(){
+	ASSERT(mMappedData == nullptr);
+	vmaMapMemory(gGraphics->GetAllocator(), mAllocation, &mMappedData);
+	return mMappedData;
+}
+void Buffer::UnMap(){
 	vmaUnmapMemory(gGraphics->GetAllocator(), mAllocation);
+	mMappedData = nullptr;
 }

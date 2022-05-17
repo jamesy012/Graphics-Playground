@@ -13,8 +13,19 @@ public:
 
     bool Create(VkRenderPass aPass);
 
+    void Begin(VkCommandBuffer aBuffer);
+    void End(VkCommandBuffer aBuffer);
+
+
+    inline VkPipeline GetPipeline(){
+        return mPipeline;
+    }
+    inline VkPipelineLayout GetLayout(){
+        return mPipelineLayout;
+    }
 private:
     std::vector<VkPipelineShaderStageCreateInfo> mShaders;
 
+    VkPipelineLayout mPipelineLayout;
     VkPipeline mPipeline;
 };

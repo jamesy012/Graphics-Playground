@@ -23,7 +23,9 @@ endif()
 
 message(STATUS ${CMAKE_GENERATOR})
 
+if( NOT APPLE) 
 set(WORK_DIR_FOLDER_REL "../")
+endif()
 get_filename_component(WORK_DIR_FOLDER "${CMAKE_BINARY_DIR}/${WORK_DIR_FOLDER_REL}" ABSOLUTE)
 message("BUILD_OUTPUT ${WORK_DIR_FOLDER}")
 
@@ -37,7 +39,11 @@ target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_APPLE=${PLATFORM_A
 target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_LINUX=${PLATFORM_LINUX})
 
 #need a better way to determin this.. or make them work the same?
-if (CMAKE_GENERATOR MATCHES "Ninja")
+if (APPLE)
+message(STATUS "using visual studio APPLE as generator")
+message("setting WORK_DIR_REL to \"${WORK_DIR_FOLDER_REL}/\"")
+target_compile_definitions(GraphicsPlayground PUBLIC WORK_DIR_REL=\"${WORK_DIR_FOLDER_REL}Build/\")
+elseif (CMAKE_GENERATOR MATCHES "Ninja")
 message(STATUS "using visual studio as generator")
 message("setting WORK_DIR_REL to \"${WORK_DIR_FOLDER_REL}/../\"")
 target_compile_definitions(GraphicsPlayground PUBLIC WORK_DIR_REL=\"${WORK_DIR_FOLDER_REL}/../\")
