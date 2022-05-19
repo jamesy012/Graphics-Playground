@@ -18,7 +18,7 @@ void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize) {
 	createInfo.samples = VK_SAMPLE_COUNT_1_BIT;
 	createInfo.imageType = VK_IMAGE_TYPE_2D;
 	createInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-	createInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	createInfo.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	//vkCreateImage(gGraphics->GetVkDevice(), &createInfo, GetAllocationCallback(), &mImage);
@@ -37,6 +37,7 @@ void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize) {
 }
 
 void Image::CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, const ImageSize aSize) {
+	ASSERT(aBuffer.GetType() == BufferType::STAGING)
 	CreateVkImage(aFormat, aSize);
 
 	OneTimeCommandBuffer cmBuffer = gGraphics->AllocateGraphicsCommandBuffer();

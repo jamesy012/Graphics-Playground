@@ -34,7 +34,7 @@ void RenderPass::Create() {
 
 }
 #include <math.h>
-void RenderPass::Begin(VkCommandBuffer aBuffer, Framebuffer& aFramebuffer) {
+void RenderPass::Begin(VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer) {
 
     std::vector<VkClearValue> clearColors(1);
 	//clearColors[0].color = { { float((sin((300+gGraphics->GetFrameCount()/500.0f))) + 1) / 2.0f, float((sin((12+gGraphics->GetFrameCount()/280.0f))) + 1) / 2.0f, 0.0f, 1.0f } };

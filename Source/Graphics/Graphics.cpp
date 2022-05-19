@@ -13,6 +13,9 @@
 #include "Pipeline.h"
 #include "RenderPass.h"
 
+#include "RenderTarget.h"
+RenderTarget gRenderTarget;
+
 #if defined(ENABLE_IMGUI)
 #include "imgui.h"
 
@@ -306,6 +309,8 @@ bool Graphics::Initalize() {
 
 	mTestVertBuffer.UnMap();
 	mTestIndexBuffer.UnMap();
+
+	gRenderTarget.Create(ImageSize(500,500),mRenderPass);
 
 	//imgui
 #if defined(ENABLE_IMGUI)
@@ -626,7 +631,7 @@ void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
 	mImGuiVertBuffer.UnMap();
 	mImGuiIndexBuffer.UnMap();
 
-	mRenderPass.Begin(aBuffer, mFramebuffer[GetCurrentImageIndex()]);
+	//mRenderPass.Begin(aBuffer, gRenderTarget.GetFb());
 
 	//vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 	vkCmdBindPipeline(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mImGuiPipeline.GetPipeline());
@@ -636,6 +641,7 @@ void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
 
 
 
+	mRenderPass.Begin(aBuffer, gRenderTarget.GetFb());
 	{
 		VkDeviceSize offsets[1] = { 0 };
 		vkCmdBindVertexBuffers(aBuffer, 0, 1, mTestVertBuffer.GetBufferRef(), offsets);
@@ -647,6 +653,9 @@ void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
 
 		vkCmdDrawIndexed(aBuffer, 6, 1, 0, 0, 0);
 	}
+	mRenderPass.End(aBuffer);
+
+	mRenderPass.Begin(aBuffer, mFramebuffer[GetCurrentImageIndex()]);
 
 	// UI scale and translate via push constants
 	gImGuiPushConstant.mScale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
@@ -689,7 +698,6 @@ void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
 
 	}
 		mRenderPass.End(aBuffer);
-
 
 }
 

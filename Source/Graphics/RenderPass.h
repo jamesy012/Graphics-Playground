@@ -9,7 +9,7 @@ public:
     void Create();
     void Destroy() {};
 
-    void Begin(VkCommandBuffer aBuffer, Framebuffer& aFramebuffer);
+    void Begin(VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer);
     void End(VkCommandBuffer aBuffer);
 
     const VkRenderPass GetRenderPass() const {

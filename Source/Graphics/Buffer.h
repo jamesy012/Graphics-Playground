@@ -21,6 +21,7 @@ public:
 
 	VkBuffer GetBuffer() const { return mBuffer; }
 	const VkBuffer* GetBufferRef() const { return &mBuffer; }
+	const BufferType GetType() const { return mType; }
 
 	void* Map();
 	void UnMap();

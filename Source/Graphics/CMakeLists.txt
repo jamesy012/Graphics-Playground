@@ -22,6 +22,8 @@ set(GRAPHICS_SOURCE
 "${CMAKE_CURRENT_SOURCE_DIR}/Buffer.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Pipeline.h" 
 "${CMAKE_CURRENT_SOURCE_DIR}/Pipeline.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/RenderTarget.h" 
+"${CMAKE_CURRENT_SOURCE_DIR}/RenderTarget.cpp"
  )
 
 if(${GraphicsPlayground_Graphics_Vulkan})
