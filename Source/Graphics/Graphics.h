@@ -84,9 +84,6 @@ private:
 	Buffer mImGuiIndexBuffer;
 #endif
 
-	Buffer mTestVertBuffer;
-	Buffer mTestIndexBuffer;
-
 	RenderPass mRenderPass;
 	Framebuffer mFramebuffer[3];
 
@@ -98,7 +95,7 @@ private:
 	std::vector<VkExtensionProperties> mInstanceExtensions;
 	std::vector<VkExtensionProperties> mDeviceExtensions;
 
-	std::vector<VkSurfaceKHR> mSurfaces;
+	std::vector<Window*> mSurfaces;
 
 	Devices* mDevicesHandler;
 	Swapchain* mSwapchain;

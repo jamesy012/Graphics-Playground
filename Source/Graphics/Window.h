@@ -18,8 +18,11 @@ public:
 	static const char** GetGLFWVulkanExtentensions(uint32_t* aCount);
 
 	//VkSurfaceKHR
-	const void* GetSurface()const {
+	const void* GetSurface() const {
 		return mSurface;
+	}
+	GLFWwindow* GetWindow() const {
+		return mWindow;
 	}
 private:
 	GLFWwindow* mWindow = nullptr;

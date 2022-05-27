@@ -117,13 +117,14 @@ void Image::ChangeImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aNewL
 	case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 		memoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 		break;
+	case VK_IMAGE_LAYOUT_UNDEFINED:
+		memoryBarrier.dstAccessMask = VK_ACCESS_NONE;
+		break;
 	default:
 		ASSERT(false);
 	}
 
-
 	vkCmdPipelineBarrier(aBuffer, aSrcStageMask, aDstStageMask, 0, 0, 0, 0, 0, 1, &memoryBarrier);
-
 
 	mLayout = aNewLayout;
 }

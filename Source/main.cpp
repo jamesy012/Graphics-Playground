@@ -16,7 +16,7 @@ int main() {
 	LOG::LogLine("--------------------------------");
 
 	Window window;
-	window.Create(500, 500, "Graphics Playground");
+	window.Create(720, 720, "Graphics Playground");
 
 	LOG::LogLine("Starting Graphics");
 	Graphics gfx;

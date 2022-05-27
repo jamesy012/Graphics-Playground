@@ -13,17 +13,16 @@
 #include "Pipeline.h"
 #include "RenderPass.h"
 
-#include "RenderTarget.h"
-RenderTarget gRenderTarget;
-
 #if defined(ENABLE_IMGUI)
 #include "imgui.h"
+#include "backends/imgui_impl_glfw.h"
 
 struct ImGuiPushConstant {
 	glm::vec2 mScale;
 	glm::vec2 mUv;
 } gImGuiPushConstant;
 
+ImGuiContext* gImGuiContext;
 #endif
 
 #pragma warning( push )
@@ -133,6 +132,11 @@ VkDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 }
 
 
+//material test
+VkDescriptorPool gDescriptorPool;
+VkDescriptorSet gImGuiFontSet;
+VkSampler gSampler;
+
 bool Graphics::StartUp() {
 	ASSERT(gGraphics == nullptr);
 	gGraphics = this;
@@ -144,7 +148,7 @@ bool Graphics::StartUp() {
 		LOG::Log("Version: %i.%i.%i\n", VK_VERSION_MAJOR(version),
 			VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
 	}
-	
+
 	//XR
 #if defined(ENABLE_XR)
 	{
@@ -257,7 +261,7 @@ bool Graphics::StartUp() {
 bool Graphics::Initalize() {
 	ASSERT(gVkInstance != VK_NULL_HANDLE);
 
-	mDevicesHandler = new Devices(mSurfaces[0]);
+	mDevicesHandler = new Devices((VkSurfaceKHR)mSurfaces[0]->GetSurface());
 	mDevicesHandler->Setup();
 	mDevicesHandler->CreateCommandPools();
 
@@ -283,34 +287,36 @@ bool Graphics::Initalize() {
 	mFramebuffer[1].Create(mSwapchain->GetImage(1), mRenderPass);
 	mFramebuffer[2].Create(mSwapchain->GetImage(2), mRenderPass);
 
-	mTestVertBuffer.Create(BufferType::VERTEX, 4 * sizeof(ImDrawVert));
-	mTestIndexBuffer.Create(BufferType::INDEX, 6 * sizeof(ImDrawIdx));
+	{
+		VkDescriptorPoolSize pools[] = { {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 50}, };
+		VkDescriptorPoolCreateInfo descriptorPoolInfo = {};
+		descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolInfo.maxSets = 50;
+		descriptorPoolInfo.pPoolSizes = pools;
+		descriptorPoolInfo.poolSizeCount = sizeof(pools) / sizeof(VkDescriptorPoolSize);
+		vkCreateDescriptorPool(GetVkDevice(), &descriptorPoolInfo, GetAllocationCallback(), &gDescriptorPool);
+	}
 
-	ImDrawVert* vertexData = (ImDrawVert*)mTestVertBuffer.Map();
-	ImDrawIdx* indexData = (ImDrawIdx*)mTestIndexBuffer.Map();
-
-	vertexData[0].pos = ImVec2(0,0);
-	vertexData[0].col = INT32_MAX;
-	vertexData[1].pos = ImVec2(0,1);
-	vertexData[1].col = INT32_MAX;
-	vertexData[2].pos = ImVec2(1,0);
-	vertexData[2].col = INT32_MAX;
-	vertexData[3].pos = ImVec2(1,1);
-	vertexData[3].col = INT32_MAX;
-	indexData[0] = 0;
-	indexData[1] = 1;
-	indexData[2] = 2;	
-	indexData[3] = 2;
-	indexData[4] = 1;
-	indexData[5] = 3;
-
-	mTestVertBuffer.Flush();
-	mTestIndexBuffer.Flush();
-
-	mTestVertBuffer.UnMap();
-	mTestIndexBuffer.UnMap();
-
-	gRenderTarget.Create(ImageSize(500,500),mRenderPass);
+	{
+		VkSamplerCreateInfo samplerInfo = {};
+		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter = VK_FILTER_LINEAR;
+		samplerInfo.minFilter = VK_FILTER_LINEAR;
+		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.anisotropyEnable = VK_TRUE;
+		samplerInfo.maxAnisotropy = GetMainDevice()->GetPrimaryDeviceData().mDeviceProperties.limits.maxSamplerAnisotropy;
+		samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		samplerInfo.unnormalizedCoordinates = VK_FALSE;
+		samplerInfo.compareEnable = VK_FALSE;
+		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		samplerInfo.mipLodBias = 0.0f;
+		samplerInfo.minLod = 0.0f;
+		samplerInfo.maxLod = 0.0f;
+		vkCreateSampler(GetVkDevice(), &samplerInfo, GetAllocationCallback(), &gSampler);
+	}
 
 	//imgui
 #if defined(ENABLE_IMGUI)
@@ -333,6 +339,16 @@ bool Graphics::Destroy() {
 		}
 	}
 
+#if defined(ENABLE_IMGUI)
+	mImGuiFontImage.Destroy();
+	//mImGuiPipeline.Destroy();
+	mImGuiVertBuffer.Destroy();
+	mImGuiIndexBuffer.Destroy();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext(gImGuiContext);
+	gImGuiContext = nullptr;
+#endif
+
 	vmaDestroyAllocator(mAllocator);
 	mAllocator = VK_NULL_HANDLE;
 
@@ -344,7 +360,7 @@ bool Graphics::Destroy() {
 	if (gXrInstance) {
 		xrDestroyInstance(gXrInstance);
 		gXrInstance = XR_NULL_HANDLE;
-	}
+}
 #endif
 
 	if (gVkInstance) {
@@ -362,13 +378,14 @@ void Graphics::AddWindow(Window* aWindow) {
 	VkSurfaceKHR surface = (VkSurfaceKHR)aWindow->CreateSurface();
 	ASSERT(surface != VK_NULL_HANDLE);
 	if (surface) {
-		mSurfaces.push_back(surface);
+		mSurfaces.push_back(aWindow);
 	}
 }
 
 void Graphics::StartNewFrame() {
 #if defined(ENABLE_IMGUI)
 	ImGui::NewFrame();
+	ImGui_ImplGlfw_NewFrame();
 #endif
 
 	mFrameCounter++;
@@ -434,6 +451,7 @@ void Graphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer) {
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.pCommandBuffers = &aBuffer.mBuffer;
+	submitInfo.commandBufferCount = 1;
 
 	vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, 1, &submitInfo, aBuffer.mFence);
 	vkWaitForFences(GetVkDevice(), 1, &aBuffer.mFence, true, UINT64_MAX);
@@ -510,7 +528,7 @@ bool Graphics::CreateInstance() {
 		}
 		extensionsTemp.push_back(&xrExtensions[lastPoint]);
 		delete[] xrExtensions;
-	}
+}
 #endif
 
 	//Debug validation
@@ -571,7 +589,8 @@ bool Graphics::CreateInstance() {
 
 #if defined(ENABLE_IMGUI)
 bool Graphics::CreateImGui() {
-	ImGui::CreateContext();
+	gImGuiContext = ImGui::CreateContext();
+	ImGui_ImplGlfw_InitForVulkan(mSurfaces[0]->GetWindow(), true);
 
 	ImGuiIO& io = ImGui::GetIO();
 
@@ -601,6 +620,33 @@ bool Graphics::CreateImGui() {
 	mImGuiVertBuffer.Create(BufferType::VERTEX, 0);
 	mImGuiIndexBuffer.Create(BufferType::INDEX, 0);
 
+	{
+		{
+			VkDescriptorSetAllocateInfo alloc_info = {};
+			alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+			alloc_info.descriptorPool = gDescriptorPool;
+			alloc_info.descriptorSetCount = 1;
+			VkDescriptorSetLayout layout = mImGuiPipeline.GetSetLayout();
+			alloc_info.pSetLayouts = &layout;
+			VkResult err = vkAllocateDescriptorSets(GetVkDevice(), &alloc_info, &gImGuiFontSet);
+		}
+
+		// Update the Descriptor Set:
+		{
+			VkDescriptorImageInfo desc_image[1] = {};
+			desc_image[0].sampler = gSampler;
+			desc_image[0].imageView = mImGuiFontImage.GetImageView();
+			desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			VkWriteDescriptorSet write_desc[1] = {};
+			write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			write_desc[0].dstSet = gImGuiFontSet;
+			write_desc[0].descriptorCount = 1;
+			write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			write_desc[0].pImageInfo = desc_image;
+			vkUpdateDescriptorSets(GetVkDevice(), 1, write_desc, 0, NULL);
+		}
+	}
+
 	return true;
 }
 
@@ -610,26 +656,27 @@ void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
 
 	VkDeviceSize vertexBufferSize = imDrawData->TotalVtxCount * sizeof(ImDrawVert);
 	VkDeviceSize indexBufferSize = imDrawData->TotalIdxCount * sizeof(ImDrawIdx);
-
 	mImGuiVertBuffer.Resize(vertexBufferSize, false);
 	mImGuiIndexBuffer.Resize(indexBufferSize, false);
 
-	ImDrawVert* vertexData = (ImDrawVert*)mImGuiVertBuffer.Map();
-	ImDrawIdx* indexData = (ImDrawIdx*)mImGuiIndexBuffer.Map();
+	if (vertexBufferSize != 0 && indexBufferSize != 0) {
+		ImDrawVert* vertexData = (ImDrawVert*)mImGuiVertBuffer.Map();
+		ImDrawIdx* indexData = (ImDrawIdx*)mImGuiIndexBuffer.Map();
 
-	for (int n = 0; n < imDrawData->CmdListsCount; n++) {
-		const ImDrawList* cmd_list = imDrawData->CmdLists[n];
-		memcpy(vertexData, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-		memcpy(indexData, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-		vertexData += cmd_list->VtxBuffer.Size;
-		indexData += cmd_list->IdxBuffer.Size;
+		for (int n = 0; n < imDrawData->CmdListsCount; n++) {
+			const ImDrawList* cmd_list = imDrawData->CmdLists[n];
+			memcpy(vertexData, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+			memcpy(indexData, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+			vertexData += cmd_list->VtxBuffer.Size;
+			indexData += cmd_list->IdxBuffer.Size;
+		}
+
+		mImGuiVertBuffer.Flush();
+		mImGuiIndexBuffer.Flush();
+
+		mImGuiVertBuffer.UnMap();
+		mImGuiIndexBuffer.UnMap();
 	}
-
-	mImGuiVertBuffer.Flush();
-	mImGuiIndexBuffer.Flush();
-
-	mImGuiVertBuffer.UnMap();
-	mImGuiIndexBuffer.UnMap();
 
 	//mRenderPass.Begin(aBuffer, gRenderTarget.GetFb());
 
@@ -639,66 +686,51 @@ void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
 	//VkViewport viewport = vks::initializers::viewport(ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y, 0.0f, 1.0f);
 	//vkCmdSetViewport(aBuffer, 0, 1, &viewport);
 
-
-
-	mRenderPass.Begin(aBuffer, gRenderTarget.GetFb());
-	{
-		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindVertexBuffers(aBuffer, 0, 1, mTestVertBuffer.GetBufferRef(), offsets);
-		vkCmdBindIndexBuffer(aBuffer, mTestIndexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT16);
-
-		gImGuiPushConstant.mScale = glm::vec2(1);
-		gImGuiPushConstant.mUv = glm::vec2(0);//glm::vec2(-1.0f);
-		vkCmdPushConstants(aBuffer, mImGuiPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ImGuiPushConstant), &gImGuiPushConstant);
-
-		vkCmdDrawIndexed(aBuffer, 6, 1, 0, 0, 0);
-	}
-	mRenderPass.End(aBuffer);
-
 	mRenderPass.Begin(aBuffer, mFramebuffer[GetCurrentImageIndex()]);
 
-	// UI scale and translate via push constants
-	gImGuiPushConstant.mScale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
-	gImGuiPushConstant.mUv = glm::vec2(-1.5f);//glm::vec2(-1.0f);
-	vkCmdPushConstants(aBuffer, mImGuiPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ImGuiPushConstant), &gImGuiPushConstant);
+	if (vertexBufferSize != 0 && indexBufferSize != 0) {
+		// UI scale and translate via push constants
+		gImGuiPushConstant.mScale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
+		gImGuiPushConstant.mUv = glm::vec2(-1.0f);
+		vkCmdPushConstants(aBuffer, mImGuiPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ImGuiPushConstant), &gImGuiPushConstant);
 
-	// Render commands
-	int32_t vertexOffset = 0;
-	int32_t indexOffset = 0;
+		vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mImGuiPipeline.GetLayout(), 0, 1, &gImGuiFontSet, 0, 0);
 
-	if (imDrawData->CmdListsCount > 0) {
+		// Render commands
+		int32_t vertexOffset = 0;
+		int32_t indexOffset = 0;
 
-		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindVertexBuffers(aBuffer, 0, 1, mImGuiVertBuffer.GetBufferRef(), offsets);
-		vkCmdBindIndexBuffer(aBuffer, mImGuiIndexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT16);
+		if (imDrawData->CmdListsCount > 0) {
 
-		VkViewport viewport = {};
-		viewport.width = mSwapchain->GetSize().width;
-		viewport.height = mSwapchain->GetSize().height;
-		viewport.maxDepth = 1.0f;
-		vkCmdSetViewport(aBuffer, 0, 1, &viewport);
+			VkDeviceSize offsets[1] = { 0 };
+			vkCmdBindVertexBuffers(aBuffer, 0, 1, mImGuiVertBuffer.GetBufferRef(), offsets);
+			vkCmdBindIndexBuffer(aBuffer, mImGuiIndexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT16);
 
-		for (int32_t i = 0; i < imDrawData->CmdListsCount; i++)
-		{
-			const ImDrawList* cmd_list = imDrawData->CmdLists[i];
-			for (int32_t j = 0; j < cmd_list->CmdBuffer.Size; j++)
-			{
-				const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[j];
-				VkRect2D scissorRect;
-				scissorRect.offset.x = std::max((int32_t)(pcmd->ClipRect.x), 0);
-				scissorRect.offset.y = std::max((int32_t)(pcmd->ClipRect.y), 0);
-				scissorRect.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
-				scissorRect.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y);
-				//vkCmdSetScissor(aBuffer, 0, 1, &scissorRect);
-				vkCmdDrawIndexed(aBuffer, pcmd->ElemCount, 1, indexOffset, vertexOffset, 0);
-				indexOffset += pcmd->ElemCount;
+			VkViewport viewport = {};
+			viewport.width = mSwapchain->GetSize().width;
+			viewport.height = mSwapchain->GetSize().height;
+			viewport.maxDepth = 1.0f;
+			vkCmdSetViewport(aBuffer, 0, 1, &viewport);
+
+			for (int32_t i = 0; i < imDrawData->CmdListsCount; i++) {
+				const ImDrawList* cmd_list = imDrawData->CmdLists[i];
+				for (int32_t j = 0; j < cmd_list->CmdBuffer.Size; j++) {
+					const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[j];
+					VkRect2D scissorRect;
+					scissorRect.offset.x = std::max((int32_t)(pcmd->ClipRect.x), 0);
+					scissorRect.offset.y = std::max((int32_t)(pcmd->ClipRect.y), 0);
+					scissorRect.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
+					scissorRect.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y);
+					vkCmdSetScissor(aBuffer, 0, 1, &scissorRect);
+					vkCmdDrawIndexed(aBuffer, pcmd->ElemCount, 1, indexOffset, vertexOffset, 0);
+					indexOffset += pcmd->ElemCount;
+				}
+				vertexOffset += cmd_list->VtxBuffer.Size;
 			}
-			vertexOffset += cmd_list->VtxBuffer.Size;
+
 		}
-
 	}
-		mRenderPass.End(aBuffer);
-
+	mRenderPass.End(aBuffer);
 }
 
 #endif

@@ -29,6 +29,21 @@ bool Pipeline::AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage) {
 }
 
 bool Pipeline::Create(VkRenderPass aPass) {
+	//Shader layouts
+	{
+		memset(&mBindings, 0, sizeof(VkDescriptorSetLayoutBinding));
+		memset(&mLayoutCreateInfo, 0, sizeof(VkDescriptorSetLayoutCreateInfo));
+		memset(&mLayouts, 0, sizeof(VkDescriptorSetLayout));
+		mBindings.binding = 0;
+		mBindings.descriptorCount = 1;
+		mBindings.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		mBindings.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		mLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		mLayoutCreateInfo.bindingCount = 1;
+		mLayoutCreateInfo.pBindings = &mBindings;
+		vkCreateDescriptorSetLayout(gGraphics->GetVkDevice(), &mLayoutCreateInfo, GetAllocationCallback(), &mLayouts);
+	}
+
 	VkPipelineCache pipelineCache;
 	{
 		VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
@@ -81,15 +96,32 @@ bool Pipeline::Create(VkRenderPass aPass) {
 	//~~~ Rasterization
 	VkPipelineRasterizationStateCreateInfo rasterizationInfo = {};
 	{
-		rasterizationInfo.sType =
-			VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizationInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+		rasterizationInfo.depthClampEnable = VK_FALSE;
+		rasterizationInfo.rasterizerDiscardEnable = VK_FALSE;
 		rasterizationInfo.polygonMode = VK_POLYGON_MODE_FILL;
+		rasterizationInfo.lineWidth = 1.0f;
 		rasterizationInfo.cullMode = VK_CULL_MODE_NONE;
 		rasterizationInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-		rasterizationInfo.rasterizerDiscardEnable = VK_TRUE;
-		rasterizationInfo.lineWidth = 1.0f;
+		rasterizationInfo.depthBiasEnable = VK_TRUE;
+		rasterizationInfo.depthBiasConstantFactor = 0.0f; // Optional
+		rasterizationInfo.depthBiasClamp = 0.0f;          // Optional
+		rasterizationInfo.depthBiasSlopeFactor = 0.0f;    // Optional
 	}
 
+
+	//~~~ Depth Stencil State
+	VkPipelineMultisampleStateCreateInfo multisampleState = {};
+	{
+		multisampleState.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampleState.sampleShadingEnable = VK_FALSE;
+		multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+		multisampleState.minSampleShading = 1.0f;          // Optional
+		multisampleState.pSampleMask = nullptr;            // Optional
+		multisampleState.alphaToCoverageEnable = VK_FALSE; // Optional
+		multisampleState.alphaToOneEnable = VK_FALSE;      // Optional
+
+	}
 	//~~~ Depth Stencil State
 	VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
 	{
@@ -97,7 +129,6 @@ bool Pipeline::Create(VkRenderPass aPass) {
 		depthStencilState.depthTestEnable = false;
 		depthStencilState.depthWriteEnable = false;
 		depthStencilState.depthCompareOp = VK_COMPARE_OP_ALWAYS;
-		depthStencilState.back.compareOp = VK_COMPARE_OP_ALWAYS;
 	}
 
 	//~~~ Color Blend State
@@ -109,12 +140,14 @@ bool Pipeline::Create(VkRenderPass aPass) {
 		blendAttachmentState.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
 		blendAttachmentState.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
 		blendAttachmentState.colorBlendOp = VK_BLEND_OP_ADD;
-		blendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+		blendAttachmentState.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
 		blendAttachmentState.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
 		blendAttachmentState.alphaBlendOp = VK_BLEND_OP_ADD;
 		colorBlendState.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlendState.attachmentCount = 1;
 		colorBlendState.pAttachments = &blendAttachmentState;
+		colorBlendState.logicOp = VK_LOGIC_OP_CLEAR;
+		colorBlendState.logicOpEnable = VK_FALSE;
 	}
 
 	//~~~ Dynamic States
@@ -129,19 +162,6 @@ bool Pipeline::Create(VkRenderPass aPass) {
 	//~~~ Layout
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	{
-		VkDescriptorSetLayoutBinding binding = {};
-		binding.binding = 0;
-		binding.descriptorCount = 1;
-		binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-		VkDescriptorSetLayout setLayout;
-		VkDescriptorSetLayoutCreateInfo setInfo = {};
-		setInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		setInfo.pBindings = &binding;
-		setInfo.bindingCount = 1;
-		vkCreateDescriptorSetLayout(gGraphics->GetVkDevice(), &setInfo, GetAllocationCallback(), &setLayout);
-
 		VkPushConstantRange pushRange = {};
 		{
 			pushRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
@@ -155,10 +175,8 @@ bool Pipeline::Create(VkRenderPass aPass) {
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.pPushConstantRanges = &pushRange;
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
-		pipelineLayoutInfo.pSetLayouts = &setLayout;
+		pipelineLayoutInfo.pSetLayouts = &mLayouts;
 		pipelineLayoutInfo.setLayoutCount = 1;
-		pipelineLayoutInfo.pSetLayouts = 0;
-		pipelineLayoutInfo.setLayoutCount = 0;//temp to remove descriptor set
 
 		vkCreatePipelineLayout(gGraphics->GetVkDevice(), &pipelineLayoutInfo,
 			GetAllocationCallback(), &mPipelineLayout);
@@ -176,7 +194,7 @@ bool Pipeline::Create(VkRenderPass aPass) {
 	createInfo.pTessellationState = 0;
 	createInfo.pViewportState = &viewportInfo;
 	createInfo.pRasterizationState = &rasterizationInfo;
-	createInfo.pMultisampleState = 0;
+	createInfo.pMultisampleState = &multisampleState;
 	createInfo.pDepthStencilState = &depthStencilState;
 	createInfo.pColorBlendState = &colorBlendState;
 	createInfo.pDynamicState = &dynamicStateInfo;

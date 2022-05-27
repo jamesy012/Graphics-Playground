@@ -23,9 +23,17 @@ public:
     inline VkPipelineLayout GetLayout(){
         return mPipelineLayout;
     }
+
+    VkDescriptorSetLayout GetSetLayout() {
+       return mLayouts;
+    }
 private:
     std::vector<VkPipelineShaderStageCreateInfo> mShaders;
 
     VkPipelineLayout mPipelineLayout;
     VkPipeline mPipeline;
+
+    VkDescriptorSetLayoutBinding mBindings;
+    VkDescriptorSetLayoutCreateInfo mLayoutCreateInfo;
+    VkDescriptorSetLayout mLayouts;
 };
