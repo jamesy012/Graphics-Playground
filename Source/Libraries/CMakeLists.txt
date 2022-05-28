@@ -15,7 +15,9 @@ target_include_directories(GraphicsPlayground PRIVATE "${CMAKE_CURRENT_SOURCE_DI
 endif()
 
 #~~~ Other sub directories
-#add_subdirectory(assimp EXCLUDE_FROM_ALL)
+set(ASSIMP_BUILD_ASSIMP_TOOLS off)
+   message("Adding assimp")
+add_subdirectory(assimp EXCLUDE_FROM_ALL)
    message("Adding GLFW")
 add_subdirectory(glfw EXCLUDE_FROM_ALL)
    message("Adding GLM")
@@ -69,6 +71,25 @@ if(GraphicsPlayground_Enable_ImGui)
    target_include_directories(GraphicsPlayground PRIVATE ${IMGUI_PATH}/backends)
 endif()
 
+#~~~ Bullet3
+message("Adding Bullet3")
+#find_package(Bullet REQUIRED)
+add_subdirectory(bullet3 EXCLUDE_FROM_ALL)
+target_include_directories(GraphicsPlayground PRIVATE "bullet3/src")
+#set(Bullet_DIR "bullet3")
+#if (DEFINED Bullet_DIR)
+#   message("Finding local Bullet")
+#   Find_Package(Bullet CONFIG)
+#   SET(BULLET_INCLUDE_DIR ${Bullet_DIR}/${BULLET_ROOT_DIR}/${BULLET_INCLUDE_DIR})
+#   SET(BLA ${Bullet_DIR}/${BULLET_ROOT_DIR}/${BULLET_LIBRARY_DIRS})
+#else()
+#   message("Finding system installed Bullet")
+#   Find_Package(Bullet)
+#endif()
+
+
+#~~~ STB
+
 message("Adding stb")
 set(STB_SOURCES
 "stb/stb_image.h"
@@ -82,7 +103,11 @@ message("Linking Targets")
 target_include_directories(GraphicsPlayground PRIVATE "VulkanMemoryAllocator/include")
 
 target_link_libraries(GraphicsPlayground
-#assimp 
+BulletCollision
+Bullet3Common
+BulletDynamics
+LinearMath
+assimp 
 glfw 
 glm
 VulkanMemoryAllocator

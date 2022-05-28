@@ -19,3 +19,9 @@
 [submodule "Source/Libraries/OpenXR-SDK"]
 	path = Source/Libraries/OpenXR-SDK
 	url = https://github.com/KhronosGroup/OpenXR-SDK.git
+[submodule "Source/Libraries/assimp"]
+	path = Source/Libraries/assimp
+	url = https://github.com/assimp/assimp.git
+[submodule "Source/Libraries/bullet3"]
+	path = Source/Libraries/bullet3
+	url = https://github.com/bulletphysics/bullet3.git
