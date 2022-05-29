@@ -5,7 +5,7 @@
 #include "Image.h"
 #include "RenderPass.h"
 
-void Framebuffer::Create(const Image& aImage, const RenderPass& mRenderPassTemplate) {
+void Framebuffer::Create(const Image& aImage, const RenderPass& mRenderPassTemplate, const char* aName /*= 0*/) {
 
     VkImageView attachments = aImage.GetImageView();
 
@@ -26,4 +26,11 @@ void Framebuffer::Create(const Image& aImage, const RenderPass& mRenderPassTempl
 
     mSize.width = info.width;
     mSize.height = info.height;
+
+    SetVkName(VK_OBJECT_TYPE_FRAMEBUFFER, mFramebuffer, aName ? aName : "Unnamed FrameBuffer");
+}
+
+void Framebuffer::Destroy() {
+    vkDestroyFramebuffer(gGraphics->GetVkDevice(), mFramebuffer, GetAllocationCallback());
+    mFramebuffer = VK_NULL_HANDLE;
 }

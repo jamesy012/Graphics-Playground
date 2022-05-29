@@ -6,8 +6,8 @@ class Framebuffer;
 
 class RenderPass {
 public:
-    void Create();
-    void Destroy() {};
+    void Create(const char* aName = 0);
+    void Destroy();
 
     void Begin(VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer);
     void End(VkCommandBuffer aBuffer);

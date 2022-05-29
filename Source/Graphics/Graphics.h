@@ -37,6 +37,16 @@ struct OneTimeCommandBuffer {
 	operator VkCommandBuffer() { return mBuffer; }
 };
 
+void SetVkName(VkObjectType aType, uint64_t aObject, const char* aName);
+template<typename T>
+inline void SetVkName(VkObjectType aType, T aObject, const char* aName) {
+	SetVkName(aType, (uint64_t)aObject, aName);
+}
+template<typename T>
+inline void SetVkName(VkObjectType aType, T aObject, const std::string aName) {
+	SetVkName(aType, (uint64_t)aObject, aName.c_str());
+}
+
 class Graphics {
 public:
 	Graphics() {};
@@ -107,3 +117,4 @@ private:
 };
 
 extern Graphics* gGraphics;
+

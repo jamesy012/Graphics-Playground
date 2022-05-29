@@ -7,7 +7,7 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize) {
+void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const char* aName/* = 0*/) {
 	VkImageCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	createInfo.format = aFormat;
@@ -31,14 +31,15 @@ void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize) {
 	mSize = aSize;
 	mLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-	CreateVkImageView(aFormat);
+	CreateVkImageView(aFormat, aName);
 
+	SetVkName(VK_OBJECT_TYPE_IMAGE, mImage, aName ? aName : "Unnamed Image");
 
 }
 
-void Image::CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, const ImageSize aSize) {
+void Image::CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, const ImageSize aSize, const char* aName/* = 0*/) {
 	ASSERT(aBuffer.GetType() == BufferType::STAGING)
-	CreateVkImage(aFormat, aSize);
+	CreateVkImage(aFormat, aSize, aName);
 
 	OneTimeCommandBuffer cmBuffer = gGraphics->AllocateGraphicsCommandBuffer();
 
@@ -56,7 +57,7 @@ void Image::CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, cons
 	gGraphics->EndGraphicsCommandBuffer(cmBuffer);
 }
 
-void Image::CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, const ImageSize aSize) {
+void Image::CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, const ImageSize aSize, const char* aName/* = 0*/) {
 	if (aImage == VK_NULL_HANDLE) {
 		ASSERT(false);
 		return;
@@ -67,7 +68,7 @@ void Image::CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, cons
 	//pass through?
 	mLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-	CreateVkImageView(aFormat);
+	CreateVkImageView(aFormat, aName);
 }
 
 void Image::Destroy() {
@@ -129,7 +130,7 @@ void Image::ChangeImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aNewL
 	mLayout = aNewLayout;
 }
 
-void Image::CreateVkImageView(const VkFormat aFormat) {
+void Image::CreateVkImageView(const VkFormat aFormat, const char* aName/* = 0*/) {
 
 	VkImageViewCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -145,4 +146,5 @@ void Image::CreateVkImageView(const VkFormat aFormat) {
 	createInfo.subresourceRange = colorRange;
 
 	vkCreateImageView(gGraphics->GetVkDevice(), &createInfo, GetAllocationCallback(), &mImageView);
+	SetVkName(VK_OBJECT_TYPE_IMAGE_VIEW, mImageView, aName ? aName : "Unnamed ImageView");
 }

@@ -24,10 +24,6 @@ int main() {
 	gfx.AddWindow(&window);
 	gfx.Initalize();
 
-	Image img;
-	img.CreateVkImage(gfx.GetMainFormat(), gfx.GetMainSwapchain()->GetSize());
-	img.Destroy();
-
     while (!window.ShouldClose()) {
         window.Update();
 
@@ -40,5 +36,7 @@ int main() {
 
 	gfx.Destroy();
 
+	window.Destroy();
+	
 	return 0;
 }

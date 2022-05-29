@@ -39,8 +39,8 @@ void* Window::CreateSurface() {
 }
 
 void Window::DestroySurface() {
-	ASSERT(gVkInstance == VK_NULL_HANDLE);
-	ASSERT(mSurface == VK_NULL_HANDLE);
+	ASSERT(gVkInstance != VK_NULL_HANDLE);
+	ASSERT(mSurface != VK_NULL_HANDLE);
 	vkDestroySurfaceKHR(gVkInstance, (VkSurfaceKHR)mSurface, GetAllocationCallback());
 }
 

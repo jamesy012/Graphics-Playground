@@ -11,7 +11,8 @@ class Pipeline {
 public:
     bool AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage);
 
-    bool Create(VkRenderPass aPass);
+    bool Create(VkRenderPass aPass, const char* aName = 0);
+    void Destroy();
 
     void Begin(VkCommandBuffer aBuffer);
     void End(VkCommandBuffer aBuffer);
@@ -31,6 +32,7 @@ private:
     std::vector<VkPipelineShaderStageCreateInfo> mShaders;
 
     VkPipelineLayout mPipelineLayout;
+    VkPipelineCache mPipelineCache;
     VkPipeline mPipeline;
 
     VkDescriptorSetLayoutBinding mBindings;

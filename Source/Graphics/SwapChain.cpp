@@ -114,6 +114,27 @@ void Swapchain::Setup() {
 }
 
 void Swapchain::Destroy() {
+    for (size_t i = 0; i < GetNumBuffers(); i++) {
+        mSwapchainImages[i]->Destroy();
+        vkDestroyFence(mAttachedDevice.mDevice, mFrameInfo[i].mSubmitFence, GetAllocationCallback());
+    }
+
+    mFrameInfo.clear();
+    mSwapchainImages.clear();
+
+    if (mRenderSemaphore) {
+        vkDestroySemaphore(mAttachedDevice.mDevice, mRenderSemaphore, GetAllocationCallback());
+        mRenderSemaphore = VK_NULL_HANDLE;
+    }
+    if (mPresentSemaphore) {
+        vkDestroySemaphore(mAttachedDevice.mDevice, mPresentSemaphore, GetAllocationCallback());
+        mPresentSemaphore = VK_NULL_HANDLE;
+    }
+
+    if (mSwapchain != VK_NULL_HANDLE) {
+        vkDestroySwapchainKHR(mAttachedDevice.mDevice, mSwapchain, GetAllocationCallback());
+        mSwapchain = VK_NULL_HANDLE;
+    }
 }
 
 void Swapchain::SetupImages() {
@@ -135,6 +156,9 @@ void Swapchain::SetupImages() {
     for (int i = 0; i < numImages; i++) {
         mFrameInfo[i].mSwapchainImage.CreateFromVkImage(vulkanImages[i], VK_FORMAT_B8G8R8A8_UNORM, mSwapchainSize);
         mSwapchainImages[i] = &mFrameInfo[i].mSwapchainImage;
+
+        SetVkName(VK_OBJECT_TYPE_IMAGE, mSwapchainImages[i]->GetImage(), "Swapchain " + std::to_string(i));
+        SetVkName(VK_OBJECT_TYPE_IMAGE_VIEW, mSwapchainImages[i]->GetImageView(), "Swapchain View " + std::to_string(i));
     }
 }
 
@@ -148,9 +172,12 @@ void Swapchain::SetupSyncObjects() {
 
     vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, GetAllocationCallback(), &mRenderSemaphore);
     vkCreateSemaphore(mAttachedDevice.mDevice, &semaphoreInfo, GetAllocationCallback(), &mPresentSemaphore);
+    SetVkName(VK_OBJECT_TYPE_SEMAPHORE, mRenderSemaphore, "Render Semaphore");
+    SetVkName(VK_OBJECT_TYPE_SEMAPHORE, mPresentSemaphore, "Present Semaphore");
     for (size_t i = 0; i < GetNumBuffers(); i++) {
         PerFrameInfo& data = mFrameInfo[i];
         vkCreateFence(mAttachedDevice.mDevice, &fenceInfo, GetAllocationCallback(), &data.mSubmitFence);
+        SetVkName(VK_OBJECT_TYPE_FENCE, data.mSubmitFence, "Submit Fence " + std::to_string(i));
     }
 }
 

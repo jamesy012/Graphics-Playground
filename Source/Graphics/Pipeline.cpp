@@ -23,12 +23,14 @@ bool Pipeline::AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage) {
 	vkCreateShaderModule(gGraphics->GetVkDevice(), &moduleInfo,
 		GetAllocationCallback(), &stageInfo.module);
 
+	SetVkName(VK_OBJECT_TYPE_SHADER_MODULE, stageInfo.module, aPath);
+
 	mShaders.push_back(stageInfo);
 
 	return stageInfo.module != VK_NULL_HANDLE;
 }
 
-bool Pipeline::Create(VkRenderPass aPass) {
+bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 	//Shader layouts
 	{
 		memset(&mBindings, 0, sizeof(VkDescriptorSetLayoutBinding));
@@ -42,15 +44,16 @@ bool Pipeline::Create(VkRenderPass aPass) {
 		mLayoutCreateInfo.bindingCount = 1;
 		mLayoutCreateInfo.pBindings = &mBindings;
 		vkCreateDescriptorSetLayout(gGraphics->GetVkDevice(), &mLayoutCreateInfo, GetAllocationCallback(), &mLayouts);
+		SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, mLayouts, aName);
 	}
 
-	VkPipelineCache pipelineCache;
 	{
 		VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
 		pipelineCacheCreateInfo.sType =
 			VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
 		vkCreatePipelineCache(gGraphics->GetVkDevice(), &pipelineCacheCreateInfo,
-			GetAllocationCallback(), &pipelineCache);
+			GetAllocationCallback(), &mPipelineCache);
+		SetVkName(VK_OBJECT_TYPE_PIPELINE_CACHE, mPipelineCache, aName);
 	}
 
 	//~~~ Vertex
@@ -180,6 +183,7 @@ bool Pipeline::Create(VkRenderPass aPass) {
 
 		vkCreatePipelineLayout(gGraphics->GetVkDevice(), &pipelineLayoutInfo,
 			GetAllocationCallback(), &mPipelineLayout);
+		SetVkName(VK_OBJECT_TYPE_PIPELINE_LAYOUT, mPipelineLayout, aName);
 	}
 
 	//~~~ VkGraphicsPipelineCreateInfo
@@ -201,10 +205,24 @@ bool Pipeline::Create(VkRenderPass aPass) {
 	createInfo.layout = mPipelineLayout;
 	createInfo.renderPass = aPass;
 
-	vkCreateGraphicsPipelines(gGraphics->GetVkDevice(), pipelineCache, 1,
+	vkCreateGraphicsPipelines(gGraphics->GetVkDevice(), mPipelineCache, 1,
 		&createInfo, GetAllocationCallback(), &mPipeline);
+	SetVkName(VK_OBJECT_TYPE_PIPELINE, mPipeline, aName ? aName : "Unnamed Graphics Pipeline");
 
-	return false;
+	for (int i = 0; i < mShaders.size(); i++) {
+		vkDestroyShaderModule(gGraphics->GetVkDevice(), mShaders[i].module, GetAllocationCallback());
+	}
+	mShaders.clear();
+
+	return true;
+}
+
+void Pipeline::Destroy() {
+	vkDestroyDescriptorSetLayout(gGraphics->GetVkDevice(), mLayouts, GetAllocationCallback());
+
+	vkDestroyPipelineCache(gGraphics->GetVkDevice(), mPipelineCache, GetAllocationCallback());
+	vkDestroyPipelineLayout(gGraphics->GetVkDevice(), mPipelineLayout, GetAllocationCallback());
+	vkDestroyPipeline(gGraphics->GetVkDevice(), mPipeline, GetAllocationCallback());
 }
 
 void Pipeline::Begin(VkCommandBuffer aBuffer) {

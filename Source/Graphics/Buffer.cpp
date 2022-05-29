@@ -29,7 +29,7 @@ void Buffer::Destroy() {
 	}
 }
 
-void Buffer::Create(const BufferType aType, const VkDeviceSize aSize) {
+void Buffer::Create(const BufferType aType, const VkDeviceSize aSize, const char* aName/* = 0*/) {
 	mType = aType;
 
 	if(aSize == 0){
@@ -53,10 +53,11 @@ void Buffer::Create(const BufferType aType, const VkDeviceSize aSize) {
 
 	vmaCreateBuffer(gGraphics->GetAllocator(), &bufferInfo, &allocationInfo, &mBuffer, &mAllocation, &mAllocationInfo);
 
+	SetVkName(VK_OBJECT_TYPE_BUFFER, mBuffer, aName ? aName : "Unnamed Buffer");
 }
 
-void Buffer::CreateFromData(const BufferType aType, const VkDeviceSize aSize, void* aData) {
-	Create(aType, aSize);
+void Buffer::CreateFromData(const BufferType aType, const VkDeviceSize aSize, void* aData, const char* aName/* = 0*/) {
+	Create(aType, aSize, aName);
 
 	void* data = Map();
 
@@ -66,11 +67,11 @@ void Buffer::CreateFromData(const BufferType aType, const VkDeviceSize aSize, vo
 	UnMap();
 }
 
-void Buffer::Resize(const VkDeviceSize aSize, const bool aKeepData){
+void Buffer::Resize(const VkDeviceSize aSize, const bool aKeepData, const char* aName/* = 0*/){
 	ASSERT(aKeepData == false);
 
 	Destroy();
-	Create(mType, aSize);
+	Create(mType, aSize, aName);
 }
 
 void Buffer::Flush() {

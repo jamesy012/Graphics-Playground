@@ -131,6 +131,20 @@ VkDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 	return VK_FALSE;
 }
 
+//template<typename T>
+//void SetVkName(VkObjectType aType, T aObject, const char* aName) {
+void SetVkName(VkObjectType aType, uint64_t aObject, const char* aName) {
+	if (gfDebugMarkerSetObjectName && gGraphics && gGraphics->GetVkDevice()) {
+		VkDebugUtilsObjectNameInfoEXT info = {};
+		info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+		info.objectType = aType;
+		info.objectHandle = aObject;
+		info.pObjectName = aName;
+		//vkSetDebugUtilsObjectNameEXT(gGraphics->GetVkDevice(), &info);
+		gfDebugMarkerSetObjectName(gGraphics->GetVkDevice(), &info);
+	}
+}
+
 
 //material test
 VkDescriptorPool gDescriptorPool;
@@ -282,10 +296,10 @@ bool Graphics::Initalize() {
 		vmaCreateAllocator(&createInfo, &mAllocator);
 	}
 
-	mRenderPass.Create();
-	mFramebuffer[0].Create(mSwapchain->GetImage(0), mRenderPass);
-	mFramebuffer[1].Create(mSwapchain->GetImage(1), mRenderPass);
-	mFramebuffer[2].Create(mSwapchain->GetImage(2), mRenderPass);
+	mRenderPass.Create("Present Renderpass");
+	mFramebuffer[0].Create(mSwapchain->GetImage(0), mRenderPass, "Swapchain Framebuffer 0");
+	mFramebuffer[1].Create(mSwapchain->GetImage(1), mRenderPass, "Swapchain Framebuffer 1");
+	mFramebuffer[2].Create(mSwapchain->GetImage(2), mRenderPass, "Swapchain Framebuffer 2");
 
 	{
 		VkDescriptorPoolSize pools[] = { {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 50}, };
@@ -295,6 +309,7 @@ bool Graphics::Initalize() {
 		descriptorPoolInfo.pPoolSizes = pools;
 		descriptorPoolInfo.poolSizeCount = sizeof(pools) / sizeof(VkDescriptorPoolSize);
 		vkCreateDescriptorPool(GetVkDevice(), &descriptorPoolInfo, GetAllocationCallback(), &gDescriptorPool);
+		SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, gDescriptorPool, "Default Descriptor Pool");
 	}
 
 	{
@@ -316,6 +331,7 @@ bool Graphics::Initalize() {
 		samplerInfo.minLod = 0.0f;
 		samplerInfo.maxLod = 0.0f;
 		vkCreateSampler(GetVkDevice(), &samplerInfo, GetAllocationCallback(), &gSampler);
+		SetVkName(VK_OBJECT_TYPE_SAMPLER, gSampler, "Default Repeat Sampler");
 	}
 
 	//imgui
@@ -339,15 +355,24 @@ bool Graphics::Destroy() {
 		}
 	}
 
+	vkDestroySampler(GetVkDevice(), gSampler, GetAllocationCallback());
+	//vkFreeDescriptorSets(GetVkDevice(), gDescriptorPool, 1, &gImGuiFontSet);
+	vkDestroyDescriptorPool(GetVkDevice(), gDescriptorPool, GetAllocationCallback());
+
 #if defined(ENABLE_IMGUI)
 	mImGuiFontImage.Destroy();
-	//mImGuiPipeline.Destroy();
+	mImGuiPipeline.Destroy();
 	mImGuiVertBuffer.Destroy();
 	mImGuiIndexBuffer.Destroy();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext(gImGuiContext);
 	gImGuiContext = nullptr;
 #endif
+
+	mFramebuffer[0].Destroy();
+	mFramebuffer[1].Destroy();
+	mFramebuffer[2].Destroy();
+	mRenderPass.Destroy();
 
 	vmaDestroyAllocator(mAllocator);
 	mAllocator = VK_NULL_HANDLE;
@@ -362,6 +387,10 @@ bool Graphics::Destroy() {
 		gXrInstance = XR_NULL_HANDLE;
 }
 #endif
+
+	for (int i = 0; i < mSurfaces.size(); i++) {
+		mSurfaces[i]->DestroySurface();
+	}
 
 	if (gVkInstance) {
 		vkDestroyInstance(gVkInstance, GetAllocationCallback());
@@ -441,6 +470,9 @@ OneTimeCommandBuffer Graphics::AllocateGraphicsCommandBuffer() {
 
 	VkFence fence;
 	vkCreateFence(GetVkDevice(), &fenceInfo, GetAllocationCallback(), &fence);
+
+	SetVkName(VK_OBJECT_TYPE_COMMAND_BUFFER, buffer, "Graphics CommandBuffer");
+	SetVkName(VK_OBJECT_TYPE_FENCE, fence, "Graphics CommandBuffer Fence");
 
 	return { buffer, fence };
 }
@@ -606,19 +638,19 @@ bool Graphics::CreateImGui() {
 	ImageSize size(fontWidth, fontHeight);
 
 	Buffer fontBuffer;
-	fontBuffer.CreateFromData(BufferType::STAGING, bufferSize, fontData);
+	fontBuffer.CreateFromData(BufferType::STAGING, bufferSize, fontData, "ImGui Font Data");
 
-	mImGuiFontImage.CreateFromBuffer(fontBuffer, VK_FORMAT_R8G8B8A8_UNORM, size);
+	mImGuiFontImage.CreateFromBuffer(fontBuffer, VK_FORMAT_R8G8B8A8_UNORM, size, "ImGui Font Image");
 
 	fontBuffer.Destroy();
 
 	mImGuiPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/imgui.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 	mImGuiPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
 
-	mImGuiPipeline.Create(mRenderPass.GetRenderPass());
+	mImGuiPipeline.Create(mRenderPass.GetRenderPass(), "ImGui Pipeline");
 
-	mImGuiVertBuffer.Create(BufferType::VERTEX, 0);
-	mImGuiIndexBuffer.Create(BufferType::INDEX, 0);
+	mImGuiVertBuffer.Create(BufferType::VERTEX, 0, "ImGui Vertex Buffer");
+	mImGuiIndexBuffer.Create(BufferType::INDEX, 0, "ImGui Index Buffer");
 
 	{
 		{
@@ -657,8 +689,8 @@ void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
 
 	VkDeviceSize vertexBufferSize = imDrawData->TotalVtxCount * sizeof(ImDrawVert);
 	VkDeviceSize indexBufferSize = imDrawData->TotalIdxCount * sizeof(ImDrawIdx);
-	mImGuiVertBuffer.Resize(vertexBufferSize, false);
-	mImGuiIndexBuffer.Resize(indexBufferSize, false);
+	mImGuiVertBuffer.Resize(vertexBufferSize, false, "ImGui Vertex Buffer");
+	mImGuiIndexBuffer.Resize(indexBufferSize, false, "ImGui Index Buffer");
 
 	if (vertexBufferSize != 0 && indexBufferSize != 0) {
 		ImDrawVert* vertexData = (ImDrawVert*)mImGuiVertBuffer.Map();

@@ -11,9 +11,9 @@ public:
 	Image() {}
 	~Image() {}
 
-	void CreateVkImage(const VkFormat aFormat, const ImageSize aSize);
-	void CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, const ImageSize aSize);
-	void CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, const ImageSize aSize);
+	void CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
+	void CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
+	void CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
 
 	void Destroy();
 
@@ -24,7 +24,7 @@ public:
 	const ImageSize GetImageSize() const { return mSize; }
 
 private:
-	void CreateVkImageView(const VkFormat aFormat);
+	void CreateVkImageView(const VkFormat aFormat, const char* aName = 0);
 
 	VkImage mImage;
 	VkImageView mImageView;

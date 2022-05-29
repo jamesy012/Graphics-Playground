@@ -203,6 +203,16 @@ bool Devices::Setup() {
 }
 
 void Devices::Destroy() {
+	vkFreeCommandBuffers(GetPrimaryDevice(), mCommandPoolGraphics, mGraphicsCommandBuffers.size(), mGraphicsCommandBuffers.data());
+	vkFreeCommandBuffers(GetPrimaryDevice(), mCommandPoolCompute, mComputeCommandBuffers.size(), mComputeCommandBuffers.data());
+	vkFreeCommandBuffers(GetPrimaryDevice(), mCommandPoolTransfer, mTransferCommandBuffers.size(), mTransferCommandBuffers.data());
+	vkDestroyCommandPool(GetPrimaryDevice(), mCommandPoolGraphics, GetAllocationCallback());
+	vkDestroyCommandPool(GetPrimaryDevice(), mCommandPoolCompute, GetAllocationCallback());
+	vkDestroyCommandPool(GetPrimaryDevice(), mCommandPoolTransfer, GetAllocationCallback());
+
+	for (int i = 0; i < gDevices.size(); i++) {
+		vkDestroyDevice(gDevices[i].mDevice, GetAllocationCallback());
+	}
 }
 
 void Devices::CreateCommandPools() {
@@ -220,6 +230,9 @@ void Devices::CreateCommandPools() {
 	createInfo.queueFamilyIndex = GetPrimaryDeviceData().mQueue.mTransferQueue.mQueueFamily;
 	vkCreateCommandPool(GetPrimaryDevice(), &createInfo, GetAllocationCallback(), &mCommandPoolTransfer);
 
+	SetVkName(VK_OBJECT_TYPE_COMMAND_POOL, mCommandPoolGraphics, "Command Pool Graphics");
+	SetVkName(VK_OBJECT_TYPE_COMMAND_POOL, mCommandPoolCompute, "Command Pool Compute");
+	SetVkName(VK_OBJECT_TYPE_COMMAND_POOL, mCommandPoolTransfer, "Command Pool Transfer");
 }
 void Devices::CreateCommandBuffers(const uint8_t aNumBuffers) {
 	mGraphicsCommandBuffers.resize(aNumBuffers);

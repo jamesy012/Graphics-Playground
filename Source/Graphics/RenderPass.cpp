@@ -5,7 +5,7 @@
 
 #include "Framebuffer.h"
 
-void RenderPass::Create() {
+void RenderPass::Create(const char* aName /*= 0*/) {
 
     VkAttachmentDescription colorAttachment = {};
     colorAttachment.format = gGraphics->GetMainSwapchain()->GetColorFormat();
@@ -31,6 +31,8 @@ void RenderPass::Create() {
     create.pSubpasses = &subpass;
 
     vkCreateRenderPass(gGraphics->GetVkDevice(), &create, GetAllocationCallback(), &mRenderPass);
+    SetVkName(VK_OBJECT_TYPE_RENDER_PASS, mRenderPass, aName ? aName : "Unnamed RenderPass");
+
 
 }
 #include <math.h>
@@ -59,4 +61,9 @@ void RenderPass::Begin(VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer)
 
 void RenderPass::End(VkCommandBuffer aBuffer) {
     vkCmdEndRenderPass(aBuffer);
+}
+
+void RenderPass::Destroy() {
+    vkDestroyRenderPass(gGraphics->GetVkDevice(), mRenderPass, GetAllocationCallback());
+    mRenderPass = VK_NULL_HANDLE;
 }
