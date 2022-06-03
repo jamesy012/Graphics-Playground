@@ -1,7 +1,6 @@
 message("Adding Libraries")
 
 #~ OpenXR
-set("GraphicsPlayground_Enable_VR" OFF CACHE BOOL "Enables Open XR")
 if(${GraphicsPlayground_Enable_VR})
 message("Adding OpenXR")
 set("OpenXR-Link" openxr_loader)
@@ -33,7 +32,7 @@ add_subdirectory(VulkanMemoryAllocator EXCLUDE_FROM_ALL)
 #add_subdirectory(Libraries/shaderc EXCLUDE_FROM_ALL)
 
 #~~~ IMGUI
-set("GraphicsPlayground_Enable_ImGui" ON CACHE BOOL "Enables ImGui")
+set(GraphicsPlayground_Enable_ImGui ON CACHE BOOL "Enables ImGui")
 if(GraphicsPlayground_Enable_ImGui)
    target_compile_definitions(GraphicsPlayground PUBLIC ENABLE_IMGUI)
    message("Adding ImGui")

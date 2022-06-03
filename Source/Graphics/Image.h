@@ -14,6 +14,10 @@ public:
 	void CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
 	void CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
 	void CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
+	//always 4bit
+	void CreateFromData(const void* aData, const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
+
+	void LoadImage(const char* aFilePath, const VkFormat aFormat);
 
 	void Destroy();
 

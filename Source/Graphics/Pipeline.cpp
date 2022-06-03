@@ -31,22 +31,6 @@ bool Pipeline::AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage) {
 }
 
 bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
-	//Shader layouts
-	{
-		memset(&mBindings, 0, sizeof(VkDescriptorSetLayoutBinding));
-		memset(&mLayoutCreateInfo, 0, sizeof(VkDescriptorSetLayoutCreateInfo));
-		memset(&mLayouts, 0, sizeof(VkDescriptorSetLayout));
-		mBindings.binding = 0;
-		mBindings.descriptorCount = 1;
-		mBindings.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		mBindings.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-		mLayoutCreateInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		mLayoutCreateInfo.bindingCount = 1;
-		mLayoutCreateInfo.pBindings = &mBindings;
-		vkCreateDescriptorSetLayout(gGraphics->GetVkDevice(), &mLayoutCreateInfo, GetAllocationCallback(), &mLayouts);
-		SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, mLayouts, aName);
-	}
-
 	{
 		VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
 		pipelineCacheCreateInfo.sType =
@@ -178,8 +162,12 @@ bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.pPushConstantRanges = &pushRange;
 		pipelineLayoutInfo.pushConstantRangeCount = 1;
-		pipelineLayoutInfo.pSetLayouts = &mLayouts;
-		pipelineLayoutInfo.setLayoutCount = 1;
+
+        if(mMaterialBase != nullptr){
+            VkDescriptorSetLayout layout = mMaterialBase->mLayout;
+            pipelineLayoutInfo.pSetLayouts = &layout;
+            pipelineLayoutInfo.setLayoutCount = 1;
+        }
 
 		vkCreatePipelineLayout(gGraphics->GetVkDevice(), &pipelineLayoutInfo,
 			GetAllocationCallback(), &mPipelineLayout);
@@ -218,8 +206,6 @@ bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 }
 
 void Pipeline::Destroy() {
-	vkDestroyDescriptorSetLayout(gGraphics->GetVkDevice(), mLayouts, GetAllocationCallback());
-
 	vkDestroyPipelineCache(gGraphics->GetVkDevice(), mPipelineCache, GetAllocationCallback());
 	vkDestroyPipelineLayout(gGraphics->GetVkDevice(), mPipelineLayout, GetAllocationCallback());
 	vkDestroyPipeline(gGraphics->GetVkDevice(), mPipeline, GetAllocationCallback());

@@ -15,7 +15,7 @@ public:
 	void Destroy();
 
 	void Create(const BufferType aType, const VkDeviceSize aSize, const char* aName = 0);
-	void CreateFromData(const BufferType aType, const VkDeviceSize aSize, void* aData, const char* aName = 0);
+	void CreateFromData(const BufferType aType, const VkDeviceSize aSize, const void* aData, const char* aName = 0);
 
 	void Resize(const VkDeviceSize aSize, const bool aKeepData, const char* aName = 0);
 

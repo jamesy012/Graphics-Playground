@@ -12,7 +12,7 @@ struct SwapchainSupportDetails {
     std::vector<VkPresentModeKHR> presentModes{};
 };
 
-void Swapchain::Setup() {
+void Swapchain::Setup(const ImageSize aRequestedSize) {
     const VkSurfaceKHR deviceSurface = mAttachedDevice.mSurfaceUsed;
 
     SwapchainSupportDetails swapChainSupport;
@@ -54,7 +54,10 @@ void Swapchain::Setup() {
         imageCount = swapChainSupport.capabilities.maxImageCount;
     }
 
-    mSwapchainSize = swapChainSupport.capabilities.currentExtent;
+    //mSwapchainSize = swapChainSupport.capabilities.currentExtent;
+    mSwapchainSize = aRequestedSize;
+    ASSERT(mSwapchainSize.width < swapChainSupport.capabilities.currentExtent.width);
+    ASSERT(mSwapchainSize.height < swapChainSupport.capabilities.currentExtent.height);
 
     VkSwapchainCreateInfoKHR createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;

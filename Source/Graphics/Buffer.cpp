@@ -56,12 +56,12 @@ void Buffer::Create(const BufferType aType, const VkDeviceSize aSize, const char
 	SetVkName(VK_OBJECT_TYPE_BUFFER, mBuffer, aName ? aName : "Unnamed Buffer");
 }
 
-void Buffer::CreateFromData(const BufferType aType, const VkDeviceSize aSize, void* aData, const char* aName/* = 0*/) {
+void Buffer::CreateFromData(const BufferType aType, const VkDeviceSize aSize, const void* aData, const char* aName/* = 0*/) {
 	Create(aType, aSize, aName);
 
 	void* data = Map();
 
-	//comes premapped due to VMA_ALLOCATION_CREATE_MAPPED_BIT
+	//comes premapped due to VMA_ALLOCATION_CREATE_MAPPED_BIT?
 	memcpy(data, aData, mAllocationInfo.size);
 
 	UnMap();

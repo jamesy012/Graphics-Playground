@@ -6,11 +6,12 @@
 #include <vector>
 #include "Image.h"
 #include "Framebuffer.h"
+#include "Helpers.h"
 
 class Swapchain {
 public:
 	Swapchain(const DeviceData& aDevice) : mAttachedDevice(aDevice) {};
-	void Setup();
+	void Setup(const ImageSize aRequestedSize);
 	void Destroy();
 
 	const uint32_t GetImageIndex() const {

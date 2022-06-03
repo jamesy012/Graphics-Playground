@@ -10,6 +10,7 @@
 #include "Buffer.h"
 #include "RenderPass.h"
 #include "Framebuffer.h"
+#include "Material.h"
 
 class Window;
 class Devices;
@@ -82,6 +83,9 @@ public:
 
 	const VkFormat GetMainFormat() const;
 	const VmaAllocator GetAllocator() const { return mAllocator; }
+
+	const VkDescriptorPool GetDesciptorPool() const { return mDescriptorPool; };
+	const VkSampler GetDefaultSampler() const { return mSampler; };
 private:
 	bool CreateInstance();
 #if defined(ENABLE_IMGUI)
@@ -92,6 +96,8 @@ private:
 	Pipeline mImGuiPipeline;
 	Buffer mImGuiVertBuffer;
 	Buffer mImGuiIndexBuffer;
+	MaterialBase mImGuiFontMaterialBase;
+	Material mImGuiFontMaterial;
 #endif
 
 	RenderPass mRenderPass;
@@ -111,6 +117,9 @@ private:
 	Swapchain* mSwapchain;
 
   	VmaAllocator mAllocator;
+
+	VkDescriptorPool mDescriptorPool;
+	VkSampler mSampler;
 
 	uint32_t mFrameCounter = 0;
 

@@ -60,3 +60,7 @@ const char** Window::GetGLFWVulkanExtentensions(uint32_t* aCount) {
 	return glfwGetRequiredInstanceExtensions(aCount);
 }
 
+void Window::GetSize(int* aWidth, int* aHeight) const {
+	glfwGetWindowSize(mWindow, aWidth, aHeight);
+}
+

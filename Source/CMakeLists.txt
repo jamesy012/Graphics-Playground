@@ -11,6 +11,8 @@ source_group("Test" ${SOURCE_FILES})
 
 add_executable(GraphicsPlayground ${SOURCE_FILES})
 
+set(GraphicsPlayground_Enable_VR OFF CACHE BOOL "Enables Open XR")
+
 add_subdirectory(Graphics)
 add_subdirectory(Libraries)
 

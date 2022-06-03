@@ -1,6 +1,20 @@
 message("Adding Graphics")
 
-set("GraphicsPlayground_Graphics_Vulkan" ON CACHE BOOL "Enables Vulkan")
+#~~~~~ GRAPHICS CODE
+
+if(GraphicsPlayground_Enable_ImGui)
+set(IMGUI_GRAPHICS_SOURCES 
+"${CMAKE_CURRENT_SOURCE_DIR}/ImGuiGraphics.h"
+"${CMAKE_CURRENT_SOURCE_DIR}/ImGuiGraphics.cpp" 
+)
+endif()
+
+if(GraphicsPlayground_Enable_VR)
+set(VR_GRAPHICS_SOURCES 
+"${CMAKE_CURRENT_SOURCE_DIR}/VRGraphics.h"
+"${CMAKE_CURRENT_SOURCE_DIR}/VRGraphics.cpp" 
+)
+endif()
 
 set(GRAPHICS_SOURCE 
 "${CMAKE_CURRENT_SOURCE_DIR}/Graphics.h"
@@ -24,7 +38,17 @@ set(GRAPHICS_SOURCE
 "${CMAKE_CURRENT_SOURCE_DIR}/Pipeline.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/RenderTarget.h" 
 "${CMAKE_CURRENT_SOURCE_DIR}/RenderTarget.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/Material.h" 
+"${CMAKE_CURRENT_SOURCE_DIR}/Material.cpp"
+${IMGUI_GRAPHICS_SOURCES}
+${VR_GRAPHICS_SOURCES}
  )
+
+target_sources(GraphicsPlayground PRIVATE ${GRAPHICS_SOURCE})
+
+#~~~~~~ VULKAN/SHADERS
+
+set("GraphicsPlayground_Graphics_Vulkan" ON CACHE BOOL "Enables Vulkan")
 
 if(${GraphicsPlayground_Graphics_Vulkan})
     message("Adding Vulkan")
@@ -69,5 +93,3 @@ if(${GraphicsPlayground_Graphics_Vulkan})
 
     add_dependencies(GraphicsPlayground Shaders)
 endif()
-
-target_sources(GraphicsPlayground PRIVATE ${GRAPHICS_SOURCE})

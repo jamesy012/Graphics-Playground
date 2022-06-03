@@ -66,42 +66,6 @@ bool getVkInstanceProcAddr(void* aFunc, const char* aName) {
 	return *func != nullptr;
 };
 
-#if defined(ENABLE_XR)
-XrDebugUtilsMessengerEXT gXrDebugMessenger = VK_NULL_HANDLE;
-
-static XRAPI_ATTR XrBool32 XRAPI_CALL
-XrDebugCallback(XrDebugUtilsMessageSeverityFlagsEXT              messageSeverity,
-	XrDebugUtilsMessageTypeFlagsEXT                  messageTypes,
-	const XrDebugUtilsMessengerCallbackDataEXT* callbackData,
-	void* userData) {
-
-	const char* severityText[4] = { "VERBOSE",
-		"INFO",
-		"WARNING",
-		"ERROR" };
-	const char* typeText[4] = {
-		"GENERAL",
-		"VALIDATION",
-		"PERFORMANCE",
-		"CONFORMANCE" };
-	LOG::Log("XR_DEBUG %s: (%s) (%s/%s)\n\t %s\n", callbackData->messageId, callbackData->functionName, severityText[messageSeverity], typeText[messageTypes],
-		callbackData->message);
-
-	//if (callbackData->messageId != 0) {
-	//	ASSERT("XR Error");
-	//}
-
-	return VK_FALSE;
-}
-
-bool getXrInstanceProcAddr(void* aFunc, const char* aName) {
-	PFN_xrVoidFunction* func = (PFN_xrVoidFunction*)aFunc;
-	xrGetInstanceProcAddr(gXrInstance, aName, func);
-	ASSERT(*func != nullptr);
-	return *func != nullptr;
-};
-#endif
-
 bool CheckVkResult(VkResult aResult) {
 	switch (aResult) {
 	case VK_SUCCESS:
@@ -146,10 +110,41 @@ void SetVkName(VkObjectType aType, uint64_t aObject, const char* aName) {
 }
 
 
-//material test
-VkDescriptorPool gDescriptorPool;
-VkDescriptorSet gImGuiFontSet;
-VkSampler gSampler;
+#if defined(ENABLE_XR)
+XrDebugUtilsMessengerEXT gXrDebugMessenger = VK_NULL_HANDLE;
+
+static XRAPI_ATTR XrBool32 XRAPI_CALL
+XrDebugCallback(XrDebugUtilsMessageSeverityFlagsEXT              messageSeverity,
+	XrDebugUtilsMessageTypeFlagsEXT                  messageTypes,
+	const XrDebugUtilsMessengerCallbackDataEXT* callbackData,
+	void* userData) {
+
+	const char* severityText[4] = { "VERBOSE",
+		"INFO",
+		"WARNING",
+		"ERROR" };
+	const char* typeText[4] = {
+		"GENERAL",
+		"VALIDATION",
+		"PERFORMANCE",
+		"CONFORMANCE" };
+	LOG::Log("XR_DEBUG %s: (%s) (%s/%s)\n\t %s\n", callbackData->messageId, callbackData->functionName, severityText[messageSeverity], typeText[messageTypes],
+		callbackData->message);
+
+	//if (callbackData->messageId != 0) {
+	//	ASSERT("XR Error");
+	//}
+
+	return VK_FALSE;
+}
+
+bool getXrInstanceProcAddr(void* aFunc, const char* aName) {
+	PFN_xrVoidFunction* func = (PFN_xrVoidFunction*)aFunc;
+	xrGetInstanceProcAddr(gXrInstance, aName, func);
+	ASSERT(*func != nullptr);
+	return *func != nullptr;
+};
+#endif
 
 bool Graphics::StartUp() {
 	ASSERT(gGraphics == nullptr);
@@ -280,7 +275,9 @@ bool Graphics::Initalize() {
 	mDevicesHandler->CreateCommandPools();
 
 	mSwapchain = new Swapchain(mDevicesHandler->GetPrimaryDeviceData());
-	mSwapchain->Setup();
+	int width, height;
+	mSurfaces[0]->GetSize(&width, &height);
+	mSwapchain->Setup(ImageSize(width, height));
 
 	mDevicesHandler->CreateCommandBuffers(mSwapchain->GetNumBuffers());
 
@@ -308,8 +305,8 @@ bool Graphics::Initalize() {
 		descriptorPoolInfo.maxSets = 50;
 		descriptorPoolInfo.pPoolSizes = pools;
 		descriptorPoolInfo.poolSizeCount = sizeof(pools) / sizeof(VkDescriptorPoolSize);
-		vkCreateDescriptorPool(GetVkDevice(), &descriptorPoolInfo, GetAllocationCallback(), &gDescriptorPool);
-		SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, gDescriptorPool, "Default Descriptor Pool");
+		vkCreateDescriptorPool(GetVkDevice(), &descriptorPoolInfo, GetAllocationCallback(), &mDescriptorPool);
+		SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, mDescriptorPool, "Default Descriptor Pool");
 	}
 
 	{
@@ -330,8 +327,8 @@ bool Graphics::Initalize() {
 		samplerInfo.mipLodBias = 0.0f;
 		samplerInfo.minLod = 0.0f;
 		samplerInfo.maxLod = 0.0f;
-		vkCreateSampler(GetVkDevice(), &samplerInfo, GetAllocationCallback(), &gSampler);
-		SetVkName(VK_OBJECT_TYPE_SAMPLER, gSampler, "Default Repeat Sampler");
+		vkCreateSampler(GetVkDevice(), &samplerInfo, GetAllocationCallback(), &mSampler);
+		SetVkName(VK_OBJECT_TYPE_SAMPLER, mSampler, "Default Repeat Sampler");
 	}
 
 	//imgui
@@ -355,11 +352,12 @@ bool Graphics::Destroy() {
 		}
 	}
 
-	vkDestroySampler(GetVkDevice(), gSampler, GetAllocationCallback());
+	vkDestroySampler(GetVkDevice(), mSampler, GetAllocationCallback());
 	//vkFreeDescriptorSets(GetVkDevice(), gDescriptorPool, 1, &gImGuiFontSet);
-	vkDestroyDescriptorPool(GetVkDevice(), gDescriptorPool, GetAllocationCallback());
+	vkDestroyDescriptorPool(GetVkDevice(), mDescriptorPool, GetAllocationCallback());
 
 #if defined(ENABLE_IMGUI)
+	mImGuiFontMaterialBase.Destroy();
 	mImGuiFontImage.Destroy();
 	mImGuiPipeline.Destroy();
 	mImGuiVertBuffer.Destroy();
@@ -647,37 +645,18 @@ bool Graphics::CreateImGui() {
 	mImGuiPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/imgui.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 	mImGuiPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
 
+	mImGuiFontMaterialBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+	mImGuiFontMaterialBase.Create("ImGui Material Layout");
+	mImGuiPipeline.SetMaterialBase(&mImGuiFontMaterialBase);
+
 	mImGuiPipeline.Create(mRenderPass.GetRenderPass(), "ImGui Pipeline");
 
 	mImGuiVertBuffer.Create(BufferType::VERTEX, 0, "ImGui Vertex Buffer");
 	mImGuiIndexBuffer.Create(BufferType::INDEX, 0, "ImGui Index Buffer");
 
 	{
-		{
-			VkDescriptorSetAllocateInfo alloc_info = {};
-			alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-			alloc_info.descriptorPool = gDescriptorPool;
-			alloc_info.descriptorSetCount = 1;
-			VkDescriptorSetLayout layout = mImGuiPipeline.GetSetLayout();
-			alloc_info.pSetLayouts = &layout;
-			VkResult err = vkAllocateDescriptorSets(GetVkDevice(), &alloc_info, &gImGuiFontSet);
-		}
-
-		// Update the Descriptor Set:
-		{
-			VkDescriptorImageInfo desc_image[1] = {};
-			desc_image[0].sampler = gSampler;
-			desc_image[0].imageView = mImGuiFontImage.GetImageView();
-			desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			VkWriteDescriptorSet write_desc[1] = {};
-			write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			write_desc[0].dstSet = gImGuiFontSet;
-			write_desc[0].dstBinding = 0;
-			write_desc[0].descriptorCount = 1;
-			write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			write_desc[0].pImageInfo = desc_image;
-			vkUpdateDescriptorSets(GetVkDevice(), 1, write_desc, 0, NULL);
-		}
+		mImGuiFontMaterial.Create(&mImGuiFontMaterialBase, "ImGui Font Material");
+		mImGuiFontMaterial.SetImage(mImGuiFontImage);
 	}
 
 	return true;
@@ -727,7 +706,7 @@ void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
 		gImGuiPushConstant.mUv = glm::vec2(-1.0f);
 		vkCmdPushConstants(aBuffer, mImGuiPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ImGuiPushConstant), &gImGuiPushConstant);
 
-		vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mImGuiPipeline.GetLayout(), 0, 1, &gImGuiFontSet, 0, 0);
+		vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mImGuiPipeline.GetLayout(), 0, 1, mImGuiFontMaterial.GetSet(), 0, 0);
 
 		// Render commands
 		int32_t vertexOffset = 0;

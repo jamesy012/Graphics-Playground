@@ -24,6 +24,8 @@ public:
 	GLFWwindow* GetWindow() const {
 		return mWindow;
 	}
+
+	void GetSize(int* aWidth, int* aHeight) const;
 private:
 	GLFWwindow* mWindow = nullptr;
 	//VkSurfaceKHR

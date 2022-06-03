@@ -7,6 +7,10 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+uint32_t ConvertImageSizeToByteSize(ImageSize aSize) {
+	return aSize.mWidth * aSize.mHeight * sizeof(char) * 4;
+}
+
 void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const char* aName/* = 0*/) {
 	VkImageCreateInfo createInfo{};
 	createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -71,6 +75,27 @@ void Image::CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, cons
 	CreateVkImageView(aFormat, aName);
 }
 
+void Image::CreateFromData(const void* aData, const VkFormat aFormat, const ImageSize aSize, const char* aName/* = 0*/) {
+	Buffer dataBuffer;
+	dataBuffer.CreateFromData(BufferType::IMAGE, ConvertImageSizeToByteSize(aSize), aData, aName);
+	
+	CreateFromBuffer(dataBuffer, aFormat, aSize, aName);
+
+	dataBuffer.Destroy();
+}
+
+void Image::LoadImage(const char* aFilePath, const VkFormat aFormat) {
+	int width, height, comp;
+	//todo
+	stbi_uc* data = stbi_load(aFilePath, &width, &height, &comp, STBI_rgb_alpha);
+	ASSERT(comp == 4);
+	ASSERT(data != nullptr);
+
+	CreateFromData(data, aFormat, {width, height}, aFilePath);
+
+	stbi_image_free(data);
+}
+
 void Image::Destroy() {
 
 	if (mImageView) {
@@ -119,7 +144,7 @@ void Image::ChangeImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aNewL
 		memoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 		break;
 	case VK_IMAGE_LAYOUT_UNDEFINED:
-		memoryBarrier.dstAccessMask = VK_ACCESS_NONE;
+		memoryBarrier.dstAccessMask = VK_ACCESS_NONE_KHR;
 		break;
 	default:
 		ASSERT(false);
