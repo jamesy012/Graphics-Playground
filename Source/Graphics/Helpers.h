@@ -8,8 +8,12 @@ struct ImageSize {
 	ImageSize(uint32_t aWidth, uint32_t aHeight) : mWidth(aWidth), mHeight(aHeight) {};
 	ImageSize(int aWidth, int aHeight) : mWidth((int)aWidth), mHeight((int)aHeight) {};
 
-	operator VkExtent2D() const { return { mWidth, mHeight }; }
-	operator VkExtent3D() const { return { mWidth, mHeight, 1 }; }
+	operator VkExtent2D() const {
+		return {mWidth, mHeight};
+	}
+	operator VkExtent3D() const {
+		return {mWidth, mHeight, 1};
+	}
 
 	uint32_t mWidth;
 	uint32_t mHeight;

@@ -7,7 +7,8 @@ struct DeviceData {
 	VkPhysicalDevice mPhysicalDevice;
 	VkDevice mDevice;
 	struct Queue {
-		enum class QueueTypes{
+		enum class QueueTypes
+		{
 			GRAPHICS,
 			COMPUTE,
 			TRANSFER,
@@ -30,23 +31,23 @@ struct DeviceData {
 		std::vector<QueueFamilys> mQueueFamilies;
 		struct QueueIndex {
 			int8_t mQueueFamily = -1;
-			VkQueue mQueue = VK_NULL_HANDLE;
+			VkQueue mQueue		= VK_NULL_HANDLE;
 		};
 		//union {
-			//struct {
-				QueueIndex mGraphicsQueue;
-				QueueIndex mComputeQueue;
-				QueueIndex mTransferQueue;
-				QueueIndex mPresentQueue;
-			//};
+		//struct {
+		QueueIndex mGraphicsQueue;
+		QueueIndex mComputeQueue;
+		QueueIndex mTransferQueue;
+		QueueIndex mPresentQueue;
+		//};
 		//	QueueIndex mQueues[(int)QueueTypes::NUM];
 		//};
 	} mQueue;
 
 	struct SwapChain {
 		VkSurfaceCapabilitiesKHR capabilities;
-		std::vector<VkSurfaceFormatKHR> formats{};
-		std::vector<VkPresentModeKHR> presentModes{};
+		std::vector<VkSurfaceFormatKHR> formats {};
+		std::vector<VkPresentModeKHR> presentModes {};
 	} mSwapchain;
 
 	std::vector<VkExtensionProperties> mExtensions;
@@ -78,8 +79,8 @@ public:
 	const VkCommandPool GetGraphicsPool() const {
 		return mCommandPoolGraphics;
 	}
-private:
 
+private:
 	VkSurfaceKHR mSurface;
 
 	//should be in DeviceData? / Combine below

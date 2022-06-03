@@ -3,7 +3,8 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
-enum class BufferType {
+enum class BufferType
+{
 	IMAGE,
 	STAGING,
 	VERTEX,
@@ -19,9 +20,15 @@ public:
 
 	void Resize(const VkDeviceSize aSize, const bool aKeepData, const char* aName = 0);
 
-	VkBuffer GetBuffer() const { return mBuffer; }
-	const VkBuffer* GetBufferRef() const { return &mBuffer; }
-	const BufferType GetType() const { return mType; }
+	VkBuffer GetBuffer() const {
+		return mBuffer;
+	}
+	const VkBuffer* GetBufferRef() const {
+		return &mBuffer;
+	}
+	const BufferType GetType() const {
+		return mType;
+	}
 
 	void* Map();
 	void UnMap();
@@ -33,7 +40,7 @@ private:
 	VkBuffer mBuffer = VK_NULL_HANDLE;
 	BufferType mType;
 
-	VmaAllocation mAllocation = VK_NULL_HANDLE;
+	VmaAllocation mAllocation		  = VK_NULL_HANDLE;
 	VmaAllocationInfo mAllocationInfo = {};
 
 	void* mMappedData = nullptr;

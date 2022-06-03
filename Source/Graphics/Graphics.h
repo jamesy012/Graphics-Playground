@@ -1,16 +1,16 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
+#include <vulkan/vulkan.h>
 
 #include <vector>
 
-#include "Image.h"
-#include "Pipeline.h"
 #include "Buffer.h"
-#include "RenderPass.h"
 #include "Framebuffer.h"
+#include "Image.h"
 #include "Material.h"
+#include "Pipeline.h"
+#include "RenderPass.h"
 
 class Window;
 class Devices;
@@ -18,12 +18,12 @@ class Swapchain;
 
 static VkAllocationCallbacks* CreateAllocationCallbacks() {
 	VkAllocationCallbacks callback;
-	callback.pUserData = nullptr;
-	callback.pfnAllocation = nullptr;
-	callback.pfnReallocation = nullptr;
-	callback.pfnFree = nullptr;
+	callback.pUserData			   = nullptr;
+	callback.pfnAllocation		   = nullptr;
+	callback.pfnReallocation	   = nullptr;
+	callback.pfnFree			   = nullptr;
 	callback.pfnInternalAllocation = nullptr;
-	callback.pfnInternalFree = nullptr;
+	callback.pfnInternalFree	   = nullptr;
 	return nullptr;
 }
 
@@ -35,16 +35,16 @@ static VkAllocationCallbacks* GetAllocationCallback() {
 struct OneTimeCommandBuffer {
 	VkCommandBuffer mBuffer;
 	VkFence mFence;
-	operator VkCommandBuffer() { return mBuffer; }
+	operator VkCommandBuffer() {
+		return mBuffer;
+	}
 };
 
 void SetVkName(VkObjectType aType, uint64_t aObject, const char* aName);
-template<typename T>
-inline void SetVkName(VkObjectType aType, T aObject, const char* aName) {
+template<typename T> inline void SetVkName(VkObjectType aType, T aObject, const char* aName) {
 	SetVkName(aType, (uint64_t)aObject, aName);
 }
-template<typename T>
-inline void SetVkName(VkObjectType aType, T aObject, const std::string aName) {
+template<typename T> inline void SetVkName(VkObjectType aType, T aObject, const std::string aName) {
 	SetVkName(aType, (uint64_t)aObject, aName.c_str());
 }
 
@@ -53,39 +53,48 @@ public:
 	Graphics() {};
 	~Graphics() {};
 
-//~~~ creation/destruction
-	//starts vulkan
+	//~~~ creation/destruction
+	// starts vulkan
 	bool StartUp();
-	//starts to set up vulkan objects, Device/Swapchain/Command buffers
+	// starts to set up vulkan objects, Device/Swapchain/Command buffers
 	bool Initalize();
 	bool Destroy();
 
 	void AddWindow(Window* aWindow);
 
-//~~~ Frame Management
+	//~~~ Frame Management
 	void StartNewFrame();
 	void EndFrame();
 
 	const uint32_t GetCurrentImageIndex() const;
-	const uint32_t GetFrameCount() const { return mFrameCounter; }
+	const uint32_t GetFrameCount() const {
+		return mFrameCounter;
+	}
 
 	VkCommandBuffer GetCurrentGraphicsCommandBuffer() const;
 
 	OneTimeCommandBuffer AllocateGraphicsCommandBuffer();
-	//submits and finish's the command buffer
+	// submits and finish's the command buffer
 	void EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer);
 
-//~~~ Helpers
+	//~~~ Helpers
 	const VkDevice GetVkDevice() const;
 	const VkPhysicalDevice GetVkPhysicalDevice() const;
 	const Devices* GetMainDevice() const;
 	const Swapchain* GetMainSwapchain() const;
 
 	const VkFormat GetMainFormat() const;
-	const VmaAllocator GetAllocator() const { return mAllocator; }
+	const VmaAllocator GetAllocator() const {
+		return mAllocator;
+	}
 
-	const VkDescriptorPool GetDesciptorPool() const { return mDescriptorPool; };
-	const VkSampler GetDefaultSampler() const { return mSampler; };
+	const VkDescriptorPool GetDesciptorPool() const {
+		return mDescriptorPool;
+	};
+	const VkSampler GetDefaultSampler() const {
+		return mSampler;
+	};
+
 private:
 	bool CreateInstance();
 #if defined(ENABLE_IMGUI)
@@ -116,14 +125,12 @@ private:
 	Devices* mDevicesHandler;
 	Swapchain* mSwapchain;
 
-  	VmaAllocator mAllocator;
+	VmaAllocator mAllocator;
 
 	VkDescriptorPool mDescriptorPool;
 	VkSampler mSampler;
 
 	uint32_t mFrameCounter = 0;
-
 };
 
 extern Graphics* gGraphics;
-

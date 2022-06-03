@@ -3,16 +3,16 @@
 #include <stdarg.h>
 
 #if PLATFORM_WINDOWS
-#include <Windows.h>
+#	include <Windows.h>
 #endif
 
 #include <cstring>
 #include <cstdio>
 
 #if PLATFORM_WINDOWS
-#define LOGOUTPUT(x) OutputDebugStringA(x);
+#	define LOGOUTPUT(x) OutputDebugStringA(x);
 #else
-#define LOGOUTPUT(x)
+#	define LOGOUTPUT(x)
 #endif
 
 #define LOGCONSOLE(...)           \
@@ -30,8 +30,8 @@ namespace LOG {
 
 	void Log(const char* aMessage, ...) {
 
-		const unsigned int size = 1024 * 16;
-		static char buffer[size] = { 0 };
+		const unsigned int size	 = 1024 * 16;
+		static char buffer[size] = {0};
 		memset(buffer, 0, size);
 
 		// Category
@@ -63,11 +63,11 @@ namespace LOG {
 
 	void LogLine(const char* aMessage, ...) {
 
-		int size = strlen(aMessage)+1;//include \0
-		char* message = new char[size+1];//adding \n
+		int size	  = strlen(aMessage) + 1; //include \0
+		char* message = new char[size + 1]; //adding \n
 		memcpy(message, aMessage, size);
-		message[size-1] = '\n';
-		message[size] = '\0';
+		message[size - 1] = '\n';
+		message[size]	  = '\0';
 
 		va_list args;
 		va_start(args, aMessage);
@@ -76,4 +76,4 @@ namespace LOG {
 
 		delete[] message;
 	}
-}
+} // namespace LOG

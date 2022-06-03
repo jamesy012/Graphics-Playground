@@ -29,11 +29,12 @@ public:
 	}
 
 	const Image& GetImage(uint8_t aIndex) const {
-		return mFrameInfo[aIndex].mSwapchainImage;		
+		return mFrameInfo[aIndex].mSwapchainImage;
 	}
 	const VkExtent2D& GetSize() const {
-		return mSwapchainSize;		
+		return mSwapchainSize;
 	}
+
 private:
 	void SetupImages();
 	void SetupSyncObjects();
@@ -42,7 +43,7 @@ private:
 	const DeviceData& mAttachedDevice;
 	VkFormat mColorFormat;
 
-	struct PerFrameInfo{
+	struct PerFrameInfo {
 		Image mSwapchainImage;
 		//Framebuffer mSwapChainFB;
 
@@ -60,5 +61,4 @@ private:
 	std::vector<Image*> mSwapchainImages;
 
 	VkExtent2D mSwapchainSize;
-
 };

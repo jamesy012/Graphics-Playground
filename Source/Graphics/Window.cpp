@@ -6,12 +6,12 @@
 #include "PlatformDebug.h"
 
 #if PLATFORM_WINDOWS
-#define VK_USE_PLATFORM_WIN32_KHR
-#include <GLFW/glfw3.h>
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h>
+#	define VK_USE_PLATFORM_WIN32_KHR
+#	include <GLFW/glfw3.h>
+#	define GLFW_EXPOSE_NATIVE_WIN32
+#	include <GLFW/glfw3native.h>
 #elif PLATFORM_APPLE
-#include <GLFW/glfw3.h>
+#	include <GLFW/glfw3.h>
 #endif
 
 extern VkInstance gVkInstance;
@@ -29,10 +29,10 @@ void Window::Destroy() {
 
 void* Window::CreateSurface() {
 	ASSERT(gVkInstance != VK_NULL_HANDLE);
-	VkSurfaceKHR surface = VK_NULL_HANDLE;
+	VkSurfaceKHR surface  = VK_NULL_HANDLE;
 	const VkResult result = glfwCreateWindowSurface(gVkInstance, mWindow, GetAllocationCallback(), &surface);
-	if (result != VK_SUCCESS) {
-		ASSERT(false);// Failed to create surface
+	if(result != VK_SUCCESS) {
+		ASSERT(false); // Failed to create surface
 	}
 	mSurface = surface;
 	return mSurface;
@@ -63,4 +63,3 @@ const char** Window::GetGLFWVulkanExtentensions(uint32_t* aCount) {
 void Window::GetSize(int* aWidth, int* aHeight) const {
 	glfwGetWindowSize(mWindow, aWidth, aHeight);
 }
-

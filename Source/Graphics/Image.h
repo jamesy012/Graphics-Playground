@@ -21,11 +21,18 @@ public:
 
 	void Destroy();
 
-	void ChangeImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aNewLayout, VkPipelineStageFlags aSrcStageMask, VkPipelineStageFlags aDstStageMask);
+	void ChangeImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aNewLayout, VkPipelineStageFlags aSrcStageMask,
+						   VkPipelineStageFlags aDstStageMask);
 
-	const VkImage GetImage() const { return mImage; }
-	const VkImageView GetImageView() const { return mImageView; }
-	const ImageSize GetImageSize() const { return mSize; }
+	const VkImage GetImage() const {
+		return mImage;
+	}
+	const VkImageView GetImageView() const {
+		return mImageView;
+	}
+	const ImageSize GetImageSize() const {
+		return mSize;
+	}
 
 private:
 	void CreateVkImageView(const VkFormat aFormat, const char* aName = 0);

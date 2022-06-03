@@ -11,7 +11,7 @@ public:
 
 	void AddBinding(const uint32_t aBinding, const uint32_t aCount, const VkDescriptorType aType, const VkShaderStageFlags aStages);
 
-	void Create(const char *aName = 0);
+	void Create(const char* aName = 0);
 
 	void Destroy();
 
@@ -24,15 +24,15 @@ private:
 class Material {
 public:
 	Material();
-	void Create(const MaterialBase *aBase, const char *aName = 0);
+	void Create(const MaterialBase* aBase, const char* aName = 0);
 
-	void SetImage(const Image &aImage) const;
+	void SetImage(const Image& aImage) const;
 
-	const VkDescriptorSet *GetSet() const {
+	const VkDescriptorSet* GetSet() const {
 		return &mSet;
 	}
 
 private:
-	const MaterialBase *mBase;
+	const MaterialBase* mBase;
 	VkDescriptorSet mSet = VK_NULL_HANDLE;
 };

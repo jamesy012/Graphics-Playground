@@ -1,6 +1,5 @@
 #pragma once
 
 class VRGraphics {
-    public:
-
+public:
 };

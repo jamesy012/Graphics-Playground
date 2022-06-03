@@ -9,16 +9,16 @@ class RenderPass;
 
 class RenderTarget {
 public:
-    void Create(const ImageSize aImageSize, const RenderPass& aRenderPass);
+	void Create(const ImageSize aImageSize, const RenderPass& aRenderPass);
 
-    const Framebuffer& GetFb() const {
-        return mFramebuffer;
-    }
-    const Image& GetImage() const {
-        return mImage;
-    }
+	const Framebuffer& GetFb() const {
+		return mFramebuffer;
+	}
+	const Image& GetImage() const {
+		return mImage;
+	}
+
 private:
-    Image mImage;
-    Framebuffer mFramebuffer;
-
+	Image mImage;
+	Framebuffer mFramebuffer;
 };

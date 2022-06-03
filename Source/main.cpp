@@ -24,19 +24,19 @@ int main() {
 	gfx.AddWindow(&window);
 	gfx.Initalize();
 
-    while (!window.ShouldClose()) {
-        window.Update();
+	while(!window.ShouldClose()) {
+		window.Update();
 
 		gfx.StartNewFrame();
 
 		ImGui::ShowDemoWindow();
-		
+
 		gfx.EndFrame();
-    }
+	}
 
 	gfx.Destroy();
 
 	window.Destroy();
-	
+
 	return 0;
 }
