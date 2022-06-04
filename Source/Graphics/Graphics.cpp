@@ -14,15 +14,16 @@
 #include "Window.h"
 
 #if defined(ENABLE_IMGUI)
-#	include "backends/imgui_impl_glfw.h"
-#	include "imgui.h"
+#include "ImGuiGraphics.h"
 
-struct ImGuiPushConstant {
-	glm::vec2 mScale;
-	glm::vec2 mUv;
-} gImGuiPushConstant;
+ImGuiGraphics gImGuiGraphics;
+#endif
 
-ImGuiContext* gImGuiContext;
+
+#if defined(ENABLE_XR)
+#include "VRGraphics.h"
+
+VRGraphics gVrGraphics;
 #endif
 
 #pragma warning(push)
@@ -32,14 +33,6 @@ ImGuiContext* gImGuiContext;
 #	define VULKAN_VERSION VK_API_VERSION_1_3
 #else
 #	define VULKAN_VERSION VK_API_VERSION_1_1
-#endif
-
-#if defined(ENABLE_XR)
-#	include <openxr/openxr.h>
-#	include <openxr/openxr_platform.h>
-XrInstance gXrInstance;
-XrSystemId gXrSystemId;
-std::vector<XrExtensionProperties> mXrInstanceExtensions;
 #endif
 
 Graphics* gGraphics = nullptr;
@@ -106,37 +99,6 @@ void SetVkName(VkObjectType aType, uint64_t aObject, const char* aName) {
 	}
 }
 
-#if defined(ENABLE_XR)
-XrDebugUtilsMessengerEXT gXrDebugMessenger = VK_NULL_HANDLE;
-
-static XRAPI_ATTR XrBool32 XRAPI_CALL XrDebugCallback(XrDebugUtilsMessageSeverityFlagsEXT messageSeverity,
-													  XrDebugUtilsMessageTypeFlagsEXT messageTypes,
-													  const XrDebugUtilsMessengerCallbackDataEXT* callbackData, void* userData) {
-
-	const char* severityText[4] = {"VERBOSE", "INFO", "WARNING", "ERROR"};
-	const char* typeText[4]		= {"GENERAL", "VALIDATION", "PERFORMANCE", "CONFORMANCE"};
-	LOG::Log("XR_DEBUG %s: (%s) (%s/%s)\n\t %s\n",
-			 callbackData->messageId,
-			 callbackData->functionName,
-			 severityText[messageSeverity],
-			 typeText[messageTypes],
-			 callbackData->message);
-
-	// if (callbackData->messageId != 0) {
-	//	ASSERT("XR Error");
-	// }
-
-	return VK_FALSE;
-}
-
-bool getXrInstanceProcAddr(void* aFunc, const char* aName) {
-	PFN_xrVoidFunction* func = (PFN_xrVoidFunction*)aFunc;
-	xrGetInstanceProcAddr(gXrInstance, aName, func);
-	ASSERT(*func != nullptr);
-	return *func != nullptr;
-};
-#endif
-
 bool Graphics::StartUp() {
 	ASSERT(gGraphics == nullptr);
 	gGraphics = this;
@@ -150,84 +112,7 @@ bool Graphics::StartUp() {
 
 	// XR
 #if defined(ENABLE_XR)
-	{
-		LOG::Log("Loading OpenXR sdk: ");
-		uint32_t version = XR_CURRENT_API_VERSION;
-		LOG::Log("Version: %i.%i.%i\n", XR_VERSION_MAJOR(version), XR_VERSION_MINOR(version), XR_VERSION_PATCH(version));
-
-		XrResult xrResult;
-		uint32_t extensionCount = 0;
-		xrResult				= xrEnumerateInstanceExtensionProperties(NULL, 0, &extensionCount, NULL);
-		mXrInstanceExtensions.resize(extensionCount);
-
-		for(int i = 0; i < extensionCount; i++) {
-			mXrInstanceExtensions[i].type = XR_TYPE_EXTENSION_PROPERTIES;
-		}
-
-		xrResult = xrEnumerateInstanceExtensionProperties(NULL, extensionCount, &extensionCount, mXrInstanceExtensions.data());
-
-		std::vector<const char*> extensions; // = { XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME };
-
-		auto optionalXrExtension = [&](const char* aExtension) {
-			for(int i = 0; i < extensionCount; i++) {
-				if(strcmp(aExtension, mXrInstanceExtensions[i].extensionName) == 0) {
-					extensions.push_back(aExtension);
-					return true;
-				}
-			}
-			return false;
-		};
-
-		auto requireXrExtension = [&](const char* aExtension) {
-			if(optionalXrExtension(aExtension)) {
-				return true;
-			}
-			ASSERT(false);
-			return false;
-		};
-
-		// if (optionalXrExtension(XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME) == false) {
-		//	requireXrExtension(XR_KHR_VULKAN_ENABLE_EXTENSION_NAME);
-		// }
-		// requireXrExtension(XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME);
-		requireXrExtension(XR_KHR_VULKAN_ENABLE_EXTENSION_NAME);
-		optionalXrExtension(XR_KHR_VISIBILITY_MASK_EXTENSION_NAME);
-		optionalXrExtension(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
-		optionalXrExtension(XR_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-		XrInstanceCreateInfo create				  = {};
-		create.type								  = XR_TYPE_INSTANCE_CREATE_INFO;
-		create.applicationInfo.apiVersion		  = XR_CURRENT_API_VERSION;
-		create.applicationInfo.applicationVersion = 1;
-		create.applicationInfo.applicationName;
-		strcpy(create.applicationInfo.applicationName, "Graphics-Playground");
-		create.enabledExtensionCount = extensions.size();
-		create.enabledExtensionNames = extensions.data();
-		xrCreateInstance(&create, &gXrInstance);
-
-		XrDebugUtilsMessengerCreateInfoEXT debugCreateInfo {};
-		debugCreateInfo.type = XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		debugCreateInfo.messageSeverities =
-			// XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-			XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-			XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-		debugCreateInfo.messageTypes = XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-			XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_TYPE_CONFORMANCE_BIT_EXT;
-		debugCreateInfo.userCallback = XrDebugCallback;
-		debugCreateInfo.next		 = nullptr;
-
-		PFN_xrCreateDebugUtilsMessengerEXT xrCreateDebugUtilsMessengerEXT;
-		if(getXrInstanceProcAddr(&xrCreateDebugUtilsMessengerEXT, "xrCreateDebugUtilsMessengerEXT")) {
-			xrCreateDebugUtilsMessengerEXT(gXrInstance, &debugCreateInfo, &gXrDebugMessenger);
-		}
-
-		XrSystemGetInfo systemGet = {};
-		systemGet.type			  = XR_TYPE_SYSTEM_GET_INFO;
-		systemGet.formFactor	  = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-		systemGet.next			  = NULL;
-
-		xrResult = xrGetSystem(gXrInstance, &systemGet, &gXrSystemId);
-	}
+	gVrGraphics.Create();
 #endif
 
 	// instance data
@@ -320,12 +205,10 @@ bool Graphics::Initalize() {
 
 	// imgui
 #if defined(ENABLE_IMGUI)
-	CreateImGui();
+	gImGuiGraphics.Create(mSurfaces[0]->GetWindow(), mRenderPass);
 #endif
 
-	// descriptor sets?
-
-	return false;
+	return true;
 }
 
 bool Graphics::Destroy() {
@@ -343,14 +226,7 @@ bool Graphics::Destroy() {
 	vkDestroyDescriptorPool(GetVkDevice(), mDescriptorPool, GetAllocationCallback());
 
 #if defined(ENABLE_IMGUI)
-	mImGuiFontMaterialBase.Destroy();
-	mImGuiFontImage.Destroy();
-	mImGuiPipeline.Destroy();
-	mImGuiVertBuffer.Destroy();
-	mImGuiIndexBuffer.Destroy();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext(gImGuiContext);
-	gImGuiContext = nullptr;
+	gImGuiGraphics.Destroy();
 #endif
 
 	mFramebuffer[0].Destroy();
@@ -366,10 +242,7 @@ bool Graphics::Destroy() {
 	mDevicesHandler->Destroy();
 
 #if defined(ENABLE_XR)
-	if(gXrInstance) {
-		xrDestroyInstance(gXrInstance);
-		gXrInstance = XR_NULL_HANDLE;
-	}
+	gVrGraphics.Destroy();
 #endif
 
 	for(int i = 0; i < mSurfaces.size(); i++) {
@@ -397,8 +270,8 @@ void Graphics::AddWindow(Window* aWindow) {
 
 void Graphics::StartNewFrame() {
 #if defined(ENABLE_IMGUI)
-	ImGui::NewFrame();
-	ImGui_ImplGlfw_NewFrame();
+	gImGuiGraphics.StartNewFrame();
+
 #endif
 
 	mFrameCounter++;
@@ -414,9 +287,7 @@ void Graphics::EndFrame() {
 	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(mSwapchain->GetImageIndex());
 
 #if defined(ENABLE_IMGUI)
-	ImGui::EndFrame();
-	ImGui::Render();
-	RenderImGui(graphics);
+	gImGuiGraphics.RenderImGui(graphics, mRenderPass, mFramebuffer[GetCurrentImageIndex()]);
 #endif
 
 	vkEndCommandBuffer(graphics);
@@ -523,28 +394,8 @@ bool Graphics::CreateInstance() {
 	}
 
 #if defined(ENABLE_XR)
-	// openXR
-	{
-		PFN_xrGetVulkanInstanceExtensionsKHR xrGetVulkanInstanceExtensionsKHR;
-		getXrInstanceProcAddr(&xrGetVulkanInstanceExtensionsKHR, "xrGetVulkanInstanceExtensionsKHR");
-
-		uint32_t extensionBufferSize = 0;
-		XrResult xrResult;
-		xrResult		   = xrGetVulkanInstanceExtensionsKHR(gXrInstance, gXrSystemId, 0, &extensionBufferSize, NULL);
-		char* xrExtensions = new char[extensionBufferSize];
-		xrResult		   = xrGetVulkanInstanceExtensionsKHR(gXrInstance, gXrSystemId, extensionBufferSize, &extensionBufferSize, xrExtensions);
-
-		int lastPoint = 0;
-		for(int i = 0; i < extensionBufferSize; i++) {
-			if(xrExtensions[i] == ' ') {
-				xrExtensions[i] = '\0';
-				extensionsTemp.push_back(&xrExtensions[lastPoint]);
-				lastPoint = i + 1;
-			}
-		}
-		extensionsTemp.push_back(&xrExtensions[lastPoint]);
-		delete[] xrExtensions;
-	}
+	std::vector<std::string> xrExtensions = gVrGraphics.GetVulkanInstanceExtensions();
+	extensionsTemp.insert(extensionsTemp.end(), xrExtensions.begin(), xrExtensions.end());
 #endif
 
 	// Debug validation
@@ -597,140 +448,6 @@ bool Graphics::CreateInstance() {
 
 	return VkResultToBool(result);
 }
-
-#if defined(ENABLE_IMGUI)
-bool Graphics::CreateImGui() {
-	gImGuiContext = ImGui::CreateContext();
-	ImGui_ImplGlfw_InitForVulkan(mSurfaces[0]->GetWindow(), true);
-
-	ImGuiIO& io = ImGui::GetIO();
-
-	io.ConfigWindowsMoveFromTitleBarOnly = true;
-
-	{
-		io.DisplaySize			   = ImVec2(GetMainSwapchain()->GetSize().width, GetMainSwapchain()->GetSize().height);
-		io.DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
-	}
-
-	unsigned char* fontData;
-	int fontWidth;
-	int fontHeight;
-	int fontBytes;
-	io.Fonts->GetTexDataAsRGBA32(&fontData, &fontWidth, &fontHeight, &fontBytes);
-	const int bufferSize = fontWidth * fontHeight * sizeof(unsigned char) * fontBytes;
-	ImageSize size(fontWidth, fontHeight);
-
-	Buffer fontBuffer;
-	fontBuffer.CreateFromData(BufferType::STAGING, bufferSize, fontData, "ImGui Font Data");
-
-	mImGuiFontImage.CreateFromBuffer(fontBuffer, VK_FORMAT_R8G8B8A8_UNORM, size, "ImGui Font Image");
-
-	fontBuffer.Destroy();
-
-	mImGuiPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/imgui.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
-	mImGuiPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-
-	mImGuiFontMaterialBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-	mImGuiFontMaterialBase.Create("ImGui Material Layout");
-	mImGuiPipeline.SetMaterialBase(&mImGuiFontMaterialBase);
-
-	mImGuiPipeline.Create(mRenderPass.GetRenderPass(), "ImGui Pipeline");
-
-	mImGuiVertBuffer.Create(BufferType::VERTEX, 0, "ImGui Vertex Buffer");
-	mImGuiIndexBuffer.Create(BufferType::INDEX, 0, "ImGui Index Buffer");
-
-	{
-		mImGuiFontMaterial.Create(&mImGuiFontMaterialBase, "ImGui Font Material");
-		mImGuiFontMaterial.SetImage(mImGuiFontImage);
-	}
-
-	return true;
-}
-
-void Graphics::RenderImGui(VkCommandBuffer aBuffer) {
-	ImGuiIO& io			   = ImGui::GetIO();
-	ImDrawData* imDrawData = ImGui::GetDrawData();
-
-	VkDeviceSize vertexBufferSize = imDrawData->TotalVtxCount * sizeof(ImDrawVert);
-	VkDeviceSize indexBufferSize  = imDrawData->TotalIdxCount * sizeof(ImDrawIdx);
-	mImGuiVertBuffer.Resize(vertexBufferSize, false, "ImGui Vertex Buffer");
-	mImGuiIndexBuffer.Resize(indexBufferSize, false, "ImGui Index Buffer");
-
-	if(vertexBufferSize != 0 && indexBufferSize != 0) {
-		ImDrawVert* vertexData = (ImDrawVert*)mImGuiVertBuffer.Map();
-		ImDrawIdx* indexData   = (ImDrawIdx*)mImGuiIndexBuffer.Map();
-
-		for(int n = 0; n < imDrawData->CmdListsCount; n++) {
-			const ImDrawList* cmd_list = imDrawData->CmdLists[n];
-			memcpy(vertexData, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-			memcpy(indexData, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-			vertexData += cmd_list->VtxBuffer.Size;
-			indexData += cmd_list->IdxBuffer.Size;
-		}
-
-		mImGuiVertBuffer.Flush();
-		mImGuiIndexBuffer.Flush();
-
-		mImGuiVertBuffer.UnMap();
-		mImGuiIndexBuffer.UnMap();
-	}
-
-	// mRenderPass.Begin(aBuffer, gRenderTarget.GetFb());
-
-	// vkCmdBindDescriptorSets(commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1,
-	// &descriptorSet, 0, nullptr);
-	vkCmdBindPipeline(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mImGuiPipeline.GetPipeline());
-
-	// VkViewport viewport = vks::initializers::viewport(ImGui::GetIO().DisplaySize.x,
-	// ImGui::GetIO().DisplaySize.y, 0.0f, 1.0f); vkCmdSetViewport(aBuffer, 0, 1, &viewport);
-
-	mRenderPass.Begin(aBuffer, mFramebuffer[GetCurrentImageIndex()]);
-
-	if(vertexBufferSize != 0 && indexBufferSize != 0) {
-		// UI scale and translate via push constants
-		gImGuiPushConstant.mScale = glm::vec2(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y);
-		gImGuiPushConstant.mUv	  = glm::vec2(-1.0f);
-		vkCmdPushConstants(aBuffer, mImGuiPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(ImGuiPushConstant), &gImGuiPushConstant);
-
-		vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mImGuiPipeline.GetLayout(), 0, 1, mImGuiFontMaterial.GetSet(), 0, 0);
-
-		// Render commands
-		int32_t vertexOffset = 0;
-		int32_t indexOffset	 = 0;
-
-		if(imDrawData->CmdListsCount > 0) {
-
-			VkDeviceSize offsets[1] = {0};
-			vkCmdBindVertexBuffers(aBuffer, 0, 1, mImGuiVertBuffer.GetBufferRef(), offsets);
-			vkCmdBindIndexBuffer(aBuffer, mImGuiIndexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT16);
-
-			VkViewport viewport = {};
-			viewport.width		= mSwapchain->GetSize().width;
-			viewport.height		= mSwapchain->GetSize().height;
-			viewport.maxDepth	= 1.0f;
-			vkCmdSetViewport(aBuffer, 0, 1, &viewport);
-
-			for(int32_t i = 0; i < imDrawData->CmdListsCount; i++) {
-				const ImDrawList* cmd_list = imDrawData->CmdLists[i];
-				for(int32_t j = 0; j < cmd_list->CmdBuffer.Size; j++) {
-					const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[j];
-					VkRect2D scissorRect;
-					scissorRect.offset.x	  = std::max((int32_t)(pcmd->ClipRect.x), 0);
-					scissorRect.offset.y	  = std::max((int32_t)(pcmd->ClipRect.y), 0);
-					scissorRect.extent.width  = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
-					scissorRect.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y);
-					vkCmdSetScissor(aBuffer, 0, 1, &scissorRect);
-					vkCmdDrawIndexed(aBuffer, pcmd->ElemCount, 1, indexOffset, vertexOffset, 0);
-					indexOffset += pcmd->ElemCount;
-				}
-				vertexOffset += cmd_list->VtxBuffer.Size;
-			}
-		}
-	}
-	mRenderPass.End(aBuffer);
-}
-
-#endif
 
 bool Graphics::HasInstanceExtension(const char* aExtension) const {
 	for(int i = 0; i < mInstanceExtensions.size(); i++) {

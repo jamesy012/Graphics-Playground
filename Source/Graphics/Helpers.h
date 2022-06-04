@@ -18,3 +18,23 @@ struct ImageSize {
 	uint32_t mWidth;
 	uint32_t mHeight;
 };
+
+struct BitMask {
+	BitMask(uint32_t aValue) : mValue(aValue) {};
+
+	operator uint32_t() const {
+		return mValue;
+	}
+
+	//BitMask& operator=(const uint32_t& other) {}
+
+	bool operator[](int i) {
+		return (mValue & (1 << i));
+	}
+
+	bool IsOnlyOneActive() {
+		return mValue && !(mValue & (mValue - 1));
+	}
+
+	uint32_t mValue;
+};

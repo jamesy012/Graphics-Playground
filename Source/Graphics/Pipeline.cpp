@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 
 #include "Graphics.h"
+#include "Material.h"
 
 #include <imgui.h>
 

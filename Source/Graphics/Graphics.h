@@ -5,10 +5,7 @@
 
 #include <vector>
 
-#include "Buffer.h"
 #include "Framebuffer.h"
-#include "Image.h"
-#include "Material.h"
 #include "Pipeline.h"
 #include "RenderPass.h"
 
@@ -97,17 +94,6 @@ public:
 
 private:
 	bool CreateInstance();
-#if defined(ENABLE_IMGUI)
-	bool CreateImGui();
-	void RenderImGui(VkCommandBuffer aBuffer);
-
-	Image mImGuiFontImage;
-	Pipeline mImGuiPipeline;
-	Buffer mImGuiVertBuffer;
-	Buffer mImGuiIndexBuffer;
-	MaterialBase mImGuiFontMaterialBase;
-	Material mImGuiFontMaterial;
-#endif
 
 	RenderPass mRenderPass;
 	Framebuffer mFramebuffer[3];

@@ -34,7 +34,7 @@ void RenderPass::Create(const char* aName /*= 0*/) {
 	SetVkName(VK_OBJECT_TYPE_RENDER_PASS, mRenderPass, aName ? aName : "Unnamed RenderPass");
 }
 #include <math.h>
-void RenderPass::Begin(VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer) {
+void RenderPass::Begin(VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer) const {
 
 	std::vector<VkClearValue> clearColors(1);
 	//clearColors[0].color = { { float((sin((300+gGraphics->GetFrameCount()/500.0f))) + 1) / 2.0f, float((sin((12+gGraphics->GetFrameCount()/280.0f))) + 1) / 2.0f, 0.0f, 1.0f } };
@@ -56,7 +56,7 @@ void RenderPass::Begin(VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer)
 	vkCmdSetViewport(aBuffer, 0, 1, &viewport);
 }
 
-void RenderPass::End(VkCommandBuffer aBuffer) {
+void RenderPass::End(VkCommandBuffer aBuffer) const {
 	vkCmdEndRenderPass(aBuffer);
 }
 

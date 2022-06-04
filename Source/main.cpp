@@ -1,17 +1,11 @@
+#include <vulkan/vulkan.h>
+#include <imgui.h>
+
 #include "Graphics/Window.h"
 #include "Graphics/Graphics.h"
 #include "PlatformDebug.h"
 
-#include "Graphics/Swapchain.h"
-#include "Graphics/RenderPass.h"
-#include "Graphics/Framebuffer.h"
-#include "Graphics/Image.h"
-
-#include <vulkan/vulkan.h>
-#include <imgui.h>
-
 int main() {
-
 	//vs code is annoying, doesnt clear the last output
 	LOG::LogLine("--------------------------------");
 
@@ -28,8 +22,6 @@ int main() {
 		window.Update();
 
 		gfx.StartNewFrame();
-
-		ImGui::ShowDemoWindow();
 
 		gfx.EndFrame();
 	}
