@@ -95,26 +95,26 @@ public:
 private:
 	bool CreateInstance();
 
-	RenderPass mRenderPass;
-	Framebuffer mFramebuffer[3];
+	RenderPass mRenderPass		= {};
+	Framebuffer mFramebuffer[3] = {};
 
 	bool HasInstanceExtension(const char* aExtension) const;
 	bool HasInstanceLayer(const char* aLayer) const;
 
-	std::vector<VkLayerProperties> mInstanceLayers;
-	std::vector<VkLayerProperties> mDeviceLayers;
-	std::vector<VkExtensionProperties> mInstanceExtensions;
-	std::vector<VkExtensionProperties> mDeviceExtensions;
+	std::vector<VkLayerProperties> mInstanceLayers		   = {};
+	std::vector<VkLayerProperties> mDeviceLayers		   = {};
+	std::vector<VkExtensionProperties> mInstanceExtensions = {};
+	std::vector<VkExtensionProperties> mDeviceExtensions   = {};
 
-	std::vector<Window*> mSurfaces;
+	std::vector<Window*> mSurfaces = {};
 
-	Devices* mDevicesHandler;
-	Swapchain* mSwapchain;
+	Devices* mDevicesHandler = nullptr;
+	Swapchain* mSwapchain	 = nullptr;
 
-	VmaAllocator mAllocator;
+	VmaAllocator mAllocator = VK_NULL_HANDLE;
 
-	VkDescriptorPool mDescriptorPool;
-	VkSampler mSampler;
+	VkDescriptorPool mDescriptorPool = VK_NULL_HANDLE;
+	VkSampler mSampler				 = VK_NULL_HANDLE;
 
 	uint32_t mFrameCounter = 0;
 };

@@ -145,19 +145,10 @@ bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 	//~~~ Layout
 	VkPipelineLayoutCreateInfo pipelineLayoutInfo = {};
 	{
-		VkPushConstantRange pushRange = {};
-		{
-			pushRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-			struct test {
-				glm::vec2 mScale;
-				glm::vec2 mUv;
-			};
-			pushRange.size = sizeof(test);
-		}
+		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
-		pipelineLayoutInfo.sType				  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.pPushConstantRanges	  = &pushRange;
-		pipelineLayoutInfo.pushConstantRangeCount = 1;
+		pipelineLayoutInfo.pPushConstantRanges	  = mPushConstants.data();
+		pipelineLayoutInfo.pushConstantRangeCount = mPushConstants.size();
 
 		if(mMaterialBase != nullptr) {
 			VkDescriptorSetLayout layout	  = mMaterialBase->mLayout;

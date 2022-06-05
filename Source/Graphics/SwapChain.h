@@ -39,26 +39,26 @@ private:
 	void SetupImages();
 	void SetupSyncObjects();
 
-	VkSwapchainKHR mSwapchain;
+	VkSwapchainKHR mSwapchain = VK_NULL_HANDLE;
 	const DeviceData& mAttachedDevice;
-	VkFormat mColorFormat;
+	VkFormat mColorFormat = VK_FORMAT_UNDEFINED;
 
 	struct PerFrameInfo {
-		Image mSwapchainImage;
+		Image mSwapchainImage = Image();
 		//Framebuffer mSwapChainFB;
 
-		VkFence mSubmitFence;
+		VkFence mSubmitFence = VK_NULL_HANDLE;
 	};
-	VkSemaphore mRenderSemaphore;
-	VkSemaphore mPresentSemaphore;
+	VkSemaphore mRenderSemaphore = VK_NULL_HANDLE;
+	VkSemaphore mPresentSemaphore = VK_NULL_HANDLE;
 
 	uint8_t mNumImages = 0;
-	std::vector<PerFrameInfo> mFrameInfo;
+	std::vector<PerFrameInfo> mFrameInfo = {};
 
 	uint32_t mImageIndex = 0;
 
 	//remove?
-	std::vector<Image*> mSwapchainImages;
+	std::vector<Image*> mSwapchainImages = {};
 
-	VkExtent2D mSwapchainSize;
+	VkExtent2D mSwapchainSize = {0,0};
 };

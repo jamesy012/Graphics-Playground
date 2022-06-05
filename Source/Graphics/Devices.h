@@ -81,14 +81,14 @@ public:
 	}
 
 private:
-	VkSurfaceKHR mSurface;
+	VkSurfaceKHR mSurface = VK_NULL_HANDLE;
 
 	//should be in DeviceData? / Combine below
-	VkCommandPool mCommandPoolGraphics;
-	VkCommandPool mCommandPoolCompute;
-	VkCommandPool mCommandPoolTransfer;
+	VkCommandPool mCommandPoolGraphics = VK_NULL_HANDLE;
+	VkCommandPool mCommandPoolCompute  = VK_NULL_HANDLE;
+	VkCommandPool mCommandPoolTransfer = VK_NULL_HANDLE;
 
-	std::vector<VkCommandBuffer> mGraphicsCommandBuffers;
-	std::vector<VkCommandBuffer> mComputeCommandBuffers;
-	std::vector<VkCommandBuffer> mTransferCommandBuffers;
+	std::vector<VkCommandBuffer> mGraphicsCommandBuffers = {};
+	std::vector<VkCommandBuffer> mComputeCommandBuffers	 = {};
+	std::vector<VkCommandBuffer> mTransferCommandBuffers = {};
 };

@@ -63,33 +63,4 @@ if(${GraphicsPlayground_Graphics_Vulkan})
     message(STATUS ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE})
     target_link_libraries(GraphicsPlayground ${Vulkan_LIBRARYS})
     include_directories(AFTER ${Vulkan_INCLUDE_DIRS})
-
-    file(GLOB_RECURSE GLSL_SOURCE_FILES
-    "${PROJECT_SOURCE_DIR}/Shaders/*.frag"  
-    "${PROJECT_SOURCE_DIR}/Shaders/*.vert"
-    "${PROJECT_SOURCE_DIR}/Shaders/*.comp"
-    )
-
-    message("setting up shader compiling")
-    foreach(SHADER ${GLSL_SOURCE_FILES})
-      get_filename_component(FILE_NAME ${SHADER} NAME)
-       set(SPIRV "${WORK_DIR_FOLDER}/WorkDir/Shaders/${FILE_NAME}.spv")
-       message(STATUS "compiling ${SHADER} to ${SPIRV}")
-       add_custom_command(
-          OUTPUT ${SPIRV}
-          COMMAND ${CMAKE_COMMAND} -E make_directory "${WORK_DIR_FOLDER}/WorkDir/"
-          COMMAND ${CMAKE_COMMAND} -E make_directory "${WORK_DIR_FOLDER}/WorkDir/Shaders/"
-          #COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${SHADER}" -o "${SPIRV}"
-          COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${SHADER}" -o "${SPIRV}" -g
-          DEPENDS ${SHADER})
-        list(APPEND SPIRV_BINARY_FILES ${SPIRV})
-    endforeach()
-
-    add_custom_target(
-    Shaders 
-    DEPENDS ${SPIRV_BINARY_FILES}
-    SOURCES ${GLSL_SOURCE_FILES}
-    )
-
-    add_dependencies(GraphicsPlayground Shaders)
 endif()

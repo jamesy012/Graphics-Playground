@@ -69,6 +69,11 @@ void ImGuiGraphics::Create(GLFWwindow* aWindow, const RenderPass& aRenderPass) {
 	gImGuiFontMaterialBase.Create("ImGui Material Layout");
 	gImGuiPipeline.SetMaterialBase(&gImGuiFontMaterialBase);
 
+	VkPushConstantRange pushRange = {};
+	pushRange.stageFlags		  = VK_SHADER_STAGE_VERTEX_BIT;
+	pushRange.size				  = sizeof(ImGuiPushConstant);
+	gImGuiPipeline.AddPushConstant(pushRange);
+
 	gImGuiPipeline.Create(aRenderPass.GetRenderPass(), "ImGui Pipeline");
 
 	gImGuiVertBuffer.Create(BufferType::VERTEX, 0, "ImGui Vertex Buffer");

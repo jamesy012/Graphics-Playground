@@ -15,6 +15,10 @@ public:
 		mMaterialBase = aBase;
 	};
 
+	void AddPushConstant(VkPushConstantRange aPush) {
+		mPushConstants.push_back(aPush);
+	}
+
 	bool Create(VkRenderPass aPass, const char* aName = 0);
 	void Destroy();
 
@@ -29,10 +33,11 @@ public:
 	}
 
 private:
-	std::vector<VkPipelineShaderStageCreateInfo> mShaders;
-	MaterialBase* mMaterialBase = nullptr;
+	std::vector<VkPipelineShaderStageCreateInfo> mShaders = {};
+	std::vector<VkPushConstantRange> mPushConstants		  = {};
+	MaterialBase* mMaterialBase							  = nullptr;
 
-	VkPipelineLayout mPipelineLayout;
-	VkPipelineCache mPipelineCache;
-	VkPipeline mPipeline;
+	VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
+	VkPipelineCache mPipelineCache	 = VK_NULL_HANDLE;
+	VkPipeline mPipeline			 = VK_NULL_HANDLE;
 };

@@ -18,7 +18,7 @@ public:
 	VkDescriptorSetLayout mLayout = VK_NULL_HANDLE;
 
 private:
-	std::vector<VkDescriptorSetLayoutBinding> mBindings;
+	std::vector<VkDescriptorSetLayoutBinding> mBindings = {};
 };
 
 class Material {
@@ -33,6 +33,6 @@ public:
 	}
 
 private:
-	const MaterialBase* mBase;
-	VkDescriptorSet mSet = VK_NULL_HANDLE;
+	const MaterialBase* mBase = nullptr;
+	VkDescriptorSet mSet	  = VK_NULL_HANDLE;
 };

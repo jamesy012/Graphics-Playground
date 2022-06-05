@@ -31,6 +31,7 @@ message("BUILD_OUTPUT ${WORK_DIR_FOLDER}")
 
 #~~~ make project
 add_subdirectory(Source)
+add_subdirectory(Shaders)
 
 #~~~ Apply Platform to project
 target_compile_definitions(GraphicsPlayground PUBLIC PLATFORM_NAME=${CMAKE_SYSTEM_NAME})

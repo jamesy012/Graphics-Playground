@@ -37,12 +37,12 @@ public:
 private:
 	void CreateVkImageView(const VkFormat aFormat, const char* aName = 0);
 
-	VkImage mImage;
-	VkImageView mImageView;
+	VkImage mImage = VK_NULL_HANDLE;
+	VkImageView mImageView = VK_NULL_HANDLE;
 
-	ImageSize mSize;
-	VkImageLayout mLayout;
+	ImageSize mSize		  = {};
+	VkImageLayout mLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-	VmaAllocation mAllocation;
-	VmaAllocationInfo mAllocationInfo;
+	VmaAllocation mAllocation = VK_NULL_HANDLE;
+	VmaAllocationInfo mAllocationInfo = {};
 };

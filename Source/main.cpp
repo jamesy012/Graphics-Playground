@@ -16,7 +16,9 @@ int main() {
 	Graphics gfx;
 	gfx.StartUp();
 	gfx.AddWindow(&window);
+	LOG::LogLine("Initalize Graphics ");
 	gfx.Initalize();
+	LOG::LogLine("Graphics Initalized");
 
 	while(!window.ShouldClose()) {
 		window.Update();
