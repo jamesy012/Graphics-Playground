@@ -14,14 +14,13 @@
 #include "Window.h"
 
 #if defined(ENABLE_IMGUI)
-#include "ImGuiGraphics.h"
+#	include "ImGuiGraphics.h"
 
 ImGuiGraphics gImGuiGraphics;
 #endif
 
-
 #if defined(ENABLE_XR)
-#include "VRGraphics.h"
+#	include "VRGraphics.h"
 
 VRGraphics gVrGraphics;
 #endif
@@ -271,7 +270,6 @@ void Graphics::AddWindow(Window* aWindow) {
 void Graphics::StartNewFrame() {
 #if defined(ENABLE_IMGUI)
 	gImGuiGraphics.StartNewFrame();
-
 #endif
 
 	mFrameCounter++;
@@ -281,6 +279,22 @@ void Graphics::StartNewFrame() {
 	VkCommandBufferBeginInfo info = {};
 	info.sType					  = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	vkBeginCommandBuffer(graphics, &info);
+
+	//reset viewport and scissor
+	VkViewport viewport = {};
+	viewport.width		= gGraphics->GetMainSwapchain()->GetSize().width;
+	viewport.height		= gGraphics->GetMainSwapchain()->GetSize().height;
+	viewport.maxDepth	= 1.0f;
+	vkCmdSetViewport(graphics, 0, 1, &viewport);
+
+	VkRect2D scissorRect;
+	scissorRect.offset.x	  = 0;
+	scissorRect.offset.y	  = 0;
+	scissorRect.extent.width  = viewport.width;
+	scissorRect.extent.height = viewport.height;
+	vkCmdSetScissor(graphics, 0, 1, &scissorRect);
+
+	mSwapchain->GetImage(GetCurrentImageIndex()).SetImageLayout(graphics, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 }
 
 void Graphics::EndFrame() {
@@ -290,6 +304,7 @@ void Graphics::EndFrame() {
 	gImGuiGraphics.RenderImGui(graphics, mRenderPass, mFramebuffer[GetCurrentImageIndex()]);
 #endif
 
+	mSwapchain->GetImage(GetCurrentImageIndex()).SetImageLayout(graphics, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 	vkEndCommandBuffer(graphics);
 
 	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, {graphics});

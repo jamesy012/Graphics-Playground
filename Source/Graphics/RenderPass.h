@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include <vector>
 
 class Framebuffer;
 
@@ -16,6 +17,8 @@ public:
 		return mRenderPass;
 	}
 
+    void SetClearColors(std::vector<VkClearValue> aClearColors);
 private:
-	VkRenderPass mRenderPass;
+    std::vector<VkClearValue> mClearColors = {};
+	VkRenderPass mRenderPass = VK_NULL_HANDLE;
 };

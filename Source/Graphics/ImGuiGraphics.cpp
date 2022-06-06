@@ -74,6 +74,22 @@ void ImGuiGraphics::Create(GLFWwindow* aWindow, const RenderPass& aRenderPass) {
 	pushRange.size				  = sizeof(ImGuiPushConstant);
 	gImGuiPipeline.AddPushConstant(pushRange);
 
+	//temp
+	{
+		gImGuiPipeline.vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		gImGuiPipeline.vertexBinding.stride	   = sizeof(ImDrawVert);
+
+		gImGuiPipeline.vertexAttribute			   = std::vector<VkVertexInputAttributeDescription>(3);
+		gImGuiPipeline.vertexAttribute[0].format   = VK_FORMAT_R32G32_SFLOAT;
+		gImGuiPipeline.vertexAttribute[0].offset   = offsetof(ImDrawVert, pos);
+		gImGuiPipeline.vertexAttribute[1].location = 1;
+		gImGuiPipeline.vertexAttribute[1].format   = VK_FORMAT_R32G32_SFLOAT;
+		gImGuiPipeline.vertexAttribute[1].offset   = offsetof(ImDrawVert, uv);
+		gImGuiPipeline.vertexAttribute[2].location = 2;
+		gImGuiPipeline.vertexAttribute[2].format   = VK_FORMAT_R8G8B8A8_UNORM;
+		gImGuiPipeline.vertexAttribute[2].offset   = offsetof(ImDrawVert, col);
+	}
+
 	gImGuiPipeline.Create(aRenderPass.GetRenderPass(), "ImGui Pipeline");
 
 	gImGuiVertBuffer.Create(BufferType::VERTEX, 0, "ImGui Vertex Buffer");

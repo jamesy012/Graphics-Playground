@@ -33,7 +33,6 @@ void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const c
 	vmaCreateImage(gGraphics->GetAllocator(), &createInfo, &allocationInfo, &mImage, &mAllocation, &mAllocationInfo);
 
 	mSize	= aSize;
-	mLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	CreateVkImageView(aFormat, aName);
 
@@ -46,7 +45,7 @@ void Image::CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, cons
 
 	OneTimeCommandBuffer cmBuffer = gGraphics->AllocateGraphicsCommandBuffer();
 
-	ChangeImageLayout(cmBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+	SetImageLayout(cmBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 	VkBufferImageCopy imageCopy			  = {};
 	imageCopy.imageSubresource.layerCount = 1;
@@ -55,7 +54,7 @@ void Image::CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, cons
 
 	vkCmdCopyBufferToImage(cmBuffer, aBuffer.GetBuffer(), mImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy);
 
-	ChangeImageLayout(cmBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+	SetImageLayout(cmBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 	gGraphics->EndGraphicsCommandBuffer(cmBuffer);
 }
@@ -69,7 +68,6 @@ void Image::CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, cons
 	mImage = aImage;
 	mSize  = aSize;
 	//pass through?
-	mLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
 	CreateVkImageView(aFormat, aName);
 }
@@ -109,11 +107,11 @@ void Image::Destroy() {
 	}
 }
 
-void Image::ChangeImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aNewLayout, VkPipelineStageFlags aSrcStageMask,
-							  VkPipelineStageFlags aDstStageMask) {
+void Image::SetImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aOldLayout, VkImageLayout aNewLayout, VkPipelineStageFlags aSrcStageMask,
+						   VkPipelineStageFlags aDstStageMask) const {
 	VkImageMemoryBarrier memoryBarrier			  = {};
 	memoryBarrier.sType							  = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-	memoryBarrier.oldLayout						  = mLayout;
+	memoryBarrier.oldLayout						  = aOldLayout;
 	memoryBarrier.newLayout						  = aNewLayout;
 	memoryBarrier.image							  = mImage;
 	memoryBarrier.subresourceRange.aspectMask	  = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -122,15 +120,21 @@ void Image::ChangeImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aNewL
 	memoryBarrier.subresourceRange.layerCount	  = 1;
 	memoryBarrier.subresourceRange.levelCount	  = 1;
 
-	switch(mLayout) {
+	switch(aOldLayout) {
 		case VK_IMAGE_LAYOUT_UNDEFINED:
-			memoryBarrier.srcAccessMask = 0;
+			memoryBarrier.srcAccessMask = VK_ACCESS_NONE_KHR;//should this be something else?
 			break;
 		case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
 			memoryBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 			break;
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 			memoryBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+			break;
+		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+			memoryBarrier.srcAccessMask = VK_ACCESS_NONE_KHR;//should this be something else?
+			break;
+		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+			memoryBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;//should this be something else?
 			break;
 		default:
 			ASSERT(false);
@@ -143,16 +147,20 @@ void Image::ChangeImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aNewL
 		case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
 			memoryBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 			break;
+		case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+			memoryBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;//should this be something else?
+			break;
 		case VK_IMAGE_LAYOUT_UNDEFINED:
 			memoryBarrier.dstAccessMask = VK_ACCESS_NONE_KHR;
+			break;
+		case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
+			memoryBarrier.dstAccessMask = VK_ACCESS_NONE_KHR;//should this be something else?
 			break;
 		default:
 			ASSERT(false);
 	}
 
 	vkCmdPipelineBarrier(aBuffer, aSrcStageMask, aDstStageMask, 0, 0, 0, 0, 0, 1, &memoryBarrier);
-
-	mLayout = aNewLayout;
 }
 
 void Image::CreateVkImageView(const VkFormat aFormat, const char* aName /* = 0*/) {

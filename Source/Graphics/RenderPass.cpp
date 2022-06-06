@@ -4,14 +4,16 @@
 #include "Swapchain.h"
 
 #include "Framebuffer.h"
+#include "PlatformDebug.h"
 
 void RenderPass::Create(const char* aName /*= 0*/) {
+	LOG::LogLine("-- RenderPass needs work, only supports one color attachment");
 
 	VkAttachmentDescription colorAttachment = {};
 	colorAttachment.format					= gGraphics->GetMainSwapchain()->GetColorFormat();
-	colorAttachment.initialLayout			= VK_IMAGE_LAYOUT_UNDEFINED;
-	colorAttachment.finalLayout				= VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-	colorAttachment.loadOp					= VK_ATTACHMENT_LOAD_OP_CLEAR;
+	colorAttachment.initialLayout			= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorAttachment.finalLayout				= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	colorAttachment.loadOp					= VK_ATTACHMENT_LOAD_OP_LOAD; //= VK_ATTACHMENT_LOAD_OP_CLEAR;
 	colorAttachment.storeOp					= VK_ATTACHMENT_STORE_OP_STORE;
 	colorAttachment.samples					= VK_SAMPLE_COUNT_1_BIT;
 
@@ -33,24 +35,22 @@ void RenderPass::Create(const char* aName /*= 0*/) {
 	vkCreateRenderPass(gGraphics->GetVkDevice(), &create, GetAllocationCallback(), &mRenderPass);
 	SetVkName(VK_OBJECT_TYPE_RENDER_PASS, mRenderPass, aName ? aName : "Unnamed RenderPass");
 }
-#include <math.h>
-void RenderPass::Begin(VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer) const {
 
-	std::vector<VkClearValue> clearColors(1);
-	//clearColors[0].color = { { float((sin((300+gGraphics->GetFrameCount()/500.0f))) + 1) / 2.0f, float((sin((12+gGraphics->GetFrameCount()/280.0f))) + 1) / 2.0f, 0.0f, 1.0f } };
-	clearColors[0].color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+void RenderPass::Begin(VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer) const {
 
 	VkRenderPassBeginInfo renderBegin {};
 	renderBegin.sType			= VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 	renderBegin.renderPass		= mRenderPass;
-	renderBegin.clearValueCount = static_cast<uint32_t>(clearColors.size());
-	renderBegin.pClearValues	= clearColors.data();
+	renderBegin.clearValueCount = static_cast<uint32_t>(mClearColors.size());
+	renderBegin.pClearValues	= mClearColors.data();
 
 	renderBegin.framebuffer		  = aFramebuffer.GetFramebuffer();
 	renderBegin.renderArea.extent = aFramebuffer.GetSize();
 
 	vkCmdBeginRenderPass(aBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
-	VkRect2D scissor	= {{}, gGraphics->GetMainSwapchain()->GetSize()};
+
+    //setup renderpass view
+	VkRect2D scissor	= {{}, aFramebuffer.GetSize()};
 	VkViewport viewport = {0.0f, 0.0f, (float)scissor.extent.width, (float)scissor.extent.height, 0.0f, 1.0f};
 	vkCmdSetScissor(aBuffer, 0, 1, &scissor);
 	vkCmdSetViewport(aBuffer, 0, 1, &viewport);
@@ -63,4 +63,8 @@ void RenderPass::End(VkCommandBuffer aBuffer) const {
 void RenderPass::Destroy() {
 	vkDestroyRenderPass(gGraphics->GetVkDevice(), mRenderPass, GetAllocationCallback());
 	mRenderPass = VK_NULL_HANDLE;
+}
+
+void RenderPass::SetClearColors(std::vector<VkClearValue> aClearColors) {
+	mClearColors = aClearColors;
 }

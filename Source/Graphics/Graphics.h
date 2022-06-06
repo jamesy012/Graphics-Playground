@@ -69,6 +69,9 @@ public:
 	}
 
 	VkCommandBuffer GetCurrentGraphicsCommandBuffer() const;
+	const Framebuffer& GetCurrentFrameBuffer() const {
+		return mFramebuffer[GetCurrentImageIndex()];
+	};
 
 	OneTimeCommandBuffer AllocateGraphicsCommandBuffer();
 	// submits and finish's the command buffer

@@ -22,8 +22,8 @@ public:
 	bool Create(VkRenderPass aPass, const char* aName = 0);
 	void Destroy();
 
-	void Begin(VkCommandBuffer aBuffer);
-	void End(VkCommandBuffer aBuffer);
+	void Begin(VkCommandBuffer aBuffer) const;
+	void End(VkCommandBuffer aBuffer) const;
 
 	inline VkPipeline GetPipeline() {
 		return mPipeline;
@@ -31,6 +31,10 @@ public:
 	inline VkPipelineLayout GetLayout() {
 		return mPipelineLayout;
 	}
+
+    //Temp
+	VkVertexInputBindingDescription vertexBinding				   = {};
+	std::vector<VkVertexInputAttributeDescription> vertexAttribute = {};
 
 private:
 	std::vector<VkPipelineShaderStageCreateInfo> mShaders = {};

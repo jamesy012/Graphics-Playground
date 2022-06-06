@@ -4,8 +4,8 @@
 
 #include "Graphics.h"
 #include "Material.h"
+#include "PlatformDebug.h"
 
-#include <imgui.h>
 
 bool Pipeline::AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage) {
 	// preload shaders??
@@ -39,25 +39,14 @@ bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 	}
 
 	//~~~ Vertex
-	VkPipelineVertexInputStateCreateInfo vertexInfo				   = {};
-	VkVertexInputBindingDescription vertexBinding				   = {};
-	std::vector<VkVertexInputAttributeDescription> vertexAttribute = std::vector<VkVertexInputAttributeDescription>(3);
+	VkPipelineVertexInputStateCreateInfo vertexInfo = {};
 	{
-		vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		vertexBinding.stride	= sizeof(ImDrawVert);
-
-		vertexAttribute[0].format	= VK_FORMAT_R32G32_SFLOAT;
-		vertexAttribute[0].offset	= offsetof(ImDrawVert, pos);
-		vertexAttribute[1].location = 1;
-		vertexAttribute[1].format	= VK_FORMAT_R32G32_SFLOAT;
-		vertexAttribute[1].offset	= offsetof(ImDrawVert, uv);
-		vertexAttribute[2].location = 2;
-		vertexAttribute[2].format	= VK_FORMAT_R8G8B8A8_UNORM;
-		vertexAttribute[2].offset	= offsetof(ImDrawVert, col);
-
-		vertexInfo.sType						   = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInfo.vertexBindingDescriptionCount   = 1;
-		vertexInfo.pVertexBindingDescriptions	   = &vertexBinding;
+        LOG::LogLine("-- Pipeline Vertex Input needs work");
+		vertexInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+		if(vertexBinding.stride != 0) {
+			vertexInfo.vertexBindingDescriptionCount = 1;
+			vertexInfo.pVertexBindingDescriptions	 = &vertexBinding;
+		}
 		vertexInfo.pVertexAttributeDescriptions	   = vertexAttribute.data();
 		vertexInfo.vertexAttributeDescriptionCount = vertexAttribute.size();
 	}
@@ -196,8 +185,8 @@ void Pipeline::Destroy() {
 	vkDestroyPipeline(gGraphics->GetVkDevice(), mPipeline, GetAllocationCallback());
 }
 
-void Pipeline::Begin(VkCommandBuffer aBuffer) {
+void Pipeline::Begin(VkCommandBuffer aBuffer) const {
 	vkCmdBindPipeline(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mPipeline);
 }
 
-void Pipeline::End(VkCommandBuffer aBuffer) {}
+void Pipeline::End(VkCommandBuffer aBuffer) const {}

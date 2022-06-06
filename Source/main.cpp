@@ -5,6 +5,8 @@
 #include "Graphics/Graphics.h"
 #include "PlatformDebug.h"
 
+#include "Graphics/Screenspace.h"
+
 int main() {
 	//vs code is annoying, doesnt clear the last output
 	LOG::LogLine("--------------------------------");
@@ -20,13 +22,20 @@ int main() {
 	gfx.Initalize();
 	LOG::LogLine("Graphics Initalized");
 
+	Screenspace ssTest;
+	ssTest.Create("WorkDir/Shaders/Screenspace/Image.frag.spv", "ScreenSpace ImageCopy");
+
 	while(!window.ShouldClose()) {
 		window.Update();
 
 		gfx.StartNewFrame();
 
+		ssTest.Render(gfx.GetCurrentGraphicsCommandBuffer(), gfx.GetCurrentFrameBuffer());
+
 		gfx.EndFrame();
 	}
+
+	ssTest.Destroy();
 
 	gfx.Destroy();
 

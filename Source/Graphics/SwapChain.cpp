@@ -148,13 +148,21 @@ void Swapchain::SetupImages() {
 	std::vector<VkImage> vulkanImages(numImages);
 	vkGetSwapchainImagesKHR(mAttachedDevice.mDevice, mSwapchain, &numImages, vulkanImages.data());
 
+    OneTimeCommandBuffer buffer = gGraphics->AllocateGraphicsCommandBuffer();
+
 	for(int i = 0; i < numImages; i++) {
 		mFrameInfo[i].mSwapchainImage.CreateFromVkImage(vulkanImages[i], VK_FORMAT_B8G8R8A8_UNORM, mSwapchainSize);
 		mSwapchainImages[i] = &mFrameInfo[i].mSwapchainImage;
 
 		SetVkName(VK_OBJECT_TYPE_IMAGE, mSwapchainImages[i]->GetImage(), "Swapchain " + std::to_string(i));
 		SetVkName(VK_OBJECT_TYPE_IMAGE_VIEW, mSwapchainImages[i]->GetImageView(), "Swapchain View " + std::to_string(i));
-	}
+
+        //images start undefined, lets put them in their expected states
+	    mSwapchainImages[i]->SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+    
+    }
+
+    gGraphics->EndGraphicsCommandBuffer(buffer);
 }
 
 void Swapchain::SetupSyncObjects() {
