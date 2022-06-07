@@ -74,21 +74,21 @@ void Image::CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, cons
 
 void Image::CreateFromData(const void* aData, const VkFormat aFormat, const ImageSize aSize, const char* aName /* = 0*/) {
 	Buffer dataBuffer;
-	dataBuffer.CreateFromData(BufferType::IMAGE, ConvertImageSizeToByteSize(aSize), aData, aName);
+	dataBuffer.CreateFromData(BufferType::STAGING, ConvertImageSizeToByteSize(aSize), aData, aName);
 
 	CreateFromBuffer(dataBuffer, aFormat, aSize, aName);
 
 	dataBuffer.Destroy();
 }
 
-void Image::LoadImage(const char* aFilePath, const VkFormat aFormat) {
+void Image::LoadImage(const FileIO::Path aFilePath, const VkFormat aFormat) {
 	int width, height, comp;
 	//todo
-	stbi_uc* data = stbi_load(aFilePath, &width, &height, &comp, STBI_rgb_alpha);
-	ASSERT(comp == 4);
+	stbi_uc* data = stbi_load(aFilePath.mPath.c_str(), &width, &height, &comp, STBI_rgb_alpha);
 	ASSERT(data != nullptr);
+	ASSERT(comp == 4);
 
-	CreateFromData(data, aFormat, {width, height}, aFilePath);
+	CreateFromData(data, aFormat, {width, height}, aFilePath.mPath.c_str());
 
 	stbi_image_free(data);
 }

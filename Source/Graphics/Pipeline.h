@@ -7,9 +7,12 @@
 #include "Engine/FileIO.h"
 
 class MaterialBase;
+class Material;
 
 class Pipeline {
 public:
+	// Pre Create
+
 	bool AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage);
 	void SetMaterialBase(MaterialBase* aBase) {
 		mMaterialBase = aBase;
@@ -19,20 +22,26 @@ public:
 		mPushConstants.push_back(aPush);
 	}
 
+	//create/Destroy
+
 	bool Create(VkRenderPass aPass, const char* aName = 0);
 	void Destroy();
 
 	void Begin(VkCommandBuffer aBuffer) const;
 	void End(VkCommandBuffer aBuffer) const;
 
-	inline VkPipeline GetPipeline() {
+	//helpers
+
+	inline VkPipeline GetPipeline() const {
 		return mPipeline;
 	}
-	inline VkPipelineLayout GetLayout() {
+	inline VkPipelineLayout GetLayout() const {
 		return mPipelineLayout;
 	}
 
-    //Temp
+	std::vector<Material> AllocateMaterials() const ;
+
+	//Temp
 	VkVertexInputBindingDescription vertexBinding				   = {};
 	std::vector<VkVertexInputAttributeDescription> vertexAttribute = {};
 

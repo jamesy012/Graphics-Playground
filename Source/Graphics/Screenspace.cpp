@@ -8,13 +8,15 @@ void Screenspace::Create(const FileIO::Path& aFragmentPath, const char* aName /*
 
 	mPipeline.Create(mRenderPass.GetRenderPass(), aName ? aName : "Unnamed Screenspace");
 
-    //duplicated data
+	//duplicated data
 	mIndexBuffer.Create(BufferType::INDEX, sizeof(uint16_t) * 3, "Screenspace Index Buffer");
 	uint16_t* data = (uint16_t*)mIndexBuffer.Map();
 	data[0]		   = 0;
 	data[1]		   = 1;
 	data[2]		   = 2;
 	mIndexBuffer.UnMap();
+
+	mMaterials = mPipeline.AllocateMaterials();
 }
 
 void Screenspace::Render(const VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer) const {
@@ -25,6 +27,10 @@ void Screenspace::Render(const VkCommandBuffer aBuffer, const Framebuffer& aFram
 	mPipeline.Begin(aBuffer);
 
 	//assuming viewport size is correct
+
+	for(int i = 0; i < mMaterials.size(); i++) {
+		vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, GetPipeline().GetLayout(), 0, 1, mMaterials[i].GetSet(), 0, 0);
+	}
 
 	vkCmdDraw(aBuffer, 3, 1, 0, 0);
 	mPipeline.End(aBuffer);

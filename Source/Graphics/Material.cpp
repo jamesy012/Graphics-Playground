@@ -3,8 +3,6 @@
 #include "Graphics.h"
 #include "Image.h"
 
-MaterialBase::MaterialBase() {}
-
 void MaterialBase::AddBinding(const uint32_t aBinding, const uint32_t aCount, const VkDescriptorType aType, const VkShaderStageFlags aStages) {
 	VkDescriptorSetLayoutBinding binding = {};
 	// binding.binding = 0;
@@ -31,7 +29,16 @@ void MaterialBase::Destroy() {
 	vkDestroyDescriptorSetLayout(gGraphics->GetVkDevice(), mLayout, GetAllocationCallback());
 }
 
-Material::Material() {}
+std::vector<Material> MaterialBase::AllocateMaterials(){
+	std::vector<Material> materials;
+
+	Material material;
+	material.Create(this, "Allocated Material");
+	materials.push_back(material);
+
+	return materials;
+}
+
 
 void Material::Create(const MaterialBase* aBase, const char* aName /* = 0*/) {
 	mBase = aBase;

@@ -6,7 +6,6 @@
 #include "Material.h"
 #include "PlatformDebug.h"
 
-
 bool Pipeline::AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage) {
 	// preload shaders??
 	FileIO::File file = FileIO::LoadFile(aPath);
@@ -41,7 +40,7 @@ bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 	//~~~ Vertex
 	VkPipelineVertexInputStateCreateInfo vertexInfo = {};
 	{
-        LOG::LogLine("-- Pipeline Vertex Input needs work");
+		LOG::LogLine("-- Pipeline Vertex Input needs work");
 		vertexInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		if(vertexBinding.stride != 0) {
 			vertexInfo.vertexBindingDescriptionCount = 1;
@@ -190,3 +189,7 @@ void Pipeline::Begin(VkCommandBuffer aBuffer) const {
 }
 
 void Pipeline::End(VkCommandBuffer aBuffer) const {}
+
+std::vector<Material> Pipeline::AllocateMaterials() const {
+	return mMaterialBase->AllocateMaterials();
+}

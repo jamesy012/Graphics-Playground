@@ -3,6 +3,7 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 #include "Helpers.h"
+#include "Engine/FileIO.h"
 
 class Buffer;
 
@@ -17,7 +18,7 @@ public:
 	//always 4bit
 	void CreateFromData(const void* aData, const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
 
-	void LoadImage(const char* aFilePath, const VkFormat aFormat);
+	void LoadImage(const FileIO::Path aFilePath, const VkFormat aFormat);
 
 	void Destroy();
 
