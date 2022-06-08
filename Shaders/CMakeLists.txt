@@ -3,6 +3,7 @@
 "/ImGui.frag"
 "/Screenspace/Screenspace.vert" 
 "/Screenspace/Image.frag"
+"/Screenspace/Image2.frag"
  )
    
    #file(GLOB_RECURSE GLSL_SOURCE_FILES

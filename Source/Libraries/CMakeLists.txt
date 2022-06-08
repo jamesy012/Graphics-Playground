@@ -100,6 +100,7 @@ target_include_directories(GraphicsPlayground PRIVATE "stb")
 message("Linking Targets")
 
 target_include_directories(GraphicsPlayground PRIVATE "VulkanMemoryAllocator/include")
+target_include_directories(GraphicsPlayground PRIVATE "assimp/include")
 
 target_link_libraries(GraphicsPlayground
 BulletCollision

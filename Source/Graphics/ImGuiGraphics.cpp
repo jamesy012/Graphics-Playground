@@ -97,7 +97,7 @@ void ImGuiGraphics::Create(GLFWwindow* aWindow, const RenderPass& aRenderPass) {
 
 	{
 		gImGuiFontMaterial.Create(&gImGuiFontMaterialBase, "ImGui Font Material");
-		gImGuiFontMaterial.SetImage(gImGuiFontImage);
+		gImGuiFontMaterial.SetImages(gImGuiFontImage, 0, 0);
 	}
 }
 

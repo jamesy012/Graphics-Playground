@@ -10,7 +10,7 @@ class Material {
 public:
 	void Create(const MaterialBase* aBase, const char* aName = 0);
 
-	void SetImage(const Image& aImage) const;
+	void SetImages(const Image& aImage, const uint8_t aBinding, const uint8_t aIndex) const;
 
 	const VkDescriptorSet* GetSet() const {
 		return &mSet;
@@ -21,7 +21,6 @@ private:
 	VkDescriptorSet mSet	  = VK_NULL_HANDLE;
 };
 
-
 class MaterialBase {
 public:
 	void AddBinding(const uint32_t aBinding, const uint32_t aCount, const VkDescriptorType aType, const VkShaderStageFlags aStages);
@@ -29,10 +28,11 @@ public:
 	void Create(const char* aName = 0);
 	void Destroy();
 
-    std::vector<Material> AllocateMaterials();
+	std::vector<Material> AllocateMaterials();
 
 	VkDescriptorSetLayout mLayout = VK_NULL_HANDLE;
 
-private:
+protected:
+	friend Material;
 	std::vector<VkDescriptorSetLayoutBinding> mBindings = {};
 };

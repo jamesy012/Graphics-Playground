@@ -29,7 +29,7 @@ void MaterialBase::Destroy() {
 	vkDestroyDescriptorSetLayout(gGraphics->GetVkDevice(), mLayout, GetAllocationCallback());
 }
 
-std::vector<Material> MaterialBase::AllocateMaterials(){
+std::vector<Material> MaterialBase::AllocateMaterials() {
 	std::vector<Material> materials;
 
 	Material material;
@@ -38,7 +38,6 @@ std::vector<Material> MaterialBase::AllocateMaterials(){
 
 	return materials;
 }
-
 
 void Material::Create(const MaterialBase* aBase, const char* aName /* = 0*/) {
 	mBase = aBase;
@@ -52,20 +51,24 @@ void Material::Create(const MaterialBase* aBase, const char* aName /* = 0*/) {
 	SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_SET, mSet, aName ? aName : "Unnamed Descriptor Set");
 }
 
-void Material::SetImage(const Image& aImage) const {
+void Material::SetImages(const Image& aImage, const uint8_t aBinding, const uint8_t aIndex) const {
 
-	VkDescriptorImageInfo desc_image[1] = {};
-	desc_image[0].sampler				= gGraphics->GetDefaultSampler();
-	desc_image[0].imageView				= aImage.GetImageView();
-	desc_image[0].imageLayout			= VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	const VkDescriptorSetLayoutBinding& binding = mBase->mBindings[aBinding];
 
-	VkWriteDescriptorSet write_desc[1] = {};
-	write_desc[0].sType				   = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write_desc[0].dstSet			   = mSet;
-	write_desc[0].dstBinding		   = 0;
-	write_desc[0].descriptorCount	   = 1;
-	write_desc[0].descriptorType	   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-	write_desc[0].pImageInfo		   = desc_image;
+	VkDescriptorImageInfo* descriptors = (VkDescriptorImageInfo*)alloca(sizeof(VkDescriptorImageInfo) * binding.descriptorCount);
+	for(int i = 0; i < binding.descriptorCount; i++) {
+		descriptors[i].sampler	   = gGraphics->GetDefaultSampler();
+		descriptors[i].imageView   = aImage.GetImageView();
+		descriptors[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+	}
 
-	vkUpdateDescriptorSets(gGraphics->GetVkDevice(), 1, write_desc, 0, NULL);
+	VkWriteDescriptorSet write_desc = {};
+	write_desc.sType				= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write_desc.descriptorType		= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	write_desc.dstSet				= mSet;
+	write_desc.dstBinding			= aBinding;
+	write_desc.descriptorCount		= binding.descriptorCount;
+	write_desc.pImageInfo			= descriptors;
+
+	vkUpdateDescriptorSets(gGraphics->GetVkDevice(), 1, &write_desc, 0, NULL);
 }
