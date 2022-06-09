@@ -10,9 +10,9 @@
 
 #include "Buffer.h"
 
-class aiScene;
-class aiNode;
-class aiMesh;
+struct aiScene;
+struct aiNode;
+struct aiMesh;
 
 static constexpr char NUM_UVS		= 8;
 static constexpr char NUM_VERT_COLS = 8;

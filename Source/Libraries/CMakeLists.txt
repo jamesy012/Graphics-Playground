@@ -1,4 +1,5 @@
 message("Adding Libraries")
+set(BUILD_SHARED_LIBS OFF)
 
 #~ OpenXR
 if(${GraphicsPlayground_Enable_VR})
@@ -14,7 +15,7 @@ target_include_directories(GraphicsPlayground PRIVATE "${CMAKE_CURRENT_SOURCE_DI
 endif()
 
 #~~~ Other sub directories
-set(ASSIMP_BUILD_ASSIMP_TOOLS off)
+set(ASSIMP_BUILD_ASSIMP_TOOLS OFF)
    message("Adding assimp")
 add_subdirectory(assimp EXCLUDE_FROM_ALL)
    message("Adding GLFW")

@@ -30,19 +30,19 @@ int main() {
 
 	//SCREEN SPACE TEST
 	Image ssImage;
-	ssImage.LoadImage(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_Leaves.png", VK_FORMAT_R8G8B8A8_UNORM);
+	ssImage.LoadImage(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_Bark.png", VK_FORMAT_R8G8B8A8_UNORM);
 	Image ssImage2;
-	ssImage2.LoadImage(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_Bark.png", VK_FORMAT_R8G8B8A8_UNORM);
+	ssImage2.LoadImage(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_Leaves.png", VK_FORMAT_R8G8B8A8_UNORM);
 
 	MaterialBase ssTestBase;
 	ssTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-	ssTestBase.AddBinding(1, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+	//ssTestBase.AddBinding(1, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 	ssTestBase.Create();
 	Screenspace ssTest;
 	ssTest.AddMaterialBase(&ssTestBase);
-	ssTest.Create("WorkDir/Shaders/Screenspace/Image2.frag.spv", "ScreenSpace ImageCopy");
+	ssTest.Create("WorkDir/Shaders/Screenspace/Image.frag.spv", "ScreenSpace ImageCopy");
 	ssTest.GetMaterial(0).SetImages(ssImage, 0, 0);
-	ssTest.GetMaterial(0).SetImages(ssImage2, 1, 0);
+	//ssTest.GetMaterial(0).SetImages(ssImage2, 1, 0);
 
 	//Mesh Test
 	Mesh meshTest;
@@ -76,26 +76,29 @@ int main() {
 	meshRenderPass.Create("Mesh RP");
 	meshPipeline.Create(meshRenderPass.GetRenderPass(), "Mesh");
 
-	{
-		glm::mat4 proj;
-		glm::mat4 view;
-		glm::mat4 world;
-
-		float size	= 5;
-		proj		= glm::ortho(-size, size, size, -size, 0.01f, 10000.0f);
-		view		= glm::lookAt(glm::vec3(10), glm::vec3(0), glm::vec3(0, 1, 0));
-		world		= glm::identity<glm::mat4>();
-		meshPC.mPVW = proj * view * world;
-	}
-
 	while(!window.ShouldClose()) {
 		window.Update();
+
+		{
+			glm::mat4 proj;
+			glm::mat4 view;
+			glm::mat4 world;
+
+			proj			  = glm::perspectiveFov(glm::radians(60.0f), 720.0f, 720.0f, 0.1f, 1000.0f);
+			const float time  = gGraphics->GetFrameCount() / 360.0f;
+			const float scale = 10.0f;
+			view			  = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0), glm::vec3(0, 1, 0));
+			world			  = glm::identity<glm::mat4>();
+			world			  = glm::translate(world, glm::vec3(0, 5, 0));
+			world			  = glm::rotate(world, glm::radians(90.0f), glm::vec3(1, 0, 0));
+			meshPC.mPVW		  = proj * view * world;
+		}
 
 		gfx.StartNewFrame();
 
 		VkCommandBuffer buffer = gfx.GetCurrentGraphicsCommandBuffer();
 
-		//ssTest.Render(buffer, gfx.GetCurrentFrameBuffer());
+		ssTest.Render(buffer, gfx.GetCurrentFrameBuffer());
 
 		meshRenderPass.Begin(buffer, gGraphics->GetCurrentFrameBuffer());
 		meshPipeline.Begin(buffer);
