@@ -18,7 +18,7 @@ public:
 		mMaterialBase = aBase;
 	};
 
-	void AddPushConstant(VkPushConstantRange aPush) {
+	void AddPushConstant(const VkPushConstantRange& aPush) {
 		mPushConstants.push_back(aPush);
 	}
 

@@ -1,7 +1,5 @@
 #include "Mesh.h"
 
-#include <vector>
-
 #include <assimp/Importer.hpp> // C++ importer interface
 #include <assimp/scene.h> // Output data structure
 #include <assimp/postprocess.h> // Post processing flags
@@ -45,12 +43,15 @@ bool Mesh::ProcessNode(const aiScene* aScene, const aiNode* aNode) {
 }
 
 bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
-	std::vector<MeshVert> vertices;
-	std::vector<uint64_t> indices;
+	mMesh.push_back(SubMesh());
+	SubMesh& mesh					= mMesh.back();
+	std::vector<MeshVert>& vertices = mesh.mVertices;
+	std::vector<MeshIndex>& indices = mesh.mIndices;
 
 	//todo memcpy these values?
 
-	// Walk through each of the mesh's vertices
+	mesh.mVertices.resize(aMesh->mNumVertices);
+	//Vertices
 	for(uint64_t i = 0; i < aMesh->mNumVertices; i++) {
 		MeshVert vertex;
 		if(aMesh->HasPositions()) {
@@ -62,7 +63,7 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 		}
 
 		if(aMesh->HasTangentsAndBitangents()) {
-			vertex.mTangent = AssimpToGlm(aMesh->mTangents[i]);
+			vertex.mTangent	  = AssimpToGlm(aMesh->mTangents[i]);
 			vertex.mBiTangent = AssimpToGlm(aMesh->mBitangents[i]);
 		}
 
@@ -82,41 +83,67 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 			}
 		}
 
-		vertices.push_back(vertex);
+		vertices[i] = vertex;
 	}
 
-	//indices
-	for(uint64_t i = 0; i < aMesh->mNumFaces; i++) {
-		const aiFace& face = aMesh->mFaces[i];
+	//Indices
+	{
+		//is the count here useful?
+		uint64_t indicesCount = 0;
+		for(uint64_t i = 0; i < aMesh->mNumFaces; i++) {
+			const aiFace& face = aMesh->mFaces[i];
+			indicesCount += face.mNumIndices;
+		}
+		indices.resize(indicesCount);
+		indicesCount = 0;
+		for(uint64_t i = 0; i < aMesh->mNumFaces; i++) {
+			const aiFace& face = aMesh->mFaces[i];
 
-		for(uint64_t j = 0; j < face.mNumIndices; j++) {
-			indices.push_back(face.mIndices[j]);
+			for(uint64_t j = 0; j < face.mNumIndices; j++) {
+				indices[indicesCount + j] = (MeshIndex)face.mIndices[j];
+			}
+			indicesCount += face.mNumIndices;
 		}
 	}
 
-    //animation todo
-	//bones
+	//todo animation
+	//Bones
 	for(uint16_t i = 0; i < aMesh->mNumBones; i++) {
 		const aiBone* bone = aMesh->mBones[i];
 	}
 
-	//animations
+	//Animations/per-vertex animations
 	for(uint16_t i = 0; i < aMesh->mNumAnimMeshes; i++) {
 		const aiAnimMesh* anim = aMesh->mAnimMeshes[i];
 	}
 
-	//aabb
+	//AABB
 	{
 		const aiAABB& aabb = aMesh->mAABB;
-		aabb.mMin;
-		aabb.mMax;
+		mesh.mAABB.Expand(AssimpToGlm(aabb.mMin), AssimpToGlm(aabb.mMax));
+		mAABB.Expand(mesh.mAABB);
 	}
 
+	//Material
 	if(aMesh->mMaterialIndex >= 0) {
-		aiMaterial* material = aScene->mMaterials[aMesh->mMaterialIndex];
+		const aiMaterial* material = aScene->mMaterials[aMesh->mMaterialIndex];
 
 		//std::vector<Texture> diffuseMaps = this->loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse", scene);
 	}
 
+	mesh.mVertexBuffer.CreateFromData(BufferType::VERTEX, sizeof(MeshVert) * vertices.size(), vertices.data(), "Mesh Vertex Data");
+	mesh.mIndexBuffer.CreateFromData(BufferType::INDEX, sizeof(MeshIndex) * indices.size(), indices.data(), "Mesh Vertex Data");
+	mesh.mVertexBuffer.Flush();
+	mesh.mIndexBuffer.Flush();
 	return true;
+}
+
+void Mesh::QuickTempRender(VkCommandBuffer aBuffer) {
+	for(int i = 0; i < mMesh.size(); i++) {
+		SubMesh& mesh			= mMesh[i];
+		VkDeviceSize offsets[1] = {0};
+		vkCmdBindVertexBuffers(aBuffer, 0, 1, mesh.mVertexBuffer.GetBufferRef(), offsets);
+		vkCmdBindIndexBuffer(aBuffer, mesh.mIndexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+		vkCmdDrawIndexed(aBuffer, mesh.mIndices.size(), 1, 0, 0, 0);
+	}
 }
