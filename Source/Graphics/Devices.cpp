@@ -5,6 +5,10 @@
 #include "Graphics.h"
 #include "PlatformDebug.h"
 
+#if defined(ENABLE_XR)
+#	include "VRGraphics.h"
+#endif
+
 const char* gDeviceExtensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 #if PLATFORM_APPLE
 								   "VK_KHR_portability_subset"
@@ -125,13 +129,31 @@ bool Devices::Setup() {
 		}
 	}
 
-	DeviceData& selectedDevice = gDevices[0];
+	int selectedDeviceIndex = 0;
+#if defined(ENABLE_XR)
+	VkPhysicalDevice requestedDevice = gGraphics->GetVrGraphics()->GetRequestedDevice();
+	selectedDeviceIndex				 = -1;
+	for(int i = 0; i < gDevices.size(); i++) {
+		if(gDevices[i].mPhysicalDevice == requestedDevice) {
+			selectedDeviceIndex = i;
+			break;
+		}
+	}
+	ASSERT(selectedDeviceIndex != -1);
+#endif
+	DeviceData& selectedDevice = gDevices[selectedDeviceIndex];
 
 	VkDeviceCreateInfo deviceInfo {};
 	deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
 	std::vector<const char*> extensions;
+	std::vector<std::string> extensionsTemp;
 	extensions.assign(gDeviceExtensions, gDeviceExtensions + std::size(gDeviceExtensions));
+
+#if defined(ENABLE_XR)
+	std::vector<std::string> xrExtensions = gGraphics->GetVrGraphics()->GetVulkanDeviceExtensions();
+	extensionsTemp.insert(extensionsTemp.end(), xrExtensions.begin(), xrExtensions.end());
+#endif
 
 	std::vector<VkDeviceQueueCreateInfo> queues;
 	float queuePriority[10];
@@ -157,6 +179,12 @@ bool Devices::Setup() {
 		}
 		delete[] uniqueQueues;
 	}
+
+	// copy over any temporary strings
+	for(int i = 0; i < extensionsTemp.size(); i++) {
+		extensions.push_back(extensionsTemp[i].c_str());
+	}
+
 	deviceInfo.queueCreateInfoCount = queues.size();
 	deviceInfo.pQueueCreateInfos	= queues.data();
 

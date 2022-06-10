@@ -61,7 +61,8 @@ namespace LOG {
 		va_end(argptr);
 	}
 
-	void LogLine(const char* aMessage, ...) {
+	//void LogLine(const char* aMessage, ...) {
+	void LogLine(const char* aMessage) {
 
 		int size	  = strlen(aMessage) + 1; //include \0
 		char* message = new char[size + 1]; //adding \n
@@ -69,10 +70,11 @@ namespace LOG {
 		message[size - 1] = '\n';
 		message[size]	  = '\0';
 
-		va_list args;
-		va_start(args, aMessage);
-		Log(message, args);
-		va_end(args);
+		//va_list args;
+		//va_start(args, aMessage);
+		//Log(message, args);
+		//va_end(args);
+		Log(message);
 
 		delete[] message;
 	}

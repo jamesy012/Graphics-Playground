@@ -11,7 +11,7 @@ static_assert(NUM_UVS <= AI_MAX_NUMBER_OF_TEXTURECOORDS);
 static_assert(NUM_VERT_COLS <= AI_MAX_NUMBER_OF_COLOR_SETS);
 
 bool Mesh::LoadMesh(FileIO::Path aFilePath) {
-	LOG::LogLine("Loading: %s", aFilePath.mPath.c_str());
+	LOG::Log("Loading: %s\n", aFilePath.mPath.c_str());
 	LOG::LogLine("Mesh Loading should not load a mesh that is already loaded?");
 
 	Assimp::Importer importer;

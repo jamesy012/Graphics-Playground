@@ -13,6 +13,8 @@ class Window;
 class Devices;
 class Swapchain;
 
+class VRGraphics;
+
 static VkAllocationCallbacks* CreateAllocationCallbacks() {
 	VkAllocationCallbacks callback;
 	callback.pUserData			   = nullptr;
@@ -78,10 +80,14 @@ public:
 	void EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer);
 
 	//~~~ Helpers
+	const VkInstance GetVkInstance() const;
 	const VkDevice GetVkDevice() const;
 	const VkPhysicalDevice GetVkPhysicalDevice() const;
 	const Devices* GetMainDevice() const;
 	const Swapchain* GetMainSwapchain() const;
+#if defined(ENABLE_XR)
+	const VRGraphics* GetVrGraphics() const;
+#endif
 
 	const VkFormat GetMainFormat() const;
 	const VmaAllocator GetAllocator() const {

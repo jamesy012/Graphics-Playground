@@ -143,6 +143,11 @@ bool Graphics::Initalize() {
 	mDevicesHandler->Setup();
 	mDevicesHandler->CreateCommandPools();
 
+#if defined(ENABLE_XR)
+	//needs device setup
+	gVrGraphics.Startup();
+#endif
+
 	mSwapchain = new Swapchain(mDevicesHandler->GetPrimaryDeviceData());
 	int width, height;
 	mSurfaces[0]->GetSize(&width, &height);
@@ -239,11 +244,12 @@ bool Graphics::Destroy() {
 
 	mSwapchain->Destroy();
 
-	mDevicesHandler->Destroy();
-
 #if defined(ENABLE_XR)
 	gVrGraphics.Destroy();
+	LOG::LogLine("~~~~~~~~~~~~~ XR Vulkan doesnt delete a command pool?");
 #endif
+
+	mDevicesHandler->Destroy();
 
 	for(int i = 0; i < mSurfaces.size(); i++) {
 		mSurfaces[i]->DestroySurface();
@@ -253,6 +259,8 @@ bool Graphics::Destroy() {
 		vkDestroyInstance(gVkInstance, GetAllocationCallback());
 		gVkInstance = VK_NULL_HANDLE;
 	}
+
+
 
 	return true;
 }
@@ -373,6 +381,10 @@ void Graphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer) {
 	vkFreeCommandBuffers(GetVkDevice(), mDevicesHandler->GetGraphicsPool(), 1, &aBuffer.mBuffer);
 }
 
+const VkInstance Graphics::GetVkInstance() const {
+	return gVkInstance;
+}
+
 const VkDevice Graphics::GetVkDevice() const {
 	return mDevicesHandler->GetPrimaryDevice();
 }
@@ -388,6 +400,12 @@ const Devices* Graphics::GetMainDevice() const {
 const Swapchain* Graphics::GetMainSwapchain() const {
 	return mSwapchain;
 }
+
+#if defined(ENABLE_XR)
+const VRGraphics* Graphics::GetVrGraphics() const {
+	return &gVrGraphics;
+}
+#endif
 
 const VkFormat Graphics::GetMainFormat() const {
 	return GetMainSwapchain()->GetColorFormat();
