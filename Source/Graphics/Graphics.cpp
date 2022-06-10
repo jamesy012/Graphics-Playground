@@ -170,6 +170,7 @@ bool Graphics::Initalize() {
 	{
 		VkDescriptorPoolSize pools[] = {
 			{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 50},
+			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 50},
 		};
 		VkDescriptorPoolCreateInfo descriptorPoolInfo = {};
 		descriptorPoolInfo.sType					  = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -294,7 +295,12 @@ void Graphics::StartNewFrame() {
 	scissorRect.extent.height = viewport.height;
 	vkCmdSetScissor(graphics, 0, 1, &scissorRect);
 
-	mSwapchain->GetImage(GetCurrentImageIndex()).SetImageLayout(graphics, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	mSwapchain->GetImage(GetCurrentImageIndex())
+		.SetImageLayout(graphics,
+						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+						VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 }
 
 void Graphics::EndFrame() {
@@ -304,7 +310,12 @@ void Graphics::EndFrame() {
 	gImGuiGraphics.RenderImGui(graphics, mRenderPass, mFramebuffer[GetCurrentImageIndex()]);
 #endif
 
-	mSwapchain->GetImage(GetCurrentImageIndex()).SetImageLayout(graphics, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+	mSwapchain->GetImage(GetCurrentImageIndex())
+		.SetImageLayout(graphics,
+						VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+						VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 	vkEndCommandBuffer(graphics);
 
 	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, {graphics});

@@ -17,6 +17,11 @@ VkBufferUsageFlags GetUsageFromType(const BufferType aType) {
 		case BufferType::INDEX:
 			return VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 			break;
+		case BufferType::UNIFORM:
+			return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+			break;
+		default:
+			ASSERT(false);
 	}
 	return 0;
 }
@@ -74,13 +79,13 @@ void Buffer::Resize(const VkDeviceSize aSize, const bool aKeepData, const char* 
 	Create(mType, aSize, aName);
 }
 
-void Buffer::Flush() {
-	vmaFlushAllocation(gGraphics->GetAllocator(), mAllocation, 0, VK_WHOLE_SIZE);
-}
+void Buffer::UpdateData(const VkDeviceSize aOffset, const VkDeviceSize aSize, const void* aData) {
+	char* data = (char*)Map() + aOffset;
 
-void Buffer::Flush(Buffer& aBuffers, uint8_t aCount) {
-	ASSERT(false);
-	vmaFlushAllocations(gGraphics->GetAllocator(), 0, 0, 0, 0);
+	//comes premapped due to VMA_ALLOCATION_CREATE_MAPPED_BIT?
+	memcpy(data, aData, aSize == VK_WHOLE_SIZE ? mAllocationInfo.size : aSize);
+
+	UnMap();
 }
 
 void* Buffer::Map() {
@@ -91,4 +96,13 @@ void* Buffer::Map() {
 void Buffer::UnMap() {
 	vmaUnmapMemory(gGraphics->GetAllocator(), mAllocation);
 	mMappedData = nullptr;
+}
+
+void Buffer::Flush() {
+	vmaFlushAllocation(gGraphics->GetAllocator(), mAllocation, 0, VK_WHOLE_SIZE);
+}
+
+void Buffer::Flush(Buffer& aBuffers, uint8_t aCount) {
+	ASSERT(false);
+	vmaFlushAllocations(gGraphics->GetAllocator(), 0, 0, 0, 0);
 }

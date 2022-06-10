@@ -49,8 +49,14 @@ int main() {
 	meshTest.LoadMesh(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_5.fbx");
 
 	struct MeshPCTest {
-		glm::mat4 mPVW;
+		glm::mat4 mWorld;
 	} meshPC;
+	struct MeshUniformTest {
+		glm::mat4 mPV;
+	} meshUniform;
+
+	Buffer meshUniformBuffer;
+	meshUniformBuffer.Create(BufferType::UNIFORM, sizeof(MeshUniformTest), "Mesh Uniform");
 
 	Pipeline meshPipeline;
 	meshPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/MeshTest.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
@@ -72,9 +78,16 @@ int main() {
 		meshPipeline.vertexAttribute[1].format	 = VK_FORMAT_R32G32_SFLOAT;
 		meshPipeline.vertexAttribute[1].offset	 = offsetof(MeshVert, mUV[0]);
 	}
+
 	RenderPass meshRenderPass;
 	meshRenderPass.Create("Mesh RP");
+	MaterialBase meshTestBase;
+	meshTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
+	meshTestBase.Create();
+	meshPipeline.SetMaterialBase(&meshTestBase);
 	meshPipeline.Create(meshRenderPass.GetRenderPass(), "Mesh");
+	Material meshMaterial = meshTestBase.AllocateMaterials()[0];
+	meshMaterial.SetBuffers(meshUniformBuffer, 0, 0);
 
 	while(!window.ShouldClose()) {
 		window.Update();
@@ -88,10 +101,10 @@ int main() {
 			const float time  = gGraphics->GetFrameCount() / 360.0f;
 			const float scale = 10.0f;
 			view			  = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0), glm::vec3(0, 1, 0));
-			world			  = glm::identity<glm::mat4>();
-			world			  = glm::translate(world, glm::vec3(0, 5, 0));
-			world			  = glm::rotate(world, glm::radians(90.0f), glm::vec3(1, 0, 0));
-			meshPC.mPVW		  = proj * view * world;
+
+			meshUniform.mPV = proj * view;
+
+			meshUniformBuffer.UpdateData(0, VK_WHOLE_SIZE, &meshUniform);
 		}
 
 		gfx.StartNewFrame();
@@ -100,15 +113,33 @@ int main() {
 
 		ssTest.Render(buffer, gfx.GetCurrentFrameBuffer());
 
+		//mesh render test
 		meshRenderPass.Begin(buffer, gGraphics->GetCurrentFrameBuffer());
 		meshPipeline.Begin(buffer);
-		vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-		meshTest.QuickTempRender(buffer);
+		vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
+		{
+			meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 5, 0));
+			meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
+			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+			meshTest.QuickTempRender(buffer);
+		}
+		{
+			meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-5, 8, 0));
+			meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
+			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+			meshTest.QuickTempRender(buffer);
+		}
 		meshPipeline.End(buffer);
 		meshRenderPass.End(buffer);
 
 		gfx.EndFrame();
 	}
+
+	meshPipeline.Destroy();
+	meshTestBase.Destroy();
+	meshRenderPass.Destroy();
+	meshTest.Destroy();
+	meshUniformBuffer.Destroy();
 
 	ssTest.Destroy();
 	ssTestBase.Destroy();

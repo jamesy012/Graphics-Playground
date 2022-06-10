@@ -2,6 +2,9 @@
 
 #include "Graphics.h"
 #include "Image.h"
+#include "Buffer.h"
+
+#include "PlatformDebug.h"
 
 void MaterialBase::AddBinding(const uint32_t aBinding, const uint32_t aCount, const VkDescriptorType aType, const VkShaderStageFlags aStages) {
 	VkDescriptorSetLayoutBinding binding = {};
@@ -48,6 +51,11 @@ void Material::Create(const MaterialBase* aBase, const char* aName /* = 0*/) {
 	alloc_info.descriptorSetCount		   = 1;
 	alloc_info.pSetLayouts				   = &mBase->mLayout;
 	VkResult err						   = vkAllocateDescriptorSets(gGraphics->GetVkDevice(), &alloc_info, &mSet);
+	if(err == VK_ERROR_OUT_OF_POOL_MEMORY){
+		LOG::Log("Failed to allocate %s, not enough pool memory", aName);
+		ASSERT(false);
+		return;
+	}
 	SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_SET, mSet, aName ? aName : "Unnamed Descriptor Set");
 }
 
@@ -64,11 +72,35 @@ void Material::SetImages(const Image& aImage, const uint8_t aBinding, const uint
 
 	VkWriteDescriptorSet write_desc = {};
 	write_desc.sType				= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-	write_desc.descriptorType		= VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 	write_desc.dstSet				= mSet;
 	write_desc.dstBinding			= aBinding;
 	write_desc.descriptorCount		= binding.descriptorCount;
-	write_desc.pImageInfo			= descriptors;
+
+	write_desc.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	write_desc.pImageInfo	  = descriptors;
+
+	vkUpdateDescriptorSets(gGraphics->GetVkDevice(), 1, &write_desc, 0, NULL);
+}
+
+void Material::SetBuffers(const Buffer& aBuffer, const uint8_t aBinding, const uint8_t aIndex) const {
+
+	const VkDescriptorSetLayoutBinding& binding = mBase->mBindings[aBinding];
+
+	VkDescriptorBufferInfo* descriptors = (VkDescriptorBufferInfo*)alloca(sizeof(VkDescriptorBufferInfo) * binding.descriptorCount);
+	for(int i = 0; i < binding.descriptorCount; i++) {
+		descriptors[i].buffer = aBuffer.GetBuffer();
+		descriptors[i].offset = 0;
+		descriptors[i].range  = VK_WHOLE_SIZE;
+	}
+
+	VkWriteDescriptorSet write_desc = {};
+	write_desc.sType				= VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write_desc.dstSet				= mSet;
+	write_desc.dstBinding			= aBinding;
+	write_desc.descriptorCount		= binding.descriptorCount;
+
+	write_desc.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	write_desc.pBufferInfo	  = descriptors;
 
 	vkUpdateDescriptorSets(gGraphics->GetVkDevice(), 1, &write_desc, 0, NULL);
 }

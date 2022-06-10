@@ -8,7 +8,8 @@ enum class BufferType
 	IMAGE,
 	STAGING,
 	VERTEX,
-	INDEX
+	INDEX,
+	UNIFORM
 };
 
 class Buffer {
@@ -19,6 +20,8 @@ public:
 	void CreateFromData(const BufferType aType, const VkDeviceSize aSize, const void* aData, const char* aName = 0);
 
 	void Resize(const VkDeviceSize aSize, const bool aKeepData, const char* aName = 0);
+
+	void UpdateData(const VkDeviceSize aOffset, const VkDeviceSize aSize, const void* aData);
 
 	VkBuffer GetBuffer() const {
 		return mBuffer;

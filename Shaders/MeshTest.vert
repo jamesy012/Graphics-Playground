@@ -1,12 +1,17 @@
 #version 450 core
 #extension GL_KHR_vulkan_glsl : enable
 
-layout(location = 0) in vec3 aPos;
-layout(location = 1) in vec2 aUV;
+layout(location = 0) in vec3 inPos;
+layout(location = 1) in vec2 inUV;
 
 layout(push_constant) uniform uPushConstant {
-    mat4 uProjViewWorld;
+    mat4 world;
 } pc;
+
+layout(set = 0, binding = 0) uniform SceneBuffer{   
+	mat4 viewProj; 
+} sceneData;
+
 
 layout(location = 0) out struct {
     vec2 UV;
@@ -17,6 +22,6 @@ out gl_PerVertex {
 };
 
 void main() {
-    Out.UV = aUV;
-    gl_Position = pc.uProjViewWorld * vec4(aPos,1);
+    Out.UV = inUV;
+    gl_Position = sceneData.viewProj * pc.world  * vec4(inPos,1);
 }

@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 
 class Image;
+class Buffer;
 class MaterialBase;
 
 class Material {
@@ -11,6 +12,7 @@ public:
 	void Create(const MaterialBase* aBase, const char* aName = 0);
 
 	void SetImages(const Image& aImage, const uint8_t aBinding, const uint8_t aIndex) const;
+	void SetBuffers(const Buffer& aBuffer, const uint8_t aBinding, const uint8_t aIndex) const;
 
 	const VkDescriptorSet* GetSet() const {
 		return &mSet;

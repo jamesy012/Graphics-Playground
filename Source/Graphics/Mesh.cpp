@@ -7,8 +7,8 @@
 #include "PlatformDebug.h"
 #include "Conversions.h"
 
-static_assert(NUM_UVS == AI_MAX_NUMBER_OF_TEXTURECOORDS);
-static_assert(NUM_VERT_COLS == AI_MAX_NUMBER_OF_COLOR_SETS);
+static_assert(NUM_UVS <= AI_MAX_NUMBER_OF_TEXTURECOORDS);
+static_assert(NUM_VERT_COLS <= AI_MAX_NUMBER_OF_COLOR_SETS);
 
 bool Mesh::LoadMesh(FileIO::Path aFilePath) {
 	LOG::LogLine("Loading: %s", aFilePath.mPath.c_str());
@@ -27,6 +27,7 @@ bool Mesh::LoadMesh(FileIO::Path aFilePath) {
 
 	ProcessNode(scene, scene->mRootNode);
 
+	importer.FreeScene();
 	return true;
 }
 
@@ -71,7 +72,7 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 			if(aMesh->HasVertexColors(channel)) {
 				vertex.mColor[channel] = AssimpToGlm(*aMesh->mColors[i]);
 			} else {
-				vertex.mColor[channel] = glm::vec4(0, 0, 0, 1);
+				vertex.mColor[channel] = glm::vec4(1, 0, 1, 1);
 			}
 		}
 
@@ -110,11 +111,13 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 	//Bones
 	for(uint16_t i = 0; i < aMesh->mNumBones; i++) {
 		const aiBone* bone = aMesh->mBones[i];
+		ASSERT(false);
 	}
 
 	//Animations/per-vertex animations
 	for(uint16_t i = 0; i < aMesh->mNumAnimMeshes; i++) {
 		const aiAnimMesh* anim = aMesh->mAnimMeshes[i];
+		ASSERT(false);
 	}
 
 	//AABB
@@ -131,13 +134,25 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 		//std::vector<Texture> diffuseMaps = this->loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse", scene);
 	}
 
+	//temp
 	mesh.mVertexBuffer.CreateFromData(BufferType::VERTEX, sizeof(MeshVert) * vertices.size(), vertices.data(), "Mesh Vertex Data");
 	mesh.mIndexBuffer.CreateFromData(BufferType::INDEX, sizeof(MeshIndex) * indices.size(), indices.data(), "Mesh Vertex Data");
 	mesh.mVertexBuffer.Flush();
 	mesh.mIndexBuffer.Flush();
+
 	return true;
 }
 
+void Mesh::Destroy() {
+	for(int i = 0; i < mMesh.size(); i++) {
+		SubMesh& mesh = mMesh[i];
+		mesh.mVertexBuffer.Destroy();
+		mesh.mIndexBuffer.Destroy();
+	}
+	mMesh.clear();
+}
+
+//temp
 void Mesh::QuickTempRender(VkCommandBuffer aBuffer) {
 	for(int i = 0; i < mMesh.size(); i++) {
 		SubMesh& mesh			= mMesh[i];
