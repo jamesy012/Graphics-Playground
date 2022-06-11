@@ -14,6 +14,9 @@ public:
 	void Startup();
 
 
+	void FrameBegin();
+	void FrameEnd();
+
 	const std::vector<std::string> GetVulkanInstanceExtensions() const;
 	const std::vector<std::string> GetVulkanDeviceExtensions() const;
 
@@ -22,7 +25,7 @@ private:
 	//create - instance/setting up session
 	void CreateInstance();
 	void CreateDebugUtils();
-	void SessionSetup();
+	bool SessionSetup();
 	void CreateActions();
 
 	//startup - session and head/hand pos 

@@ -1,4 +1,6 @@
 #include "VRGraphics.h"
+#include "VRGraphics.h"
+#include "VRGraphics.h"
 
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
@@ -11,17 +13,51 @@
 //get vulkan info
 #include "Graphics.h"
 #include "Devices.h"
+#pragma region XR Variables
 
+//
+//~ xr info
+//
+std::vector<XrExtensionProperties> mXrInstanceExtensions;
+
+//
+//~ general xr session info
+//
 XrInstance gXrInstance;
 XrSystemId gXrSystemId;
 XrSession gXrSession;
-std::vector<XrExtensionProperties> mXrInstanceExtensions;
+bool gXrSessionActive = false;
 
+//
+//~ view/frame xr session info
+//
+
+std::vector<XrViewConfigurationView> gViewConfigs;
+XrEnvironmentBlendMode gBlendMode;
+
+//
+//~ pre frame xr info
+//
+
+XrFrameState gFrameState = {XR_TYPE_FRAME_STATE};
+
+bool gFrameActive = false;
+
+//spaces used to work out head/hand positions
+//head space
 const uint8_t NUM_SPACES = 3;
 struct SpaceInfo {
 	XrSpace mSpace = XR_NULL_HANDLE;
 	XrExtent2Df mBounds;
 } gSpaces[NUM_SPACES];
+
+//hand space
+//todo
+#pragma endregion
+
+#pragma region XR Debug
+
+#define VALIDATEXR() ASSERT(result == XR_SUCCESS);
 
 XrDebugUtilsMessengerEXT gXrDebugMessenger = XR_NULL_HANDLE;
 
@@ -46,7 +82,9 @@ static XRAPI_ATTR XrBool32 XRAPI_CALL XrDebugCallback(XrDebugUtilsMessageSeverit
 
 	return XR_FALSE;
 }
+#pragma endregion
 
+//helper for getting function ptr from XR
 bool getXrInstanceProcAddr(void* aFunc, const char* aName) {
 	PFN_xrVoidFunction* func = (PFN_xrVoidFunction*)aFunc;
 	xrGetInstanceProcAddr(gXrInstance, aName, func);
@@ -75,6 +113,102 @@ void VRGraphics::Startup() {
 	PrepareSwapchainData();
 }
 
+void VRGraphics::FrameBegin() {
+	XrResult result = XR_SUCCESS;
+	XrEventDataBuffer eventData;
+	result = xrPollEvent(gXrInstance, &eventData);
+	ASSERT(result == XR_SUCCESS || result == XR_EVENT_UNAVAILABLE);
+	while(result == XR_SUCCESS) {
+		switch(eventData.type) {
+			case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
+				const char* stateText[] = {"XR_SESSION_STATE_UNKNOWN",
+										   "XR_SESSION_STATE_IDLE",
+										   "XR_SESSION_STATE_READY",
+										   "XR_SESSION_STATE_SYNCHRONIZED",
+										   "XR_SESSION_STATE_VISIBLE",
+										   "XR_SESSION_STATE_FOCUSED",
+										   "XR_SESSION_STATE_STOPPING",
+										   "XR_SESSION_STATE_LOSS_PENDING",
+										   "XR_SESSION_STATE_EXITING"};
+
+				XrEventDataSessionStateChanged* sessionState = (XrEventDataSessionStateChanged*)&eventData;
+				LOG::Log("Session state changed to %s\n", stateText[(int)sessionState->state]);
+				if(sessionState->state == XR_SESSION_STATE_READY) {
+					XrSessionBeginInfo beginInfo		   = {XR_TYPE_SESSION_BEGIN_INFO};
+					beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+
+					result = xrBeginSession(gXrSession, &beginInfo);
+					VALIDATEXR();
+					if(result == XR_SUCCESS) {
+						LOG::LogLine("Begining Xr Session");
+						gXrSessionActive = true;
+					}
+				}
+				if(sessionState->state == XR_SESSION_STATE_STOPPING) {
+					result = xrEndSession(gXrSession);
+					VALIDATEXR();
+					if(result == XR_SUCCESS) {
+						gXrSessionActive = false;
+					}
+				}
+				break;
+			}
+			case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED: {
+				XrEventDataInteractionProfileChanged* profileChange = (XrEventDataInteractionProfileChanged*)&eventData;
+				LOG::LogLine("XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED");
+				break;
+			}
+			default:
+				ASSERT(false);
+		}
+		result = xrPollEvent(gXrInstance, &eventData);
+		ASSERT(result == XR_SUCCESS || result == XR_EVENT_UNAVAILABLE);
+	}
+
+	if(gXrSessionActive == false) {
+		return;
+	}
+
+	XrActionsSyncInfo syncInfo	   = {XR_TYPE_ACTIONS_SYNC_INFO};
+	syncInfo.countActiveActionSets = 0;
+	result						   = xrSyncActions(gXrSession, &syncInfo);
+	ASSERT(result == XR_SUCCESS || result == XR_SESSION_LOSS_PENDING || XR_SESSION_NOT_FOCUSED);
+	if(result != XR_SUCCESS) {
+		return;
+	}
+
+
+	XrFrameWaitInfo frameWaitInfo {XR_TYPE_FRAME_WAIT_INFO};
+	result = xrWaitFrame(gXrSession, &frameWaitInfo, &gFrameState);
+	VALIDATEXR();
+
+	XrFrameBeginInfo frameBeginInfo {XR_TYPE_FRAME_BEGIN_INFO};
+	result = xrBeginFrame(gXrSession, &frameBeginInfo);
+	VALIDATEXR();
+
+	gFrameActive = true;
+
+	XrSpaceLocation location = {XR_TYPE_SPACE_LOCATION};
+	result					 = xrLocateSpace(gSpaces[XR_REFERENCE_SPACE_TYPE_VIEW - 1].mSpace,
+							 gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mSpace,
+							 gFrameState.predictedDisplayTime,
+							 &location);
+	VALIDATEXR();
+}
+
+void VRGraphics::FrameEnd() {
+	if (gFrameActive == false) {
+		return;
+		}
+	XrResult result;
+	XrFrameEndInfo endInfo		 = {XR_TYPE_FRAME_END_INFO};
+	endInfo.displayTime			 = gFrameState.predictedDisplayTime;
+	endInfo.environmentBlendMode = gBlendMode;
+
+	result = xrEndFrame(gXrSession, &endInfo);
+	VALIDATEXR();
+}
+
 const VkPhysicalDevice VRGraphics::GetRequestedDevice() const {
 	XrResult result;
 	PFN_xrGetVulkanGraphicsDeviceKHR xrGetVulkanGraphicsDeviceKHR;
@@ -82,6 +216,7 @@ const VkPhysicalDevice VRGraphics::GetRequestedDevice() const {
 	VkPhysicalDevice vkPhysicalDevice = VK_NULL_HANDLE;
 	if(getXrInstanceProcAddr(&xrGetVulkanGraphicsDeviceKHR, "xrGetVulkanGraphicsDeviceKHR")) {
 		result = xrGetVulkanGraphicsDeviceKHR(gXrInstance, gXrSystemId, vkInstance, &vkPhysicalDevice);
+		VALIDATEXR();
 	};
 	return vkPhysicalDevice;
 }
@@ -157,16 +292,18 @@ void VRGraphics::Destroy() {
 }
 
 void VRGraphics::CreateInstance() {
-	XrResult xrResult;
+	XrResult result;
 	uint32_t extensionCount = 0;
-	xrResult				= xrEnumerateInstanceExtensionProperties(NULL, 0, &extensionCount, NULL);
+	result					= xrEnumerateInstanceExtensionProperties(NULL, 0, &extensionCount, NULL);
+	VALIDATEXR();
 	mXrInstanceExtensions.resize(extensionCount);
 
 	for(int i = 0; i < extensionCount; i++) {
 		mXrInstanceExtensions[i].type = XR_TYPE_EXTENSION_PROPERTIES;
 	}
 
-	xrResult = xrEnumerateInstanceExtensionProperties(NULL, extensionCount, &extensionCount, mXrInstanceExtensions.data());
+	result = xrEnumerateInstanceExtensionProperties(NULL, extensionCount, &extensionCount, mXrInstanceExtensions.data());
+	VALIDATEXR();
 
 	std::vector<const char*> extensions; // = { XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME };
 
@@ -205,7 +342,8 @@ void VRGraphics::CreateInstance() {
 	strcpy(create.applicationInfo.applicationName, "Graphics-Playground");
 	create.enabledExtensionCount = extensions.size();
 	create.enabledExtensionNames = extensions.data();
-	xrCreateInstance(&create, &gXrInstance);
+	result						 = xrCreateInstance(&create, &gXrInstance);
+	VALIDATEXR();
 }
 
 void VRGraphics::CreateDebugUtils() {
@@ -226,7 +364,7 @@ void VRGraphics::CreateDebugUtils() {
 	}
 }
 
-void VRGraphics::SessionSetup() {
+bool VRGraphics::SessionSetup() {
 	XrResult result;
 	XrSystemGetInfo systemGet = {};
 	systemGet.type			  = XR_TYPE_SYSTEM_GET_INFO;
@@ -234,33 +372,53 @@ void VRGraphics::SessionSetup() {
 	systemGet.next			  = NULL;
 
 	result = xrGetSystem(gXrInstance, &systemGet, &gXrSystemId);
-
-	ASSERT(result == XR_SUCCESS);
+	VALIDATEXR();
 
 	uint32_t viewCount;
 	result = xrEnumerateViewConfigurations(gXrInstance, gXrSystemId, 0, &viewCount, nullptr);
+	VALIDATEXR();
 	std::vector<XrViewConfigurationType> viewTypeConfigs(viewCount);
 	result = xrEnumerateViewConfigurations(gXrInstance, gXrSystemId, viewCount, &viewCount, viewTypeConfigs.data());
+	VALIDATEXR();
 	ASSERT(viewCount == 1);
+	ASSERT(viewTypeConfigs[0] == XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO);
 	const XrViewConfigurationType viewType = viewTypeConfigs[0];
+	if(viewType != XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO) {
+		return false;
+	}
 
 	XrInstanceProperties instanceProperties {XR_TYPE_INSTANCE_PROPERTIES};
 	result = xrGetInstanceProperties(gXrInstance, &instanceProperties);
+	VALIDATEXR();
 	XrSystemProperties systemProperties {XR_TYPE_SYSTEM_PROPERTIES};
 	result = xrGetSystemProperties(gXrInstance, gXrSystemId, &systemProperties);
+	VALIDATEXR();
 
 	uint32_t blendCount = 0;
 	result				= xrEnumerateEnvironmentBlendModes(gXrInstance, gXrSystemId, viewType, 0, &blendCount, nullptr);
+	VALIDATEXR();
 	std::vector<XrEnvironmentBlendMode> environmentBlendModes(blendCount);
 	result = xrEnumerateEnvironmentBlendModes(gXrInstance, gXrSystemId, viewType, blendCount, &blendCount, environmentBlendModes.data());
+	VALIDATEXR();
+
+	for(int i = 0; i < blendCount; i++) {
+		if(environmentBlendModes[i] == XrEnvironmentBlendMode::XR_ENVIRONMENT_BLEND_MODE_OPAQUE) {
+			gBlendMode = environmentBlendModes[i];
+			break;
+		}
+		gBlendMode = environmentBlendModes[i];
+	}
 
 	XrViewConfigurationProperties viewConfigProps = {XR_TYPE_VIEW_CONFIGURATION_PROPERTIES};
 	result										  = xrGetViewConfigurationProperties(gXrInstance, gXrSystemId, viewType, &viewConfigProps);
+	VALIDATEXR();
 
 	uint32_t viewConfigCount = 0;
 	result					 = xrEnumerateViewConfigurationViews(gXrInstance, gXrSystemId, viewType, 0, &viewConfigCount, nullptr);
-	std::vector<XrViewConfigurationView> viewConfigs(viewConfigCount);
-	result = xrEnumerateViewConfigurationViews(gXrInstance, gXrSystemId, viewType, viewConfigCount, &viewConfigCount, viewConfigs.data());
+	VALIDATEXR();
+	gViewConfigs.resize(viewConfigCount);
+	result = xrEnumerateViewConfigurationViews(gXrInstance, gXrSystemId, viewType, viewConfigCount, &viewConfigCount, gViewConfigs.data());
+	VALIDATEXR();
 
 	CreateActions();
 
@@ -268,8 +426,11 @@ void VRGraphics::SessionSetup() {
 	XrGraphicsRequirementsVulkanKHR graphicsRequirements = {XR_TYPE_GRAPHICS_REQUIREMENTS_VULKAN_KHR};
 	if(getXrInstanceProcAddr(&xrGetVulkanGraphicsRequirementsKHR, "xrGetVulkanGraphicsRequirementsKHR")) {
 		result = xrGetVulkanGraphicsRequirementsKHR(gXrInstance, gXrSystemId, &graphicsRequirements);
+		VALIDATEXR();
 	}
 	//todo xr - verify graphics requirements
+
+	return true;
 }
 
 void VRGraphics::CreateActions() {
@@ -301,11 +462,13 @@ void VRGraphics::CreateSession() {
 	//vulkanInfo.queueFamilyIndex					  = gGraphics->GetMainDevice()->GetPrimaryDeviceData().mQueue.mPresentQueue.mQueueFamily;
 	//vulkanInfo.queueIndex						  = gGraphics->GetMainDevice()->GetPrimaryDeviceData().mQueue.mQueueFamilies[0].;
 
+	LOG::LogLine("Creating Xr Session");
 	XrSessionCreateInfo info = {XR_TYPE_SESSION_CREATE_INFO};
 	info.systemId			 = gXrSystemId;
 	info.next				 = &vulkanInfo;
 	XrResult result			 = xrCreateSession(gXrInstance, &info, &gXrSession);
-	ASSERT(result == XR_SUCCESS);
+	VALIDATEXR();
+	LOG::LogLine("Created Xr Session");
 }
 
 void VRGraphics::CreateSpaces() {
@@ -313,8 +476,10 @@ void VRGraphics::CreateSpaces() {
 
 	uint32_t spaceCount = 0;
 	result				= xrEnumerateReferenceSpaces(gXrSession, 0, &spaceCount, nullptr);
+	VALIDATEXR();
 	std::vector<XrReferenceSpaceType> refSpaceTypes(spaceCount);
 	result = xrEnumerateReferenceSpaces(gXrSession, spaceCount, &spaceCount, refSpaceTypes.data());
+	VALIDATEXR();
 
 	//Head
 	ASSERT(spaceCount == NUM_SPACES);
@@ -326,9 +491,11 @@ void VRGraphics::CreateSpaces() {
 		refSpaceInfo.referenceSpaceType	  = type;
 		refSpaceInfo.poseInReferenceSpace = poseReference;
 		result							  = xrCreateReferenceSpace(gXrSession, &refSpaceInfo, &gSpaces[i].mSpace);
+		VALIDATEXR();
 
 		XrExtent2Df spaceBounds;
 		result = xrGetReferenceSpaceBoundsRect(gXrSession, type, &gSpaces[i].mBounds);
+		//VALIDATEXR();
 	}
 
 	//Hands

@@ -281,6 +281,11 @@ void Graphics::StartNewFrame() {
 	gImGuiGraphics.StartNewFrame();
 #endif
 
+	
+#if defined(ENABLE_XR)
+	gVrGraphics.FrameBegin();
+#endif
+
 	mFrameCounter++;
 	uint32_t index = mSwapchain->GetNextImage();
 
@@ -329,6 +334,10 @@ void Graphics::EndFrame() {
 	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, {graphics});
 
 	mSwapchain->PresentImage();
+
+#if defined(ENABLE_XR)
+	gVrGraphics.FrameEnd();
+#endif
 }
 
 const uint32_t Graphics::GetCurrentImageIndex() const {
