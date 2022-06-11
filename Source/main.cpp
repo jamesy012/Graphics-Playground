@@ -110,27 +110,37 @@ int main() {
 		gfx.StartNewFrame();
 
 		VkCommandBuffer buffer = gfx.GetCurrentGraphicsCommandBuffer();
-
-		ssTest.Render(buffer, gfx.GetCurrentFrameBuffer());
-
-		//mesh render test
-		meshRenderPass.Begin(buffer, gGraphics->GetCurrentFrameBuffer());
-		meshPipeline.Begin(buffer);
-		vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
+#if defined(ENABLE_XR)
+		const Framebuffer* frameBuffers[3] = {&gfx.GetCurrentFrameBuffer(), &gfx.GetCurrentXrFrameBuffer(0), &gfx.GetCurrentXrFrameBuffer(1)};
+		for(int i = 0; i < 3; i++) {
+#else
+		const Framebuffer* frameBuffers[1] = {&gfx.GetCurrentFrameBuffer()};
+		const int i						   = 0;
 		{
-			meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 5, 0));
-			meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
-			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-			meshTest.QuickTempRender(buffer);
+#endif
+			const Framebuffer& framebuffer = *frameBuffers[i];
+
+			ssTest.Render(buffer, framebuffer);
+
+			//mesh render test
+			meshRenderPass.Begin(buffer, framebuffer);
+			meshPipeline.Begin(buffer);
+			vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
+			{
+				meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 5, 0));
+				meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
+				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+				meshTest.QuickTempRender(buffer);
+			}
+			{
+				meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-5, 8, 0));
+				meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
+				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+				meshTest.QuickTempRender(buffer);
+			}
+			meshPipeline.End(buffer);
+			meshRenderPass.End(buffer);
 		}
-		{
-			meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-5, 8, 0));
-			meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
-			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-			meshTest.QuickTempRender(buffer);
-		}
-		meshPipeline.End(buffer);
-		meshRenderPass.End(buffer);
 
 		gfx.EndFrame();
 	}

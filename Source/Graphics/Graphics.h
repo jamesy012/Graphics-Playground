@@ -74,6 +74,9 @@ public:
 	const Framebuffer& GetCurrentFrameBuffer() const {
 		return mFramebuffer[GetCurrentImageIndex()];
 	};
+#if defined(ENABLE_XR)
+	const Framebuffer& GetCurrentXrFrameBuffer(uint8_t aEye) const;
+#endif
 
 	OneTimeCommandBuffer AllocateGraphicsCommandBuffer();
 	// submits and finish's the command buffer
@@ -106,6 +109,9 @@ private:
 
 	RenderPass mRenderPass		= {};
 	Framebuffer mFramebuffer[3] = {};
+#if defined(ENABLE_XR)
+	Framebuffer mXrFramebuffer[2][3] = {};
+#endif
 
 	bool HasInstanceExtension(const char* aExtension) const;
 	bool HasInstanceLayer(const char* aLayer) const;

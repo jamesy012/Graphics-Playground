@@ -171,6 +171,14 @@ bool Graphics::Initalize() {
 	mFramebuffer[0].Create(mSwapchain->GetImage(0), mRenderPass, "Swapchain Framebuffer 0");
 	mFramebuffer[1].Create(mSwapchain->GetImage(1), mRenderPass, "Swapchain Framebuffer 1");
 	mFramebuffer[2].Create(mSwapchain->GetImage(2), mRenderPass, "Swapchain Framebuffer 2");
+#if defined(ENABLE_XR)
+	mXrFramebuffer[0][0].Create(gVrGraphics.GetImage(0, 0), mRenderPass, "xr Swapchain Framebuffer 0/0");
+	mXrFramebuffer[0][1].Create(gVrGraphics.GetImage(0, 1), mRenderPass, "xr Swapchain Framebuffer 0/1");
+	mXrFramebuffer[0][2].Create(gVrGraphics.GetImage(0, 2), mRenderPass, "xr Swapchain Framebuffer 0/2");
+	mXrFramebuffer[1][0].Create(gVrGraphics.GetImage(1, 0), mRenderPass, "xr Swapchain Framebuffer 1/0");
+	mXrFramebuffer[1][1].Create(gVrGraphics.GetImage(1, 1), mRenderPass, "xr Swapchain Framebuffer 1/1");
+	mXrFramebuffer[1][2].Create(gVrGraphics.GetImage(1, 2), mRenderPass, "xr Swapchain Framebuffer 1/2");
+#endif
 
 	{
 		VkDescriptorPoolSize pools[] = {
@@ -234,6 +242,15 @@ bool Graphics::Destroy() {
 	gImGuiGraphics.Destroy();
 #endif
 
+#if defined(ENABLE_XR)
+	mXrFramebuffer[0][0].Destroy();
+	mXrFramebuffer[0][1].Destroy();
+	mXrFramebuffer[0][2].Destroy();
+	mXrFramebuffer[1][0].Destroy();
+	mXrFramebuffer[1][1].Destroy();
+	mXrFramebuffer[1][2].Destroy();
+#endif
+
 	mFramebuffer[0].Destroy();
 	mFramebuffer[1].Destroy();
 	mFramebuffer[2].Destroy();
@@ -260,8 +277,6 @@ bool Graphics::Destroy() {
 		gVkInstance = VK_NULL_HANDLE;
 	}
 
-
-
 	return true;
 }
 
@@ -281,7 +296,6 @@ void Graphics::StartNewFrame() {
 	gImGuiGraphics.StartNewFrame();
 #endif
 
-	
 #if defined(ENABLE_XR)
 	gVrGraphics.FrameBegin();
 #endif
@@ -347,6 +361,12 @@ const uint32_t Graphics::GetCurrentImageIndex() const {
 VkCommandBuffer Graphics::GetCurrentGraphicsCommandBuffer() const {
 	return GetMainDevice()->GetGraphicsCB(GetCurrentImageIndex());
 }
+
+#if defined(ENABLE_XR)
+const Framebuffer& Graphics::GetCurrentXrFrameBuffer(uint8_t aEye) const {
+	return mXrFramebuffer[aEye][gVrGraphics.GetCurrentImageIndex(aEye)];
+}
+#endif
 
 OneTimeCommandBuffer Graphics::AllocateGraphicsCommandBuffer() {
 	VkCommandBufferAllocateInfo allocateInfo = {};

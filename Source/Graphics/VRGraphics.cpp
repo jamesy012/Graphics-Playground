@@ -1,6 +1,4 @@
 #include "VRGraphics.h"
-#include "VRGraphics.h"
-#include "VRGraphics.h"
 
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
@@ -9,6 +7,8 @@
 
 #include "PlatformDebug.h"
 #include "Helpers.h"
+
+#include "Image.h"
 
 //get vulkan info
 #include "Graphics.h"
@@ -32,8 +32,15 @@ bool gXrSessionActive = false;
 //~ view/frame xr session info
 //
 
+const int NUM_VIEWS = 2;
+
 std::vector<XrViewConfigurationView> gViewConfigs;
 XrEnvironmentBlendMode gBlendMode;
+struct Swapchain {
+	XrSwapchain mSwapchain = XR_NULL_HANDLE;
+	std::vector<Image> mImages;
+	uint32_t mActiveImage;
+} gXrSwapchains[NUM_VIEWS];
 
 //
 //~ pre frame xr info
@@ -172,11 +179,10 @@ void VRGraphics::FrameBegin() {
 	XrActionsSyncInfo syncInfo	   = {XR_TYPE_ACTIONS_SYNC_INFO};
 	syncInfo.countActiveActionSets = 0;
 	result						   = xrSyncActions(gXrSession, &syncInfo);
-	ASSERT(result == XR_SUCCESS || result == XR_SESSION_LOSS_PENDING || XR_SESSION_NOT_FOCUSED);
-	if(result != XR_SUCCESS) {
+	ASSERT(result == XR_SUCCESS || result == XR_SESSION_LOSS_PENDING || result == XR_SESSION_NOT_FOCUSED);
+	if(result != XR_SUCCESS && result != XR_SESSION_LOSS_PENDING && result != XR_SESSION_NOT_FOCUSED) {
 		return;
 	}
-
 
 	XrFrameWaitInfo frameWaitInfo {XR_TYPE_FRAME_WAIT_INFO};
 	result = xrWaitFrame(gXrSession, &frameWaitInfo, &gFrameState);
@@ -194,16 +200,81 @@ void VRGraphics::FrameBegin() {
 							 gFrameState.predictedDisplayTime,
 							 &location);
 	VALIDATEXR();
+
+	for(int i = 0; i < NUM_VIEWS; i++) {
+		Swapchain& swapchain = gXrSwapchains[i];
+
+		XrSwapchainImageAcquireInfo acquireInfo = {XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
+
+		result = xrAcquireSwapchainImage(swapchain.mSwapchain, &acquireInfo, &swapchain.mActiveImage);
+		VALIDATEXR();
+
+		XrSwapchainImageWaitInfo waitInfo = {XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
+		waitInfo.timeout				  = XR_INFINITE_DURATION;
+
+		result = xrWaitSwapchainImage(swapchain.mSwapchain, &waitInfo);
+		VALIDATEXR();
+	}
+}
+
+const uint8_t VRGraphics::GetCurrentImageIndex(uint8_t aEye) const {
+	return gXrSwapchains[aEye].mActiveImage;
+}
+const Image& VRGraphics::GetImage(uint8_t aEye, uint8_t aIndex) const {
+	return gXrSwapchains[aEye].mImages[aIndex];
 }
 
 void VRGraphics::FrameEnd() {
-	if (gFrameActive == false) {
+	if(gFrameActive == false) {
 		return;
-		}
+	}
 	XrResult result;
+
+	for(int i = 0; i < NUM_VIEWS; i++) {
+		Swapchain& swapchain = gXrSwapchains[i];
+
+		XrSwapchainImageReleaseInfo releaseInfo = {XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
+
+		result = xrReleaseSwapchainImage(swapchain.mSwapchain, &releaseInfo);
+		VALIDATEXR();
+	}
+
+	XrCompositionLayerProjectionView projectionViews[2] = {};
+
+	projectionViews[0].type						= XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+	projectionViews[0].fov.angleLeft			= -0.7f;
+	projectionViews[0].fov.angleRight			= 0.7f;
+	projectionViews[0].fov.angleDown			= -0.7f;
+	projectionViews[0].fov.angleUp				= 0.7f;
+	projectionViews[0].pose.orientation.w		= 1.0f;
+	projectionViews[0].subImage.swapchain		= gXrSwapchains[0].mSwapchain;
+	projectionViews[0].subImage.imageArrayIndex = 0;
+	projectionViews[0].subImage.imageRect		= {
+		  0, 0, (int32_t)gViewConfigs[0].recommendedImageRectWidth, (int32_t)gViewConfigs[0].recommendedImageRectHeight};
+	projectionViews[1].type						= XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+	projectionViews[1].fov.angleLeft			= -0.7f;
+	projectionViews[1].fov.angleRight			= 0.7f;
+	projectionViews[1].fov.angleDown			= -0.7f;
+	projectionViews[1].fov.angleUp				= 0.7f;
+	projectionViews[1].pose.orientation.w		= 1.0f;
+	projectionViews[1].subImage.swapchain		= gXrSwapchains[1].mSwapchain;
+	projectionViews[1].subImage.imageArrayIndex = 0;
+	projectionViews[1].subImage.imageRect		= {
+		  0, 0, (int32_t)gViewConfigs[1].recommendedImageRectWidth, (int32_t)gViewConfigs[1].recommendedImageRectHeight};
+
+	XrCompositionLayerProjection projectionLayer			  = {};
+	const XrCompositionLayerBaseHeader* projectionLayerHeader = (XrCompositionLayerBaseHeader*)&projectionLayer;
+	projectionLayer.type									  = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
+	projectionLayer.space									  = gSpaces[1].mSpace;
+	projectionLayer.viewCount								  = NUM_VIEWS;
+	projectionLayer.views									  = projectionViews;
+
 	XrFrameEndInfo endInfo		 = {XR_TYPE_FRAME_END_INFO};
 	endInfo.displayTime			 = gFrameState.predictedDisplayTime;
 	endInfo.environmentBlendMode = gBlendMode;
+
+	endInfo.layers	   = &projectionLayerHeader;
+	endInfo.layerCount = 1;
 
 	result = xrEndFrame(gXrSession, &endInfo);
 	VALIDATEXR();
@@ -274,6 +345,16 @@ const std::vector<std::string> VRGraphics::GetVulkanDeviceExtensions() const {
 }
 
 void VRGraphics::Destroy() {
+	for(int i = 0; i < NUM_VIEWS; i++) {
+		if(gXrSwapchains[i].mSwapchain != XR_NULL_HANDLE) {
+			for(int q = 0; q < gXrSwapchains[i].mImages.size(); q++) {
+				gXrSwapchains[i].mImages[q].Destroy();
+			}
+			gXrSwapchains[i].mImages.clear();
+			xrDestroySwapchain(gXrSwapchains[i].mSwapchain);
+			gXrSwapchains[i].mSwapchain = XR_NULL_HANDLE;
+		}
+	}
 	for(int i = 0; i < NUM_SPACES; i++) {
 		if(gSpaces[i].mSpace != XR_NULL_HANDLE) {
 			xrDestroySpace(gSpaces[i].mSpace);
@@ -384,6 +465,7 @@ bool VRGraphics::SessionSetup() {
 	ASSERT(viewTypeConfigs[0] == XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO);
 	const XrViewConfigurationType viewType = viewTypeConfigs[0];
 	if(viewType != XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO) {
+		ASSERT(false);
 		return false;
 	}
 
@@ -503,6 +585,66 @@ void VRGraphics::CreateSpaces() {
 }
 
 void VRGraphics::PrepareSwapchainData() {
+	XrResult result;
+	uint32_t formatCounts = 0;
+	result				  = xrEnumerateSwapchainFormats(gXrSession, 0, &formatCounts, nullptr);
+	VALIDATEXR();
+	std::vector<int64_t> formats(formatCounts);
+	result = xrEnumerateSwapchainFormats(gXrSession, formatCounts, &formatCounts, formats.data());
+	VALIDATEXR();
 
-	xrEnumerateSwapchainFormats(gXrSession, 0, 0, 0);
+	VkFormat selectedFormat = (VkFormat)formats[0];
+
+	for(int i = 0; i < NUM_VIEWS; i++) {
+		XrSwapchainCreateInfo createInfo {XR_TYPE_SWAPCHAIN_CREATE_INFO};
+		createInfo.width	   = gViewConfigs[i].recommendedImageRectWidth;
+		createInfo.height	   = gViewConfigs[i].recommendedImageRectHeight;
+		createInfo.format	   = selectedFormat;
+		createInfo.arraySize   = 1;
+		createInfo.faceCount   = 1;
+		createInfo.mipCount	   = 1;
+		createInfo.sampleCount = 1;
+		createInfo.usageFlags  = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+
+		result = xrCreateSwapchain(gXrSession, &createInfo, &gXrSwapchains[i].mSwapchain);
+		VALIDATEXR();
+	}
+
+	OneTimeCommandBuffer buffer = gGraphics->AllocateGraphicsCommandBuffer();
+
+	for(int i = 0; i < NUM_VIEWS; i++) {
+		Swapchain& swapchain = gXrSwapchains[i];
+		uint32_t imageCount;
+		result = xrEnumerateSwapchainImages(swapchain.mSwapchain, 0, &imageCount, nullptr);
+		VALIDATEXR();
+		std::vector<XrSwapchainImageVulkanKHR> vkImages(imageCount);
+		//std::vector<XrSwapchainImageBaseHeader> images(imageCount);
+		for(int vkImage = 0; vkImage < imageCount; vkImage++) {
+			vkImages[vkImage].type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR;
+		}
+		result =
+			xrEnumerateSwapchainImages(swapchain.mSwapchain, imageCount, &imageCount, reinterpret_cast<XrSwapchainImageBaseHeader*>(&vkImages[0]));
+		VALIDATEXR();
+
+		gXrSwapchains[i].mImages.resize(imageCount);
+
+		for(int vkImage = 0; vkImage < imageCount; vkImage++) {
+			Image& image = gXrSwapchains[i].mImages[vkImage];
+
+			image.CreateFromVkImage(
+				vkImages[vkImage].image, selectedFormat, {gViewConfigs[i].recommendedImageRectWidth, gViewConfigs[i].recommendedImageRectHeight});
+
+			SetVkName(VK_OBJECT_TYPE_IMAGE, image.GetImage(), "XR Swapchain eye " + std::to_string(i) + " " + std::to_string(vkImage));
+			SetVkName(VK_OBJECT_TYPE_IMAGE_VIEW, image.GetImageView(), "XR Swapchain View eye " + std::to_string(i) + " " + std::to_string(vkImage));
+
+			//images start undefined, lets put them in their expected states
+			image.SetImageLayout(buffer,
+								 VK_IMAGE_LAYOUT_UNDEFINED,
+								 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+								 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+								 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+		}
+	}
+
+	gGraphics->EndGraphicsCommandBuffer(buffer);
 }
