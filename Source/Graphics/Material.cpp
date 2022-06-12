@@ -52,7 +52,7 @@ void Material::Create(const MaterialBase* aBase, const char* aName /* = 0*/) {
 	alloc_info.pSetLayouts				   = &mBase->mLayout;
 	VkResult err						   = vkAllocateDescriptorSets(gGraphics->GetVkDevice(), &alloc_info, &mSet);
 	if(err == VK_ERROR_OUT_OF_POOL_MEMORY){
-		LOG::Log("Failed to allocate %s, not enough pool memory", aName);
+		LOGGER::Formated("Failed to allocate {0}, not enough pool memory", aName);
 		ASSERT(false);
 		return;
 	}

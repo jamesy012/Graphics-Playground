@@ -9,8 +9,8 @@
 namespace FileIO {
 
 	File LoadFile(Path aPath) {
-		LOG::Log("Current Filepath: (%s)/%s\n", std::filesystem::current_path().string().c_str(), aPath.mPath.c_str());
-		LOG::Log("loading: %s\n", std::filesystem::absolute(aPath.mPath.c_str()).string().c_str());
+		LOGGER::Formated("Current Filepath: ({})/{}\n", std::filesystem::current_path().string(), aPath.mPath);
+		LOGGER::Formated("loading: {}\n", std::filesystem::absolute(aPath.mPath.c_str()).string());
 
 		File file;
 		std::ifstream fileStream(aPath, std::ios::binary | std::ios::in | std::ios::ate);

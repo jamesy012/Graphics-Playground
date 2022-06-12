@@ -13,24 +13,26 @@
 #include "Graphics/Pipeline.h"
 #include <glm/ext.hpp>
 
+#include "Graphics/Conversions.h"
+
 #if defined(ENABLE_XR)
 #	include "Graphics/VRGraphics.h"
 #endif
 
 int main() {
 	//vs code is annoying, doesnt clear the last output
-	LOG::LogLine("--------------------------------");
+	LOGGER::Log("--------------------------------\n");
 
 	Window window;
 	window.Create(720, 720, "Graphics Playground");
 
-	LOG::LogLine("Starting Graphics");
+	LOGGER::Log("Starting Graphics\n");
 	Graphics gfx;
 	gfx.StartUp();
 	gfx.AddWindow(&window);
-	LOG::LogLine("Initalize Graphics ");
+	LOGGER::Log("Initalize Graphics\n");
 	gfx.Initalize();
-	LOG::LogLine("Graphics Initalized");
+	LOGGER::Log("Graphics Initalized\n");
 
 	//SCREEN SPACE TEST
 	Image ssImage;

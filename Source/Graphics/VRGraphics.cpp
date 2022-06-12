@@ -79,7 +79,7 @@ static XRAPI_ATTR XrBool32 XRAPI_CALL XrDebugCallback(XrDebugUtilsMessageSeverit
 
 	const char* severityText[4] = {"VERBOSE", "INFO", "WARNING", "ERROR"};
 	const char* typeText[4]		= {"GENERAL", "VALIDATION", "PERFORMANCE", "CONFORMANCE"};
-	LOG::Log("XR_DEBUG %s: (%s) (%s/%s)\n\t %s\n",
+	LOGGER::Formated("XR_DEBUG {}: ({}) ({}/{})\n\t {}\n",
 			 callbackData->messageId,
 			 callbackData->functionName,
 			 severityText[messageSeverity],
@@ -103,9 +103,9 @@ bool getXrInstanceProcAddr(void* aFunc, const char* aName) {
 };
 
 void VRGraphics::Create() {
-	LOG::Log("Loading OpenXR sdk: ");
+	LOGGER::Log("Loading OpenXR sdk: ");
 	uint32_t version = XR_CURRENT_API_VERSION;
-	LOG::Log("Version: %i.%i.%i\n", XR_VERSION_MAJOR(version), XR_VERSION_MINOR(version), XR_VERSION_PATCH(version));
+	LOGGER::Formated("Version: {}.{}.{}\n", XR_VERSION_MAJOR(version), XR_VERSION_MINOR(version), XR_VERSION_PATCH(version));
 
 	CreateInstance();
 
@@ -141,7 +141,9 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 										   "XR_SESSION_STATE_EXITING"};
 
 				XrEventDataSessionStateChanged* sessionState = (XrEventDataSessionStateChanged*)&eventData;
-				LOG::Log("Session state changed to %s\n", stateText[(int)sessionState->state]);
+				//todo add enum as formattable enum? (check color example in conversion.h)
+				LOGGER::Formated("Session state changed to {}\n", stateText[(int)sessionState->state]);
+
 				if(sessionState->state == XR_SESSION_STATE_READY) {
 					XrSessionBeginInfo beginInfo		   = {XR_TYPE_SESSION_BEGIN_INFO};
 					beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
@@ -149,7 +151,7 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 					result = xrBeginSession(gXrSession, &beginInfo);
 					VALIDATEXR();
 					if(result == XR_SUCCESS) {
-						LOG::LogLine("Begining Xr Session");
+						LOGGER::Log("Begining Xr Session\n");
 						gXrSessionActive = true;
 					}
 				}
@@ -164,7 +166,7 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 			}
 			case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED: {
 				XrEventDataInteractionProfileChanged* profileChange = (XrEventDataInteractionProfileChanged*)&eventData;
-				LOG::LogLine("XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED");
+				LOGGER::Log("XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED\n");
 				break;
 			}
 			default:
@@ -580,13 +582,13 @@ void VRGraphics::CreateSession() {
 	//vulkanInfo.queueFamilyIndex					  = gGraphics->GetMainDevice()->GetPrimaryDeviceData().mQueue.mPresentQueue.mQueueFamily;
 	//vulkanInfo.queueIndex						  = gGraphics->GetMainDevice()->GetPrimaryDeviceData().mQueue.mQueueFamilies[0].;
 
-	LOG::LogLine("Creating Xr Session");
+	LOGGER::Log("Creating Xr Session\n");
 	XrSessionCreateInfo info = {XR_TYPE_SESSION_CREATE_INFO};
 	info.systemId			 = gXrSystemId;
 	info.next				 = &vulkanInfo;
 	XrResult result			 = xrCreateSession(gXrInstance, &info, &gXrSession);
 	VALIDATEXR();
-	LOG::LogLine("Created Xr Session");
+	LOGGER::Log("Created Xr Session\n");
 }
 
 void VRGraphics::CreateSpaces() {

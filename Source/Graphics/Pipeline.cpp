@@ -40,7 +40,7 @@ bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 	//~~~ Vertex
 	VkPipelineVertexInputStateCreateInfo vertexInfo = {};
 	{
-		LOG::LogLine("-- Pipeline Vertex Input needs work");
+		LOGGER::Log("-- Pipeline Vertex Input needs work\n");
 		vertexInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		if(vertexBinding.stride != 0) {
 			vertexInfo.vertexBindingDescriptionCount = 1;

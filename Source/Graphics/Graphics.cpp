@@ -75,7 +75,7 @@ bool VkResultToBool(VkResult aResult) {
 static VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 													  VkDebugUtilsMessageTypeFlagsEXT messageType,
 													  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
-	LOG::Log("VULKAN %s: \n\t %s\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+	LOGGER::Formated("VULKAN {}: \n\t{}\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);
 
 	if(pCallbackData->messageIdNumber != 0) {
 		ASSERT("Vulkan Error");
@@ -104,9 +104,9 @@ bool Graphics::StartUp() {
 
 	VkResult result;
 	{
-		LOG::Log("Loading Vulkan sdk: ");
+		LOGGER::Log("Loading Vulkan sdk: ");
 		uint32_t version = VK_HEADER_VERSION_COMPLETE;
-		LOG::Log("Version: %i.%i.%i\n", VK_VERSION_MAJOR(version), VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
+		LOGGER::Formated("Version: {0}.{1}.{2}\n", VK_VERSION_MAJOR(version), VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
 	}
 
 	// XR
@@ -263,7 +263,7 @@ bool Graphics::Destroy() {
 
 #if defined(ENABLE_XR)
 	gVrGraphics.Destroy();
-	LOG::LogLine("~~~~~~~~~~~~~ XR Vulkan doesnt delete a command pool?");
+	LOGGER::Log("~~~~~~~~~~~~~ XR Vulkan doesnt delete a command pool\n?");
 #endif
 
 	mDevicesHandler->Destroy();

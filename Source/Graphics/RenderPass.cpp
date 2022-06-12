@@ -7,7 +7,7 @@
 #include "PlatformDebug.h"
 
 void RenderPass::Create(const char* aName /*= 0*/) {
-	LOG::LogLine("-- RenderPass needs work, only supports one color attachment");
+	LOGGER::Log("-- RenderPass needs work, only supports one color attachment\n");
 
 	VkAttachmentDescription colorAttachment = {};
 	colorAttachment.format					= gGraphics->GetMainSwapchain()->GetColorFormat();
