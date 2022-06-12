@@ -56,6 +56,9 @@ const uint8_t NUM_SPACES = 3;
 struct SpaceInfo {
 	XrSpace mSpace = XR_NULL_HANDLE;
 	XrExtent2Df mBounds;
+	XrPosef mLastPose;
+	XrView mViews[NUM_VIEWS];
+	VRGraphics::GLMViewInfo mInfos[NUM_VIEWS];
 } gSpaces[NUM_SPACES];
 
 //hand space
@@ -100,7 +103,6 @@ bool getXrInstanceProcAddr(void* aFunc, const char* aName) {
 };
 
 void VRGraphics::Create() {
-
 	LOG::Log("Loading OpenXR sdk: ");
 	uint32_t version = XR_CURRENT_API_VERSION;
 	LOG::Log("Version: %i.%i.%i\n", XR_VERSION_MAJOR(version), XR_VERSION_MINOR(version), XR_VERSION_PATCH(version));
@@ -120,7 +122,7 @@ void VRGraphics::Startup() {
 	PrepareSwapchainData();
 }
 
-void VRGraphics::FrameBegin() {
+void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 	XrResult result = XR_SUCCESS;
 	XrEventDataBuffer eventData;
 	result = xrPollEvent(gXrInstance, &eventData);
@@ -214,6 +216,40 @@ void VRGraphics::FrameBegin() {
 
 		result = xrWaitSwapchainImage(swapchain.mSwapchain, &waitInfo);
 		VALIDATEXR();
+
+		//swapchain.mImages[swapchain.mActiveImage].SetImageLayout(aBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+	}
+
+	for(int i = 0; i < NUM_SPACES; i++) {
+		SpaceInfo& spaceInfo = gSpaces[i];
+
+		XrViewState viewState {XR_TYPE_VIEW_STATE};
+		uint32_t viewCapacityInput = NUM_VIEWS;
+		uint32_t viewCountOutput;
+
+		XrViewLocateInfo locateInfo		 = {XR_TYPE_VIEW_LOCATE_INFO};
+		locateInfo.space				 = spaceInfo.mSpace;
+		locateInfo.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+		locateInfo.displayTime			 = gFrameState.predictedDisplayTime;
+
+		result = xrLocateViews(gXrSession, &locateInfo, &viewState, viewCapacityInput, &viewCountOutput, spaceInfo.mViews);
+		VALIDATEXR();
+
+		for(int q = 0; q < NUM_VIEWS; q++) {
+			spaceInfo.mInfos[q].mPos.x = spaceInfo.mViews[q].pose.position.x;
+			spaceInfo.mInfos[q].mPos.y = -spaceInfo.mViews[q].pose.position.y;
+			spaceInfo.mInfos[q].mPos.z = spaceInfo.mViews[q].pose.position.z;
+			spaceInfo.mInfos[q].mRot.x = spaceInfo.mViews[q].pose.orientation.x;
+			spaceInfo.mInfos[q].mRot.y = spaceInfo.mViews[q].pose.orientation.y;
+			spaceInfo.mInfos[q].mRot.z = spaceInfo.mViews[q].pose.orientation.z;
+			spaceInfo.mInfos[q].mRot.w = spaceInfo.mViews[q].pose.orientation.w;
+			const glm::vec3 euler	   = glm::eulerAngles(spaceInfo.mInfos[q].mRot);
+			spaceInfo.mInfos[q].mRot   = glm::quat(euler * glm::vec3(-1, 1, -1));
+			spaceInfo.mInfos[q].mFov.x = (spaceInfo.mViews[q].fov.angleLeft);
+			spaceInfo.mInfos[q].mFov.y = (spaceInfo.mViews[q].fov.angleRight);
+			spaceInfo.mInfos[q].mFov.z = (spaceInfo.mViews[q].fov.angleDown);
+			spaceInfo.mInfos[q].mFov.w = (spaceInfo.mViews[q].fov.angleUp);
+		}
 	}
 }
 
@@ -222,6 +258,13 @@ const uint8_t VRGraphics::GetCurrentImageIndex(uint8_t aEye) const {
 }
 const Image& VRGraphics::GetImage(uint8_t aEye, uint8_t aIndex) const {
 	return gXrSwapchains[aEye].mImages[aIndex];
+}
+
+void VRGraphics::GetHeadPoseData(GLMViewInfo& aInfo) const {
+	aInfo = gSpaces[1].mInfos[0];
+}
+void VRGraphics::GetEyePoseData(uint8_t aEye, GLMViewInfo& aInfo) const {
+	aInfo = gSpaces[1].mInfos[aEye];
 }
 
 void VRGraphics::FrameEnd() {
@@ -239,28 +282,21 @@ void VRGraphics::FrameEnd() {
 		VALIDATEXR();
 	}
 
-	XrCompositionLayerProjectionView projectionViews[2] = {};
-
-	projectionViews[0].type						= XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
-	projectionViews[0].fov.angleLeft			= -0.7f;
-	projectionViews[0].fov.angleRight			= 0.7f;
-	projectionViews[0].fov.angleDown			= -0.7f;
-	projectionViews[0].fov.angleUp				= 0.7f;
-	projectionViews[0].pose.orientation.w		= 1.0f;
-	projectionViews[0].subImage.swapchain		= gXrSwapchains[0].mSwapchain;
-	projectionViews[0].subImage.imageArrayIndex = 0;
-	projectionViews[0].subImage.imageRect		= {
-		  0, 0, (int32_t)gViewConfigs[0].recommendedImageRectWidth, (int32_t)gViewConfigs[0].recommendedImageRectHeight};
-	projectionViews[1].type						= XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
-	projectionViews[1].fov.angleLeft			= -0.7f;
-	projectionViews[1].fov.angleRight			= 0.7f;
-	projectionViews[1].fov.angleDown			= -0.7f;
-	projectionViews[1].fov.angleUp				= 0.7f;
-	projectionViews[1].pose.orientation.w		= 1.0f;
-	projectionViews[1].subImage.swapchain		= gXrSwapchains[1].mSwapchain;
-	projectionViews[1].subImage.imageArrayIndex = 0;
-	projectionViews[1].subImage.imageRect		= {
-		  0, 0, (int32_t)gViewConfigs[1].recommendedImageRectWidth, (int32_t)gViewConfigs[1].recommendedImageRectHeight};
+	XrCompositionLayerProjectionView projectionViews[NUM_VIEWS] = {};
+	for(int i = 0; i < NUM_VIEWS; i++) {
+		projectionViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+		//projectionViews[i].fov.angleLeft			= -0.7f;
+		//projectionViews[i].fov.angleRight			= 0.7f;
+		//projectionViews[i].fov.angleDown			= -0.7f;
+		//projectionViews[i].fov.angleUp				= 0.7f;
+		//projectionViews[i].pose.orientation.w		= 1.0f;
+		projectionViews[i].fov						= gSpaces[1].mViews->fov;
+		projectionViews[i].pose						= gSpaces[1].mViews->pose;
+		projectionViews[i].subImage.swapchain		= gXrSwapchains[i].mSwapchain;
+		projectionViews[i].subImage.imageArrayIndex = 0;
+		projectionViews[i].subImage.imageRect		= {
+			  0, 0, (int32_t)gViewConfigs[i].recommendedImageRectWidth, (int32_t)gViewConfigs[i].recommendedImageRectHeight};
+	}
 
 	XrCompositionLayerProjection projectionLayer			  = {};
 	const XrCompositionLayerBaseHeader* projectionLayerHeader = (XrCompositionLayerBaseHeader*)&projectionLayer;

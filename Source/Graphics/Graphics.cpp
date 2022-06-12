@@ -296,10 +296,6 @@ void Graphics::StartNewFrame() {
 	gImGuiGraphics.StartNewFrame();
 #endif
 
-#if defined(ENABLE_XR)
-	gVrGraphics.FrameBegin();
-#endif
-
 	mFrameCounter++;
 	uint32_t index = mSwapchain->GetNextImage();
 
@@ -307,6 +303,10 @@ void Graphics::StartNewFrame() {
 	VkCommandBufferBeginInfo info = {};
 	info.sType					  = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	vkBeginCommandBuffer(graphics, &info);
+
+#if defined(ENABLE_XR)
+	gVrGraphics.FrameBegin(graphics);
+#endif
 
 	//reset viewport and scissor
 	VkViewport viewport = {};
@@ -347,11 +347,11 @@ void Graphics::EndFrame() {
 
 	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, {graphics});
 
-	mSwapchain->PresentImage();
-
 #if defined(ENABLE_XR)
 	gVrGraphics.FrameEnd();
 #endif
+
+	mSwapchain->PresentImage();
 }
 
 const uint32_t Graphics::GetCurrentImageIndex() const {

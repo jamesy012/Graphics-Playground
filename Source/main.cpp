@@ -13,6 +13,10 @@
 #include "Graphics/Pipeline.h"
 #include <glm/ext.hpp>
 
+#if defined(ENABLE_XR)
+#	include "Graphics/VRGraphics.h"
+#endif
+
 int main() {
 	//vs code is annoying, doesnt clear the last output
 	LOG::LogLine("--------------------------------");
@@ -97,11 +101,31 @@ int main() {
 			glm::mat4 view;
 			glm::mat4 world;
 
-			proj			  = glm::perspectiveFov(glm::radians(60.0f), 720.0f, 720.0f, 0.1f, 1000.0f);
+#if defined(ENABLE_XR)
+			VRGraphics::GLMViewInfo info;
+			gfx.GetVrGraphics()->GetHeadPoseData(info);
+
+			glm::mat4 translation;
+			glm::mat4 rotation;
+
+			translation = glm::translate(glm::identity<glm::mat4>(), info.mPos);
+			translation = glm::translate(glm::identity<glm::mat4>(), info.mPos);
+			rotation	= glm::mat4_cast(info.mRot);
+
+			view = translation * rotation;
+			view = glm::inverse(view);
+			glm::translate(view, glm::vec3(5.0f, 0.0f, 5.0f));
+			proj = glm::frustumRH_ZO(info.mFov.x, info.mFov.y, info.mFov.z, info.mFov.w, 0.1f, 100.0f);
+			proj = glm::perspectiveFov(glm::radians(60.0f), 720.0f, 720.0f, 0.1f, 1000.0f);
+			if(info.mFov.w != 0) {
+				proj = glm::perspective(info.mFov.w - info.mFov.z, info.mFov.y / info.mFov.w, 0.1f, 1000.0f);
+			}
+#else
 			const float time  = gGraphics->GetFrameCount() / 360.0f;
 			const float scale = 10.0f;
 			view			  = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0), glm::vec3(0, 1, 0));
-
+			proj			  = glm::perspectiveFov(glm::radians(60.0f), 720.0f, 720.0f, 0.1f, 1000.0f);
+#endif
 			meshUniform.mPV = proj * view;
 
 			meshUniformBuffer.UpdateData(0, VK_WHOLE_SIZE, &meshUniform);
@@ -115,7 +139,7 @@ int main() {
 		for(int i = 0; i < 3; i++) {
 #else
 		const Framebuffer* frameBuffers[1] = {&gfx.GetCurrentFrameBuffer()};
-		const int i						   = 0;
+		const int i = 0;
 		{
 #endif
 			const Framebuffer& framebuffer = *frameBuffers[i];
