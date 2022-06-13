@@ -20,6 +20,9 @@ static glm::vec4 AssimpToGlm(const aiColor4D& aAssimp) {
 #pragma endregion
 
 #pragma region std::Format
+#if __cpp_lib_format
+#include <format>
+
 //https://fmt.dev/7.0.2/api.html#formatting-user-defined-types
 
 //enum class color {
@@ -47,10 +50,11 @@ static glm::vec4 AssimpToGlm(const aiColor4D& aAssimp) {
 //	}
 //};
 
-template<> struct std::formatter<glm::vec3> : formatter<string_view> {
+template<> struct std::formatter<glm::vec3> : std::formatter<std::string_view> {
 	// parse is inherited from formatter<string_view>.
 	template<typename FormatContext> auto format(const glm::vec3& c, FormatContext& ctx) {
 		return format_to(ctx.out(), "({0}, {1}, {2})", c.x, c.y, c.z);
 	}
 };
+#endif
 #pragma endregion
