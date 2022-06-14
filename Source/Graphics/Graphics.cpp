@@ -452,11 +452,13 @@ const bool Graphics::IsFormatDepth(VkFormat aFormat) {
 	return false;
 }
 
+//static
 const VkFormat Graphics::GetDeafultColorFormat() {
 	//todo check that this format is supported
-	return VK_FORMAT_R8G8B8A8_SNORM;
+	return VK_FORMAT_R8G8B8A8_UNORM;
 }
 
+//static
 const VkFormat Graphics::GetDeafultDepthFormat() {
 	//todo check that this format is supported
 	return VK_FORMAT_D32_SFLOAT;

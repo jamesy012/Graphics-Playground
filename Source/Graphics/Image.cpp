@@ -12,9 +12,16 @@ uint32_t ConvertImageSizeToByteSize(ImageSize aSize) {
 }
 
 void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const char* aName /* = 0*/) {
+	VkFormat format;
+	if(aFormat == VK_FORMAT_UNDEFINED) {
+		format = Graphics::GetDeafultColorFormat();
+	}else{
+		format = aFormat;
+	}
+
 	VkImageCreateInfo createInfo {};
 	createInfo.sType		 = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-	createInfo.format		 = aFormat;
+	createInfo.format		 = format;
 	createInfo.extent		 = aSize;
 	createInfo.arrayLayers	 = 1;
 	createInfo.mipLevels	 = 1;
@@ -25,7 +32,7 @@ void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const c
 	createInfo.usage		 = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 	createInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-	if(Graphics::IsFormatDepth(aFormat)) {
+	if(Graphics::IsFormatDepth(format)) {
 		createInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
 	} else {
 		createInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -39,9 +46,9 @@ void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const c
 	vmaCreateImage(gGraphics->GetAllocator(), &createInfo, &allocationInfo, &mImage, &mAllocation, &mAllocationInfo);
 
 	mSize	= aSize;
-	mFormat = aFormat;
+	mFormat = format;
 
-	CreateVkImageView(aFormat, aName);
+	CreateVkImageView(format, aName);
 
 	SetVkName(VK_OBJECT_TYPE_IMAGE, mImage, aName ? aName : "Unnamed Image");
 }
@@ -76,10 +83,11 @@ void Image::CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, cons
 		ASSERT(false);
 		return;
 	}
+	ASSERT(aFormat != VK_FORMAT_UNDEFINED);
 
 	mImage = aImage;
 	mSize  = aSize;
-	//pass through?
+	mFormat = aFormat;
 
 	CreateVkImageView(aFormat, aName);
 }

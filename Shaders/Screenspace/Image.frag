@@ -10,6 +10,6 @@ layout(location = 0) out vec4 fColor;
 void main()
 {
     //fColor = vec4(inUV.x, inUV.y, 0, 1);//texture(sTexture, inUV);
-    //fColor = texture(sTexture, inUV);
-    fColor = texture(sTexture, inUV) * vec4(inUV.x, inUV.y, 1, 1);
+    fColor = texture(sTexture, inUV);
+    //fColor = texture(sTexture, inUV) * vec4(inUV.x, inUV.y, 1, 1);
 }

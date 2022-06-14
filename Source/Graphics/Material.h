@@ -30,7 +30,7 @@ public:
 	void Create(const char* aName = 0);
 	void Destroy();
 
-	std::vector<Material> AllocateMaterials();
+	std::vector<Material> MakeMaterials();
 
 	VkDescriptorSetLayout mLayout = VK_NULL_HANDLE;
 

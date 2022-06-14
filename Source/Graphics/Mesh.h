@@ -14,8 +14,8 @@ struct aiScene;
 struct aiNode;
 struct aiMesh;
 
-static constexpr char NUM_UVS		= 8;
-static constexpr char NUM_VERT_COLS = 8;
+static constexpr char NUM_UVS		= 1;
+static constexpr char NUM_VERT_COLS = 1;
 
 //includes all per mesh data we can load from assimp
 struct MeshVert {
@@ -23,8 +23,8 @@ struct MeshVert {
 	glm::vec3 mNorm;
 	glm::vec3 mTangent;
 	glm::vec3 mBiTangent;
-	glm::vec4 mColor[NUM_VERT_COLS];
-	glm::vec2 mUV[NUM_UVS];
+	glm::vec4 mColors[NUM_VERT_COLS];
+	glm::vec2 mUVs[NUM_UVS];
 };
 typedef uint32_t MeshIndex;
 

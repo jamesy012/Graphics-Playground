@@ -8,6 +8,7 @@
 #include "RenderPass.h"
 #include "Material.h"
 
+//makes one color output
 class Screenspace {
 public:
 	void AddMaterialBase(MaterialBase* aMaterial) {

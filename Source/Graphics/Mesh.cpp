@@ -70,17 +70,17 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 
 		for(uint64_t channel = 0; channel < NUM_VERT_COLS; channel++) {
 			if(aMesh->HasVertexColors(channel)) {
-				vertex.mColor[channel] = AssimpToGlm(*aMesh->mColors[i]);
+				vertex.mColors[channel] = AssimpToGlm(*aMesh->mColors[i]);
 			} else {
-				vertex.mColor[channel] = glm::vec4(1, 0, 1, 1);
+				vertex.mColors[channel] = glm::vec4(1, 0, 1, 1);
 			}
 		}
 
 		for(uint64_t channel = 0; channel < NUM_UVS; channel++) {
 			if(aMesh->HasTextureCoords(channel)) {
-				vertex.mUV[channel] = AssimpToGlm(aMesh->mTextureCoords[channel][i]);
+				vertex.mUVs[channel] = AssimpToGlm(aMesh->mTextureCoords[channel][i]);
 			} else {
-				vertex.mUV[channel] = glm::vec2(-1);
+				vertex.mUVs[channel] = glm::vec2(-1);
 			}
 		}
 

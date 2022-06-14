@@ -6,6 +6,7 @@ void Screenspace::Create(const FileIO::Path& aFragmentPath, const char* aName /*
 	mPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/Screenspace/Screenspace.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	mPipeline.AddShader(std::string(WORK_DIR_REL) + aFragmentPath.mPath, VK_SHADER_STAGE_FRAGMENT_BIT);
 
+	//this should not be making a renderpass?
 	mRenderPass.AddColorAttachment(gGraphics->GetSwapchainFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
 	mRenderPass.Create(aName);
 
@@ -19,7 +20,7 @@ void Screenspace::Create(const FileIO::Path& aFragmentPath, const char* aName /*
 	data[2]		   = 2;
 	mIndexBuffer.UnMap();
 
-	mMaterials = mPipeline.AllocateMaterials();
+	mMaterials = mPipeline.MakeMaterials();
 }
 
 void Screenspace::Render(const VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer) const {

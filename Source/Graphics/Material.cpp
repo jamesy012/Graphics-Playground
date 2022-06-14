@@ -32,7 +32,7 @@ void MaterialBase::Destroy() {
 	vkDestroyDescriptorSetLayout(gGraphics->GetVkDevice(), mLayout, GetAllocationCallback());
 }
 
-std::vector<Material> MaterialBase::AllocateMaterials() {
+std::vector<Material> MaterialBase::MakeMaterials() {
 	std::vector<Material> materials;
 
 	Material material;

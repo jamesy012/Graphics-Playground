@@ -38,11 +38,10 @@ int main() {
 
 	//FRAMEBUFFER TEST
 	//will need one for each eye?, container?
-	Framebuffer fb;
 	Image fbImage;
 	Image fbDepthImage;
-	fbImage.CreateVkImage(VK_FORMAT_R8G8B8A8_SNORM, {720, 720}, "Main FB Image");
-	fbDepthImage.CreateVkImage(VK_FORMAT_D32_SFLOAT, {720, 720}, "Main FB Depth Image");
+	fbImage.CreateVkImage(Graphics::GetDeafultColorFormat(), {720, 720}, "Main FB Image");
+	fbDepthImage.CreateVkImage(Graphics::GetDeafultDepthFormat(), {720, 720}, "Main FB Depth Image");
 
 	{
 		auto buffer = gfx.AllocateGraphicsCommandBuffer();
@@ -50,8 +49,10 @@ int main() {
 		fbDepthImage.SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 		gfx.EndGraphicsCommandBuffer(buffer);
 	}
+
+	//we want to render with these outputs
 	RenderPass mainRenderPass;
-	mainRenderPass.AddColorAttachment(Graphics::GetDeafultColorFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
+	mainRenderPass.AddColorAttachment(Graphics::GetDeafultColorFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
 	mainRenderPass.AddDepthAttachment(Graphics::GetDeafultDepthFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
 	mainRenderPass.Create("Main Render RP");
 
@@ -61,20 +62,24 @@ int main() {
 		mainPassClear[0].color.float32[1]	  = 0.0f;
 		mainPassClear[0].color.float32[2]	  = 0.0f;
 		mainPassClear[0].color.float32[3]	  = 1.0f;
-		mainPassClear[1].depthStencil.depth	  = 0.0f;
+		mainPassClear[1].depthStencil.depth	  = 1.0f;
 		mainPassClear[1].depthStencil.stencil = 0;
 		mainRenderPass.SetClearColors(mainPassClear);
 	}
 
+	//FB write to these images, following the layout from mainRenderPass
+	Framebuffer fb;
 	fb.AddImage(&fbImage);
 	fb.AddImage(&fbDepthImage);
 	fb.Create(mainRenderPass, "Main Render FB");
 
 	//SCREEN SPACE TEST
-	Image ssImage;
-	ssImage.LoadImage(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_Bark.png", VK_FORMAT_R8G8B8A8_UNORM);
-	Image ssImage2;
-	ssImage2.LoadImage(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_Leaves.png", VK_FORMAT_R8G8B8A8_UNORM);
+	//used to copy fbImage to backbuffer
+
+	//Image ssImage;
+	//ssImage.LoadImage(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_Bark.png", Graphics::GetDeafultColorFormat());
+	//Image ssImage2;
+	//ssImage2.LoadImage(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_Leaves.png", Graphics::GetDeafultColorFormat());
 
 	MaterialBase ssTestBase;
 	ssTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -111,14 +116,14 @@ int main() {
 	{
 		meshPipeline.vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 		meshPipeline.vertexBinding.stride	 = sizeof(MeshVert);
-
+		MeshVert temp;
 		meshPipeline.vertexAttribute			 = std::vector<VkVertexInputAttributeDescription>(2);
 		meshPipeline.vertexAttribute[0].location = 0;
-		meshPipeline.vertexAttribute[0].format	 = VK_FORMAT_R32G32B32_SFLOAT;
+		meshPipeline.vertexAttribute[0].format	 = GlmToVkFormat(temp.mPos);
 		meshPipeline.vertexAttribute[0].offset	 = offsetof(MeshVert, mPos);
 		meshPipeline.vertexAttribute[1].location = 1;
 		meshPipeline.vertexAttribute[1].format	 = VK_FORMAT_R32G32_SFLOAT;
-		meshPipeline.vertexAttribute[1].offset	 = offsetof(MeshVert, mUV[0]);
+		meshPipeline.vertexAttribute[1].offset	 = offsetof(MeshVert, mUVs[0]);
 	}
 
 	MaterialBase meshTestBase;
@@ -127,7 +132,7 @@ int main() {
 	meshPipeline.SetMaterialBase(&meshTestBase);
 	meshPipeline.Create(mainRenderPass.GetRenderPass(), "Mesh");
 
-	Material meshMaterial = meshTestBase.AllocateMaterials()[0];
+	Material meshMaterial = meshTestBase.MakeMaterials()[0];
 	meshMaterial.SetBuffers(meshUniformBuffer, 0, 0);
 
 	while(!window.ShouldClose()) {
@@ -172,25 +177,32 @@ int main() {
 
 		VkCommandBuffer buffer = gfx.GetCurrentGraphicsCommandBuffer();
 #if defined(ENABLE_XR)
-		const Framebuffer* frameBuffers[3] = {&gfx.GetCurrentFrameBuffer(), &gfx.GetCurrentXrFrameBuffer(0), &gfx.GetCurrentXrFrameBuffer(1)};
-		for(int i = 0; i < 3; i++) {
+		const Framebuffer* frameBuffers[3] = {
+			&gfx.GetCurrentXrFrameBuffer(0),
+			&gfx.GetCurrentXrFrameBuffer(1),
+			&gfx.GetCurrentFrameBuffer(),
+		};
+		for(int i = 0; i < 2; i++) {
 #else
-		const Framebuffer* frameBuffers[1] = {&fb};
+		const Framebuffer* frameBuffers[1] = {&gfx.GetCurrentFrameBuffer()};
 		const int i = 0;
 		{
 #endif
-			const Framebuffer& framebuffer = *frameBuffers[i];
+			const Framebuffer& framebuffer = fb;
 
 			//mesh render test
 			mainRenderPass.Begin(buffer, framebuffer);
 			meshPipeline.Begin(buffer);
+			//bind camera data
 			vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
+			//tree 1
 			{
 				meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 5, 0));
 				meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
 				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
 				meshTest.QuickTempRender(buffer);
 			}
+			//tree 2
 			{
 				meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-5, 8, 0));
 				meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
@@ -199,35 +211,43 @@ int main() {
 			}
 			meshPipeline.End(buffer);
 			mainRenderPass.End(buffer);
+
+			fbImage.SetImageLayout(buffer,
+								   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+								   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+								   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+								   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+			//copies fbImage to framebuffer
+			ssTest.Render(buffer, *frameBuffers[i]);
+#if defined(ENABLE_XR)
+			if(i == 1) {
+				ssTest.Render(buffer, *frameBuffers[i + 1]);
+			}
+#endif
+
+			fbImage.SetImageLayout(buffer,
+								   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+								   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+								   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+								   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 		}
-
-		fbImage.SetImageLayout(buffer,
-							   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-							   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-							   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-							   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
-		ssTest.Render(buffer, gfx.GetCurrentFrameBuffer());
-
-		fbImage.SetImageLayout(buffer,
-							   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-							   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-							   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-							   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
 		gfx.EndFrame();
 	}
 
 	meshPipeline.Destroy();
 	meshTestBase.Destroy();
-	mainRenderPass.Destroy();
 	meshTest.Destroy();
 	meshUniformBuffer.Destroy();
 
+	mainRenderPass.Destroy();
+	fb.Destroy();
+	fbDepthImage.Destroy();
+	fbImage.Destroy();
+
 	ssTest.Destroy();
 	ssTestBase.Destroy();
-	ssImage.Destroy();
-	ssImage2.Destroy();
 
 	gfx.Destroy();
 

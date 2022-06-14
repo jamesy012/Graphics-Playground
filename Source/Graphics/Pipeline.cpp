@@ -190,6 +190,6 @@ void Pipeline::Begin(VkCommandBuffer aBuffer) const {
 
 void Pipeline::End(VkCommandBuffer aBuffer) const {}
 
-std::vector<Material> Pipeline::AllocateMaterials() const {
-	return mMaterialBase->AllocateMaterials();
+std::vector<Material> Pipeline::MakeMaterials() const {
+	return mMaterialBase->MakeMaterials();
 }

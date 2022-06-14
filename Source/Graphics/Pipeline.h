@@ -39,7 +39,7 @@ public:
 		return mPipelineLayout;
 	}
 
-	std::vector<Material> AllocateMaterials() const ;
+	std::vector<Material> MakeMaterials() const ;
 
 	//Temp
 	VkVertexInputBindingDescription vertexBinding				   = {};
