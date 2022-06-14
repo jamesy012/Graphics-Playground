@@ -11,17 +11,19 @@
 #include <format>
 
 #if PLATFORM_WINDOWS
-#	define LOGOUTPUT(x) OutputDebugStringA(x);
+#	define LOGOUTPUT(x)       \
+		OutputDebugStringA(x); \
+		printf(x);
 #else
-#	define LOGOUTPUT(x)
+#	define LOGOUTPUT(x) printf(x);
 #endif
 
 namespace LOGGER {
 
 	void Log_Internal(const char* aMessage) {
-		printf(aMessage);
 		LOGOUTPUT(aMessage);
 	}
+
 #if __cpp_lib_source_location
 	void Log(const char* aMessage, const std::source_location location) {
 		//File: F:\proj\Engines\Graphics-Playground\Source\Graphics\Pipeline.cpp(43:11) Create:

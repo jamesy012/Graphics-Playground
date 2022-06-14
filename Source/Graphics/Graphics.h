@@ -92,7 +92,11 @@ public:
 	const VRGraphics* GetVrGraphics() const;
 #endif
 
-	const VkFormat GetMainFormat() const;
+	static const bool IsFormatDepth(VkFormat aFormat);
+	static const VkFormat GetDeafultDepthFormat();
+	static const VkFormat GetDeafultColorFormat();
+	const VkFormat GetSwapchainFormat() const;
+
 	const VmaAllocator GetAllocator() const {
 		return mAllocator;
 	}

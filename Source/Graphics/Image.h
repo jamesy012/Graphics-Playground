@@ -22,8 +22,8 @@ public:
 
 	void Destroy();
 
-	void SetImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aOldLayout, VkImageLayout aNewLayout, VkPipelineStageFlags aSrcStageMask,
-						   VkPipelineStageFlags aDstStageMask) const;
+	void SetImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aOldLayout, VkImageLayout aNewLayout, VkPipelineStageFlags aSrcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT,
+						   VkPipelineStageFlags aDstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT) const;
 
 	const VkImage GetImage() const {
 		return mImage;
@@ -42,6 +42,7 @@ private:
 	VkImageView mImageView = VK_NULL_HANDLE;
 
 	ImageSize mSize		  = {};
+	VkFormat mFormat;
 
 	VmaAllocation mAllocation = VK_NULL_HANDLE;
 	VmaAllocationInfo mAllocationInfo = {};

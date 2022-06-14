@@ -167,10 +167,19 @@ bool Graphics::Initalize() {
 		vmaCreateAllocator(&createInfo, &mAllocator);
 	}
 
+	{
+		std::vector<VkClearValue> clear(1);
+		clear[0].color.float32[0] = 1.0f;
+		mRenderPass.SetClearColors(clear);
+	}
+	mRenderPass.AddColorAttachment(GetSwapchainFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
 	mRenderPass.Create("Present Renderpass");
-	mFramebuffer[0].Create(mSwapchain->GetImage(0), mRenderPass, "Swapchain Framebuffer 0");
-	mFramebuffer[1].Create(mSwapchain->GetImage(1), mRenderPass, "Swapchain Framebuffer 1");
-	mFramebuffer[2].Create(mSwapchain->GetImage(2), mRenderPass, "Swapchain Framebuffer 2");
+	mFramebuffer[0].AddImage(&mSwapchain->GetImage(0));
+	mFramebuffer[0].Create(mRenderPass, "Swapchain Framebuffer 0");
+	mFramebuffer[1].AddImage(&mSwapchain->GetImage(1));
+	mFramebuffer[1].Create(mRenderPass, "Swapchain Framebuffer 1");
+	mFramebuffer[2].AddImage(&mSwapchain->GetImage(2));
+	mFramebuffer[2].Create(mRenderPass, "Swapchain Framebuffer 2");
 #if defined(ENABLE_XR)
 	mXrFramebuffer[0][0].Create(gVrGraphics.GetImage(0, 0), mRenderPass, "xr Swapchain Framebuffer 0/0");
 	mXrFramebuffer[0][1].Create(gVrGraphics.GetImage(0, 1), mRenderPass, "xr Swapchain Framebuffer 0/1");
@@ -436,7 +445,24 @@ const VRGraphics* Graphics::GetVrGraphics() const {
 }
 #endif
 
-const VkFormat Graphics::GetMainFormat() const {
+const bool Graphics::IsFormatDepth(VkFormat aFormat) {
+	if(aFormat >= VK_FORMAT_D16_UNORM && aFormat <= VK_FORMAT_D32_SFLOAT_S8_UINT) {
+		return true;
+	}
+	return false;
+}
+
+const VkFormat Graphics::GetDeafultColorFormat() {
+	//todo check that this format is supported
+	return VK_FORMAT_R8G8B8A8_SNORM;
+}
+
+const VkFormat Graphics::GetDeafultDepthFormat() {
+	//todo check that this format is supported
+	return VK_FORMAT_D32_SFLOAT;
+}
+
+const VkFormat Graphics::GetSwapchainFormat() const {
 	return GetMainSwapchain()->GetColorFormat();
 }
 

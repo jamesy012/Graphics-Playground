@@ -5,6 +5,8 @@
 #include "Graphics/Graphics.h"
 #include "PlatformDebug.h"
 
+#include "Graphics/Framebuffer.h"
+
 #include "Graphics/Screenspace.h"
 #include "Graphics/Image.h"
 #include "Graphics/Material.h"
@@ -34,6 +36,40 @@ int main() {
 	gfx.Initalize();
 	LOGGER::Log("Graphics Initalized\n");
 
+	//FRAMEBUFFER TEST
+	//will need one for each eye?, container?
+	Framebuffer fb;
+	Image fbImage;
+	Image fbDepthImage;
+	fbImage.CreateVkImage(VK_FORMAT_R8G8B8A8_SNORM, {720, 720}, "Main FB Image");
+	fbDepthImage.CreateVkImage(VK_FORMAT_D32_SFLOAT, {720, 720}, "Main FB Depth Image");
+
+	{
+		auto buffer = gfx.AllocateGraphicsCommandBuffer();
+		fbImage.SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		fbDepthImage.SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		gfx.EndGraphicsCommandBuffer(buffer);
+	}
+	RenderPass mainRenderPass;
+	mainRenderPass.AddColorAttachment(Graphics::GetDeafultColorFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
+	mainRenderPass.AddDepthAttachment(Graphics::GetDeafultDepthFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
+	mainRenderPass.Create("Main Render RP");
+
+	{
+		std::vector<VkClearValue> mainPassClear(2);
+		mainPassClear[0].color.float32[0]	  = 1.0f;
+		mainPassClear[0].color.float32[1]	  = 0.0f;
+		mainPassClear[0].color.float32[2]	  = 0.0f;
+		mainPassClear[0].color.float32[3]	  = 1.0f;
+		mainPassClear[1].depthStencil.depth	  = 0.0f;
+		mainPassClear[1].depthStencil.stencil = 0;
+		mainRenderPass.SetClearColors(mainPassClear);
+	}
+
+	fb.AddImage(&fbImage);
+	fb.AddImage(&fbDepthImage);
+	fb.Create(mainRenderPass, "Main Render FB");
+
 	//SCREEN SPACE TEST
 	Image ssImage;
 	ssImage.LoadImage(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_Bark.png", VK_FORMAT_R8G8B8A8_UNORM);
@@ -47,7 +83,7 @@ int main() {
 	Screenspace ssTest;
 	ssTest.AddMaterialBase(&ssTestBase);
 	ssTest.Create("WorkDir/Shaders/Screenspace/Image.frag.spv", "ScreenSpace ImageCopy");
-	ssTest.GetMaterial(0).SetImages(ssImage, 0, 0);
+	ssTest.GetMaterial(0).SetImages(fbImage, 0, 0);
 	//ssTest.GetMaterial(0).SetImages(ssImage2, 1, 0);
 
 	//Mesh Test
@@ -85,13 +121,12 @@ int main() {
 		meshPipeline.vertexAttribute[1].offset	 = offsetof(MeshVert, mUV[0]);
 	}
 
-	RenderPass meshRenderPass;
-	meshRenderPass.Create("Mesh RP");
 	MaterialBase meshTestBase;
 	meshTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
 	meshTestBase.Create();
 	meshPipeline.SetMaterialBase(&meshTestBase);
-	meshPipeline.Create(meshRenderPass.GetRenderPass(), "Mesh");
+	meshPipeline.Create(mainRenderPass.GetRenderPass(), "Mesh");
+
 	Material meshMaterial = meshTestBase.AllocateMaterials()[0];
 	meshMaterial.SetBuffers(meshUniformBuffer, 0, 0);
 
@@ -140,16 +175,14 @@ int main() {
 		const Framebuffer* frameBuffers[3] = {&gfx.GetCurrentFrameBuffer(), &gfx.GetCurrentXrFrameBuffer(0), &gfx.GetCurrentXrFrameBuffer(1)};
 		for(int i = 0; i < 3; i++) {
 #else
-		const Framebuffer* frameBuffers[1] = {&gfx.GetCurrentFrameBuffer()};
+		const Framebuffer* frameBuffers[1] = {&fb};
 		const int i = 0;
 		{
 #endif
 			const Framebuffer& framebuffer = *frameBuffers[i];
 
-			ssTest.Render(buffer, framebuffer);
-
 			//mesh render test
-			meshRenderPass.Begin(buffer, framebuffer);
+			mainRenderPass.Begin(buffer, framebuffer);
 			meshPipeline.Begin(buffer);
 			vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
 			{
@@ -165,15 +198,29 @@ int main() {
 				meshTest.QuickTempRender(buffer);
 			}
 			meshPipeline.End(buffer);
-			meshRenderPass.End(buffer);
+			mainRenderPass.End(buffer);
 		}
+
+		fbImage.SetImageLayout(buffer,
+							   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+							   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+							   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+							   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
+		ssTest.Render(buffer, gfx.GetCurrentFrameBuffer());
+
+		fbImage.SetImageLayout(buffer,
+							   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+							   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+							   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+							   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
 		gfx.EndFrame();
 	}
 
 	meshPipeline.Destroy();
 	meshTestBase.Destroy();
-	meshRenderPass.Destroy();
+	mainRenderPass.Destroy();
 	meshTest.Destroy();
 	meshUniformBuffer.Destroy();
 

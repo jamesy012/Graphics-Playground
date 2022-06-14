@@ -7,28 +7,30 @@
 #include "PlatformDebug.h"
 
 void RenderPass::Create(const char* aName /*= 0*/) {
-	LOGGER::Log("-- RenderPass needs work, only supports one color attachment\n");
 
-	VkAttachmentDescription colorAttachment = {};
-	colorAttachment.format					= gGraphics->GetMainSwapchain()->GetColorFormat();
-	colorAttachment.initialLayout			= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	colorAttachment.finalLayout				= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-	colorAttachment.loadOp					= VK_ATTACHMENT_LOAD_OP_LOAD; //= VK_ATTACHMENT_LOAD_OP_CLEAR;
-	colorAttachment.storeOp					= VK_ATTACHMENT_STORE_OP_STORE;
-	colorAttachment.samples					= VK_SAMPLE_COUNT_1_BIT;
+	//VkAttachmentDescription colorAttachment = {};
+	//colorAttachment.format					= gGraphics->GetMainSwapchain()->GetColorFormat();
+	//colorAttachment.initialLayout			= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	//colorAttachment.finalLayout				= VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	//colorAttachment.loadOp					= VK_ATTACHMENT_LOAD_OP_LOAD; //= VK_ATTACHMENT_LOAD_OP_CLEAR;
+	//colorAttachment.storeOp					= VK_ATTACHMENT_STORE_OP_STORE;
+	//colorAttachment.samples					= VK_SAMPLE_COUNT_1_BIT;
 
-	VkAttachmentReference colorReference {};
-	colorReference.attachment = 0;
-	colorReference.layout	  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+	//VkAttachmentReference colorReference {};
+	//colorReference.attachment = 0;
+	//colorReference.layout	  = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
 	VkSubpassDescription subpass = {};
-	subpass.colorAttachmentCount = 1;
-	subpass.pColorAttachments	 = &colorReference;
+	subpass.colorAttachmentCount = mColorReferences.size();
+	subpass.pColorAttachments	 = mColorReferences.data();
+	if(mDepthReference.layout != 0) {
+		subpass.pDepthStencilAttachment = &mDepthReference;
+	}
 
 	VkRenderPassCreateInfo create {};
 	create.sType		   = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-	create.attachmentCount = 1;
-	create.pAttachments	   = &colorAttachment;
+	create.attachmentCount = mAttachments.size();
+	create.pAttachments	   = mAttachments.data();
 	create.subpassCount	   = 1;
 	create.pSubpasses	   = &subpass;
 
@@ -49,7 +51,7 @@ void RenderPass::Begin(VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer)
 
 	vkCmdBeginRenderPass(aBuffer, &renderBegin, VK_SUBPASS_CONTENTS_INLINE);
 
-    //setup renderpass view
+	//setup renderpass view
 	VkRect2D scissor	= {{}, aFramebuffer.GetSize()};
 	VkViewport viewport = {0.0f, 0.0f, (float)scissor.extent.width, (float)scissor.extent.height, 0.0f, 1.0f};
 	vkCmdSetScissor(aBuffer, 0, 1, &scissor);

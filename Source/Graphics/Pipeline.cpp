@@ -96,9 +96,9 @@ bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 	VkPipelineDepthStencilStateCreateInfo depthStencilState = {};
 	{
 		depthStencilState.sType			   = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencilState.depthTestEnable  = false;
-		depthStencilState.depthWriteEnable = false;
-		depthStencilState.depthCompareOp   = VK_COMPARE_OP_ALWAYS;
+		depthStencilState.depthTestEnable  = VK_TRUE;
+		depthStencilState.depthWriteEnable = VK_TRUE;
+		depthStencilState.depthCompareOp   = VK_COMPARE_OP_LESS_OR_EQUAL;
 	}
 
 	//~~~ Color Blend State

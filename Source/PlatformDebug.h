@@ -29,6 +29,7 @@ namespace LOGGER {
 	//doesnt seem overally hard to hack about, given how this function works
 	template<typename... Args> void QuickNonFormatLog(Args&&... args) {
 		int counter = 0;
+		//change this to LOGOUTPUT?
 		((std::cout << "\t{" << counter++ << "} " << std::forward<Args>(args) << "\n"), ...);
 	}
 	//template<typename Arg, typename... Args> void QuickNonFormatLog(Arg&& arg, Args&&... args) {
@@ -36,7 +37,7 @@ namespace LOGGER {
 	//	((std::cout << ", " << std::forward<Args>(args)), ...);
 	//	std::cout << std::endl;
 	//}
-#endif
+#endif //__cpp_lib_format == false
 
 	//old log, still needed?
 	//void Log(const char* aMessage, ...);
@@ -48,12 +49,12 @@ namespace LOGGER {
 #if __cpp_lib_format
 		std::string output = std::vformat(aMessage, std::make_format_args(args...));
 		Log_Internal(output.c_str());
-#else
+#else //__cpp_lib_format
 		const std::string output = "(*) " + aMessage;
 		Log_Internal(output.c_str());
 		QuickNonFormatLog(args...);
 		//QuickNonFormatLog(std::forward<Args>(args));
-#endif
+#endif //__cpp_lib_format
 	};
 
 	template<typename... Args> void Formated(const char* aMessage, Args&&... args) {
