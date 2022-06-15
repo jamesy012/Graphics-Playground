@@ -59,7 +59,7 @@ int main() {
 
 	{
 		std::vector<VkClearValue> mainPassClear(2);
-		mainPassClear[0].color.float32[0]	  = 1.0f;
+		mainPassClear[0].color.float32[0]	  = 0.0f;
 		mainPassClear[0].color.float32[1]	  = 0.0f;
 		mainPassClear[0].color.float32[2]	  = 0.0f;
 		mainPassClear[0].color.float32[3]	  = 1.0f;
@@ -120,7 +120,7 @@ int main() {
 		MeshVert temp;
 		meshPipeline.vertexAttribute			 = std::vector<VkVertexInputAttributeDescription>(2);
 		meshPipeline.vertexAttribute[0].location = 0;
-		meshPipeline.vertexAttribute[0].format	 = GlmToVkFormat(temp.mPos);
+		meshPipeline.vertexAttribute[0].format	 = VK_FORMAT_R32G32B32_SFLOAT;
 		meshPipeline.vertexAttribute[0].offset	 = offsetof(MeshVert, mPos);
 		meshPipeline.vertexAttribute[1].location = 1;
 		meshPipeline.vertexAttribute[1].format	 = VK_FORMAT_R32G32_SFLOAT;

@@ -18,18 +18,11 @@ static glm::vec4 AssimpToGlm(const aiColor4D& aAssimp) {
 	return glm::vec4(aAssimp.r, aAssimp.g, aAssimp.b, aAssimp.a);
 }
 
-template<typename T = glm::vec3>
-static VkFormat GlmToVkFormat(const T) {
-    return VK_FORMAT_R32G32B32_SFLOAT;
-}
-static VkFormat GlmToVkFormat(const glm::vec2){
-    return VK_FORMAT_R32G32_SFLOAT;
-}
 #pragma endregion
 
 #pragma region std::Format
 #if __cpp_lib_format
-#include <format>
+#	include <format>
 
 //https://fmt.dev/7.0.2/api.html#formatting-user-defined-types
 
