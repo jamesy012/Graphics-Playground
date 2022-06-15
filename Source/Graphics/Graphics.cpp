@@ -169,7 +169,7 @@ bool Graphics::Initalize() {
 
 	{
 		std::vector<VkClearValue> clear(1);
-		clear[0].color.float32[0] = 1.0f;
+		clear[0].color.float32[0] = 0.0f;
 		mRenderPass.SetClearColors(clear);
 	}
 	mRenderPass.AddColorAttachment(GetSwapchainFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
@@ -181,12 +181,17 @@ bool Graphics::Initalize() {
 	mFramebuffer[2].AddImage(&mSwapchain->GetImage(2));
 	mFramebuffer[2].Create(mRenderPass, "Swapchain Framebuffer 2");
 #if defined(ENABLE_XR)
-	mXrFramebuffer[0][0].Create(gVrGraphics.GetImage(0, 0), mRenderPass, "xr Swapchain Framebuffer 0/0");
-	mXrFramebuffer[0][1].Create(gVrGraphics.GetImage(0, 1), mRenderPass, "xr Swapchain Framebuffer 0/1");
-	mXrFramebuffer[0][2].Create(gVrGraphics.GetImage(0, 2), mRenderPass, "xr Swapchain Framebuffer 0/2");
-	mXrFramebuffer[1][0].Create(gVrGraphics.GetImage(1, 0), mRenderPass, "xr Swapchain Framebuffer 1/0");
-	mXrFramebuffer[1][1].Create(gVrGraphics.GetImage(1, 1), mRenderPass, "xr Swapchain Framebuffer 1/1");
-	mXrFramebuffer[1][2].Create(gVrGraphics.GetImage(1, 2), mRenderPass, "xr Swapchain Framebuffer 1/2");
+	for(int eye = 0; eye < 2; eye++) {
+		for(int sc = 0; sc < 3; sc++) {
+			mXrFramebuffer[eye][sc].AddImage(&gVrGraphics.GetImage(eye, sc));
+			mXrFramebuffer[eye][sc].Create(mRenderPass, "xr Swapchain Framebuffer ");
+		}
+	}
+	//mXrFramebuffer[0][1].Create(gVrGraphics.GetImage(0, 1), mRenderPass, "xr Swapchain Framebuffer 0/1");
+	//mXrFramebuffer[0][2].Create(gVrGraphics.GetImage(0, 2), mRenderPass, "xr Swapchain Framebuffer 0/2");
+	//mXrFramebuffer[1][0].Create(gVrGraphics.GetImage(1, 0), mRenderPass, "xr Swapchain Framebuffer 1/0");
+	//mXrFramebuffer[1][1].Create(gVrGraphics.GetImage(1, 1), mRenderPass, "xr Swapchain Framebuffer 1/1");
+	//mXrFramebuffer[1][2].Create(gVrGraphics.GetImage(1, 2), mRenderPass, "xr Swapchain Framebuffer 1/2");
 #endif
 
 	{

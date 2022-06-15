@@ -43,6 +43,7 @@ int main() {
 	fbImage.CreateVkImage(Graphics::GetDeafultColorFormat(), {720, 720}, "Main FB Image");
 	fbDepthImage.CreateVkImage(Graphics::GetDeafultDepthFormat(), {720, 720}, "Main FB Depth Image");
 
+	//convert to correct layout
 	{
 		auto buffer = gfx.AllocateGraphicsCommandBuffer();
 		fbImage.SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);

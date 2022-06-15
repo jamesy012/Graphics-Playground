@@ -11,5 +11,7 @@ layout(location = 0) out vec4 fColor;
 
 void main() {
     //fColor = In.Color * texture(sTexture, In.UV.st);
-    fColor = vec4(In.UV.st, 1, 1);
+    //vec3 val = vec3(floor(In.UV.x * 8.0f) / 8.0f, floor(In.UV.y * 8.0f) / 8.0f, floor(In.UV.x * 8.0f) / 8.0f);
+    vec3 val = floor(In.UV.xyx * 8.0f) / 8.0f;
+    fColor = vec4(val, 1);
 }
