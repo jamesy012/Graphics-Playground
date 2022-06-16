@@ -16,6 +16,7 @@
 #include <glm/ext.hpp>
 
 #include "Graphics/Conversions.h"
+#include "Engine/Transform.h"
 
 #if defined(ENABLE_XR)
 #	include "Graphics/VRGraphics.h"
@@ -136,6 +137,11 @@ int main() {
 	Material meshMaterial = meshTestBase.MakeMaterials()[0];
 	meshMaterial.SetBuffers(meshUniformBuffer, 0, 0);
 
+	Transform mModelTransforms[2];
+	Transform mRootTransform;
+	mModelTransforms[0].Set(glm::vec3(0, 5, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
+	mModelTransforms[1].Set(glm::vec3(-5, 8, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
+
 	while(!window.ShouldClose()) {
 		window.Update();
 
@@ -164,7 +170,7 @@ int main() {
 				proj = glm::perspective(info.mFov.w - info.mFov.z, info.mFov.y / info.mFov.w, 0.1f, 1000.0f);
 			}
 #else
-			const float time  = gGraphics->GetFrameCount() / 360.0f;
+			const float time  = 0; //gGraphics->GetFrameCount() / 360.0f;
 			const float scale = 10.0f;
 			view			  = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0), glm::vec3(0, 1, 0));
 			proj			  = glm::perspectiveFov(glm::radians(60.0f), 720.0f, 720.0f, 0.1f, 1000.0f);
@@ -172,6 +178,16 @@ int main() {
 			meshUniform.mPV[0] = proj * view;
 
 			meshUniformBuffer.UpdateData(0, VK_WHOLE_SIZE, &meshUniform);
+		}
+
+		{
+			const float time = gGraphics->GetFrameCount() / 5.0f;
+			mRootTransform.SetRotation(glm::vec3(0, -time, 0));
+			//mRootTransform.SetPosition(glm::vec3(sin(time / 5) * 2, 0, 0));
+			mRootTransform.SetPosition(glm::vec3(2, 0, 0));
+			mRootTransform.SetScale(abs(cos(time/50)));
+			//mModelTransforms[0].SetWorldPosition(glm::vec3(0, 5, 0));
+			//mModelTransforms[0].SetWorldRotation(glm::vec3(90, 0, 0));
 		}
 
 		gfx.StartNewFrame();
@@ -198,15 +214,17 @@ int main() {
 			vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
 			//tree 1
 			{
-				meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 5, 0));
-				meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
+				//meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 5, 0));
+				//meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
+				meshPC.mWorld = mModelTransforms[0].GetWorldMatrix();
 				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
 				meshTest.QuickTempRender(buffer);
 			}
 			//tree 2
 			{
-				meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-5, 8, 0));
-				meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
+				//meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-5, 8, 0));
+				//meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
+				meshPC.mWorld = mModelTransforms[1].GetWorldMatrix();
 				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
 				meshTest.QuickTempRender(buffer);
 			}
@@ -236,6 +254,8 @@ int main() {
 
 		gfx.EndFrame();
 	}
+
+	mRootTransform.Clear();
 
 	meshPipeline.Destroy();
 	meshTestBase.Destroy();

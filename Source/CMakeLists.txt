@@ -6,6 +6,8 @@ set("SOURCE_FILES"
  "Engine/FileIO.cpp" 
  "Engine/FileIO.h"
  "Engine/AABB.h"
+ "Engine/Transform.h"
+ "Engine/Transform.cpp"
 )
 
 source_group("Test" ${SOURCE_FILES})
