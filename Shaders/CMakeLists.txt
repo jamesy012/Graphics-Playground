@@ -44,15 +44,21 @@
          set(VR_ENABLED --define-macro "VR_ENABLED=1")
        endif()
 
+       #can add -S <Stage> by getting file extension
+
        add_custom_command(
           OUTPUT ${SPIRV}
+          COMMENT "Building Shader: ${SPIRV}"
           #COMMAND ${CMAKE_COMMAND} -E make_directory "${WORK_DIR_FOLDER}/WorkDir/"
           #COMMAND ${CMAKE_COMMAND} -E make_directory "${WORK_DIR_FOLDER}/WorkDir/Shaders/"
           #COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${SHADER}" -o "${SPIRV}"
           COMMAND ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${CMAKE_CURRENT_SOURCE_DIR}${SHADER}" -o "${SPIRV}" -g 
+          -I"${CMAKE_CURRENT_SOURCE_DIR}/include/"
           --define-macro "TEST=10" 
           ${VR_ENABLED}
-          DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}${SHADER})
+          DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}${SHADER}
+          DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/include/*" #update all shaders when a include change happens, is there a better way for this?
+          )
 
           message(STATUS "${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V ${CMAKE_CURRENT_SOURCE_DIR}${SHADER} -o ${SPIRV} -g")
         list(APPEND SPIRV_BINARY_FILES ${SPIRV})

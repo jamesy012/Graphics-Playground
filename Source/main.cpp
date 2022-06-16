@@ -100,7 +100,7 @@ int main() {
 		glm::mat4 mWorld;
 	} meshPC;
 	struct MeshUniformTest {
-		glm::mat4 mPV;
+		glm::mat4 mPV[2];
 	} meshUniform;
 
 	Buffer meshUniformBuffer;
@@ -169,7 +169,7 @@ int main() {
 			view			  = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0), glm::vec3(0, 1, 0));
 			proj			  = glm::perspectiveFov(glm::radians(60.0f), 720.0f, 720.0f, 0.1f, 1000.0f);
 #endif
-			meshUniform.mPV = proj * view;
+			meshUniform.mPV[0] = proj * view;
 
 			meshUniformBuffer.UpdateData(0, VK_WHOLE_SIZE, &meshUniform);
 		}

@@ -1,5 +1,4 @@
 #version 450 
-#extension GL_KHR_vulkan_glsl : enable
 //https://www.saschawillems.de/blog/2016/08/13/vulkan-tutorial-on-rendering-a-fullscreen-quad-without-buffers/
 
 
