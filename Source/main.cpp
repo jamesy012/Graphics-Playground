@@ -149,7 +149,7 @@ int main() {
 
 #if defined(ENABLE_XR)
 			VRGraphics::GLMViewInfo info;
-			gfx.GetVrGraphics()->GetHeadPoseData(info);
+			gGraphics->GetVrGraphics()->GetHeadPoseData(info);
 
 			glm::mat4 translation;
 			glm::mat4 rotation;
@@ -187,9 +187,9 @@ int main() {
 		VkCommandBuffer buffer = gGraphics->GetCurrentGraphicsCommandBuffer();
 #if defined(ENABLE_XR)
 		const Framebuffer* frameBuffers[3] = {
-			&gfx.GetCurrentXrFrameBuffer(0),
-			&gfx.GetCurrentXrFrameBuffer(1),
-			&gfx.GetCurrentFrameBuffer(),
+			&gGraphics->GetCurrentXrFrameBuffer(0),
+			&gGraphics->GetCurrentXrFrameBuffer(1),
+			&gGraphics->GetCurrentFrameBuffer(),
 		};
 		for(int i = 0; i < 2; i++) {
 #else

@@ -19,7 +19,7 @@ void Transform::Clear(bool aReparent /* = true*/) {
 
 	const int childCount = mChildren.size();
 	for(int i = 0; i < childCount; i++) {
-		mChildren[i]->SetParent(newChildParent);
+		mChildren[0]->SetParent(newChildParent);
 	}
 
 	if(mParent != nullptr) {
