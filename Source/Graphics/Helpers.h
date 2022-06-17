@@ -8,6 +8,13 @@ struct ImageSize {
 	ImageSize(uint32_t aWidth, uint32_t aHeight) : mWidth(aWidth), mHeight(aHeight) {};
 	ImageSize(int aWidth, int aHeight) : mWidth((int)aWidth), mHeight((int)aHeight) {};
 
+	bool operator==(const ImageSize& aOther) const {
+		return aOther.mHeight == mHeight && aOther.mWidth == mWidth;
+	}
+	bool operator==(const VkExtent2D& aOther) const {
+		return aOther.height == mHeight && aOther.width == mWidth;
+	}
+
 	operator VkExtent2D() const {
 		return {mWidth, mHeight};
 	}

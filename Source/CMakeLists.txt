@@ -1,21 +1,18 @@
 
-set("SOURCE_FILES" 
+set("MAIN_FILES" 
  "main.cpp"
  "PlatformDebug.cpp" 
  "PlatformDebug.h"
- "Engine/FileIO.cpp" 
- "Engine/FileIO.h"
- "Engine/AABB.h"
- "Engine/Transform.h"
- "Engine/Transform.cpp"
 )
 
-source_group("Test" ${SOURCE_FILES})
+add_executable(GraphicsPlayground ${MAIN_FILES})
 
-add_executable(GraphicsPlayground ${SOURCE_FILES})
+set("GraphicsPlayground_Enable_Vulkan" ON CACHE BOOL "Enables Vulkan")
+set("GraphicsPlayground_Graphics_DX12" OFF CACHE BOOL "Enables DX12")
+set("GraphicsPlayground_Enable_VR" OFF CACHE BOOL "Enables Open XR")
+set("GraphicsPlayground_Enable_ImGui" ON CACHE BOOL "Enables ImGui")
 
-set(GraphicsPlayground_Enable_VR OFF CACHE BOOL "Enables Open XR")
-
+add_subdirectory(Engine)
 add_subdirectory(Graphics)
 add_subdirectory(Libraries)
 

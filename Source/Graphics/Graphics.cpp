@@ -11,7 +11,7 @@
 #include "PlatformDebug.h"
 #include "RenderPass.h"
 #include "Swapchain.h"
-#include "Window.h"
+#include "Engine/Window.h"
 
 #if defined(ENABLE_IMGUI)
 #	include "ImGuiGraphics.h"
@@ -34,7 +34,7 @@ VRGraphics gVrGraphics;
 #	define VULKAN_VERSION VK_API_VERSION_1_1
 #endif
 
-Graphics* gGraphics = nullptr;
+VulkanGraphics* gGraphics = nullptr;
 
 const bool gEnableValidation	= true;
 bool gInstanceValidationEnabled = false;
@@ -98,9 +98,10 @@ void SetVkName(VkObjectType aType, uint64_t aObject, const char* aName) {
 	}
 }
 
-bool Graphics::StartUp() {
+bool VulkanGraphics::Startup() {
 	ASSERT(gGraphics == nullptr);
 	gGraphics = this;
+	LOGGER::Log("Starting Graphics\n");
 
 	VkResult result;
 	{
@@ -111,7 +112,7 @@ bool Graphics::StartUp() {
 
 	// XR
 #if defined(ENABLE_XR)
-	gVrGraphics.Create();
+	gVrGraphics.Startup();
 #endif
 
 	// instance data
@@ -136,16 +137,17 @@ bool Graphics::StartUp() {
 	return false;
 }
 
-bool Graphics::Initalize() {
+bool VulkanGraphics::Initalize() {
 	ASSERT(gVkInstance != VK_NULL_HANDLE);
+	LOGGER::Log("Initalize Graphics\n");
 
 	mDevicesHandler = new Devices((VkSurfaceKHR)mSurfaces[0]->GetSurface());
 	mDevicesHandler->Setup();
 	mDevicesHandler->CreateCommandPools();
 
 #if defined(ENABLE_XR)
-	//needs device setup
-	gVrGraphics.Startup();
+	//needs the device setup
+	gVrGraphics.Initalize();
 #endif
 
 	mSwapchain = new Swapchain(mDevicesHandler->GetPrimaryDeviceData());
@@ -238,7 +240,7 @@ bool Graphics::Initalize() {
 	return true;
 }
 
-bool Graphics::Destroy() {
+bool VulkanGraphics::Destroy() {
 
 	if(gDebugMessenger) {
 		auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(gVkInstance, "vkDestroyDebugUtilsMessengerEXT");
@@ -294,7 +296,7 @@ bool Graphics::Destroy() {
 	return true;
 }
 
-void Graphics::AddWindow(Window* aWindow) {
+void VulkanGraphics::AddWindow(Window* aWindow) {
 	if(aWindow == nullptr) {
 		return;
 	}
@@ -305,7 +307,7 @@ void Graphics::AddWindow(Window* aWindow) {
 	}
 }
 
-void Graphics::StartNewFrame() {
+void VulkanGraphics::StartNewFrame() {
 #if defined(ENABLE_IMGUI)
 	gImGuiGraphics.StartNewFrame();
 #endif
@@ -344,7 +346,7 @@ void Graphics::StartNewFrame() {
 						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 }
 
-void Graphics::EndFrame() {
+void VulkanGraphics::EndFrame() {
 	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(mSwapchain->GetImageIndex());
 
 #if defined(ENABLE_IMGUI)
@@ -368,21 +370,21 @@ void Graphics::EndFrame() {
 	mSwapchain->PresentImage();
 }
 
-const uint32_t Graphics::GetCurrentImageIndex() const {
+const uint32_t VulkanGraphics::GetCurrentImageIndex() const {
 	return mSwapchain->GetImageIndex();
 }
 
-VkCommandBuffer Graphics::GetCurrentGraphicsCommandBuffer() const {
+VkCommandBuffer VulkanGraphics::GetCurrentGraphicsCommandBuffer() const {
 	return GetMainDevice()->GetGraphicsCB(GetCurrentImageIndex());
 }
 
 #if defined(ENABLE_XR)
-const Framebuffer& Graphics::GetCurrentXrFrameBuffer(uint8_t aEye) const {
+const Framebuffer& VulkanGraphics::GetCurrentXrFrameBuffer(uint8_t aEye) const {
 	return mXrFramebuffer[aEye][gVrGraphics.GetCurrentImageIndex(aEye)];
 }
 #endif
 
-OneTimeCommandBuffer Graphics::AllocateGraphicsCommandBuffer() {
+OneTimeCommandBuffer VulkanGraphics::AllocateGraphicsCommandBuffer() {
 	VkCommandBufferAllocateInfo allocateInfo = {};
 	allocateInfo.sType						 = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocateInfo.commandPool				 = mDevicesHandler->GetGraphicsPool();
@@ -409,7 +411,7 @@ OneTimeCommandBuffer Graphics::AllocateGraphicsCommandBuffer() {
 	return {buffer, fence};
 }
 
-void Graphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer) {
+void VulkanGraphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer) {
 	vkEndCommandBuffer(aBuffer);
 
 	VkSubmitInfo submitInfo		  = {};
@@ -424,33 +426,33 @@ void Graphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer) {
 	vkFreeCommandBuffers(GetVkDevice(), mDevicesHandler->GetGraphicsPool(), 1, &aBuffer.mBuffer);
 }
 
-const VkInstance Graphics::GetVkInstance() const {
+const VkInstance VulkanGraphics::GetVkInstance() const {
 	return gVkInstance;
 }
 
-const VkDevice Graphics::GetVkDevice() const {
+const VkDevice VulkanGraphics::GetVkDevice() const {
 	return mDevicesHandler->GetPrimaryDevice();
 }
 
-const VkPhysicalDevice Graphics::GetVkPhysicalDevice() const {
+const VkPhysicalDevice VulkanGraphics::GetVkPhysicalDevice() const {
 	return mDevicesHandler->GetPrimaryPhysicalDevice();
 }
 
-const Devices* Graphics::GetMainDevice() const {
+const Devices* VulkanGraphics::GetMainDevice() const {
 	return mDevicesHandler;
 }
 
-const Swapchain* Graphics::GetMainSwapchain() const {
+const Swapchain* VulkanGraphics::GetMainSwapchain() const {
 	return mSwapchain;
 }
 
 #if defined(ENABLE_XR)
-const VRGraphics* Graphics::GetVrGraphics() const {
+const VRGraphics* VulkanGraphics::GetVrGraphics() const {
 	return &gVrGraphics;
 }
 #endif
 
-const bool Graphics::IsFormatDepth(VkFormat aFormat) {
+const bool VulkanGraphics::IsFormatDepth(VkFormat aFormat) {
 	if(aFormat >= VK_FORMAT_D16_UNORM && aFormat <= VK_FORMAT_D32_SFLOAT_S8_UINT) {
 		return true;
 	}
@@ -458,22 +460,22 @@ const bool Graphics::IsFormatDepth(VkFormat aFormat) {
 }
 
 //static
-const VkFormat Graphics::GetDeafultColorFormat() {
+const VkFormat VulkanGraphics::GetDeafultColorFormat() {
 	//todo check that this format is supported
 	return VK_FORMAT_R8G8B8A8_UNORM;
 }
 
 //static
-const VkFormat Graphics::GetDeafultDepthFormat() {
+const VkFormat VulkanGraphics::GetDeafultDepthFormat() {
 	//todo check that this format is supported
 	return VK_FORMAT_D32_SFLOAT;
 }
 
-const VkFormat Graphics::GetSwapchainFormat() const {
+const VkFormat VulkanGraphics::GetSwapchainFormat() const {
 	return GetMainSwapchain()->GetColorFormat();
 }
 
-bool Graphics::CreateInstance() {
+bool VulkanGraphics::CreateInstance() {
 	VkResult result;
 
 	VkApplicationInfo appInfo  = {};
@@ -555,7 +557,7 @@ bool Graphics::CreateInstance() {
 	return VkResultToBool(result);
 }
 
-bool Graphics::HasInstanceExtension(const char* aExtension) const {
+bool VulkanGraphics::HasInstanceExtension(const char* aExtension) const {
 	for(int i = 0; i < mInstanceExtensions.size(); i++) {
 		if(strcmp(aExtension, mInstanceExtensions[i].extensionName) == 0) {
 			return true;
@@ -564,7 +566,7 @@ bool Graphics::HasInstanceExtension(const char* aExtension) const {
 	return false;
 }
 
-bool Graphics::HasInstanceLayer(const char* aLayer) const {
+bool VulkanGraphics::HasInstanceLayer(const char* aLayer) const {
 	for(int i = 0; i < mInstanceLayers.size(); i++) {
 		if(strcmp(aLayer, mInstanceLayers[i].layerName) == 0) {
 			return true;

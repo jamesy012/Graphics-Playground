@@ -19,9 +19,9 @@ public:
 
 	//must be called in this order, each stage depends on the last
 
-	void Create();
-	const VkPhysicalDevice GetRequestedDevice() const;
 	void Startup();
+	const VkPhysicalDevice GetRequestedDevice() const;
+	void Initalize();
 
 	void FrameBegin(VkCommandBuffer aBuffer);
 

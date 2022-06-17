@@ -102,7 +102,7 @@ bool getXrInstanceProcAddr(void* aFunc, const char* aName) {
 	return *func != nullptr;
 };
 
-void VRGraphics::Create() {
+void VRGraphics::Startup() {
 	LOGGER::Log("Loading OpenXR sdk: ");
 	uint32_t version = XR_CURRENT_API_VERSION;
 	LOGGER::Formated("Version: {}.{}.{}\n", XR_VERSION_MAJOR(version), XR_VERSION_MINOR(version), XR_VERSION_PATCH(version));
@@ -114,7 +114,7 @@ void VRGraphics::Create() {
 	SessionSetup();
 }
 
-void VRGraphics::Startup() {
+void VRGraphics::Initalize() {
 	CreateSession();
 
 	CreateSpaces();

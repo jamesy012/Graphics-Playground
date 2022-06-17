@@ -1,7 +1,9 @@
 #include <vulkan/vulkan.h>
 #include <imgui.h>
 
-#include "Graphics/Window.h"
+#include "Engine/Engine.h"
+
+#include "Engine/Window.h"
 #include "Graphics/Graphics.h"
 #include "PlatformDebug.h"
 
@@ -26,16 +28,11 @@ int main() {
 	//vs code is annoying, doesnt clear the last output
 	LOGGER::Log("--------------------------------\n");
 
-	Window window;
-	window.Create(720, 720, "Graphics Playground");
+	Graphics vulkanGraphics;
 
-	LOGGER::Log("Starting Graphics\n");
-	Graphics gfx;
-	gfx.StartUp();
-	gfx.AddWindow(&window);
-	LOGGER::Log("Initalize Graphics\n");
-	gfx.Initalize();
-	LOGGER::Log("Graphics Initalized\n");
+	Engine gameEngine;
+	gameEngine.Startup(&vulkanGraphics);
+
 
 	//FRAMEBUFFER TEST
 	//will need one for each eye?, container?
@@ -46,10 +43,10 @@ int main() {
 
 	//convert to correct layout
 	{
-		auto buffer = gfx.AllocateGraphicsCommandBuffer();
+		auto buffer = gGraphics->AllocateGraphicsCommandBuffer();
 		fbImage.SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		fbDepthImage.SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-		gfx.EndGraphicsCommandBuffer(buffer);
+		gGraphics->EndGraphicsCommandBuffer(buffer);
 	}
 
 	//we want to render with these outputs
@@ -142,8 +139,8 @@ int main() {
 	mModelTransforms[0].Set(glm::vec3(0, 5, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
 	mModelTransforms[1].Set(glm::vec3(-5, 8, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
 
-	while(!window.ShouldClose()) {
-		window.Update();
+	while(!gEngine->GetWindow()->ShouldClose()) {
+		gEngine->GetWindow()->Update();
 
 		{
 			glm::mat4 proj;
@@ -183,16 +180,11 @@ int main() {
 		{
 			const float time = gGraphics->GetFrameCount() / 5.0f;
 			mRootTransform.SetRotation(glm::vec3(0, -time, 0));
-			//mRootTransform.SetPosition(glm::vec3(sin(time / 5) * 2, 0, 0));
-			mRootTransform.SetPosition(glm::vec3(2, 0, 0));
-			mRootTransform.SetScale(abs(cos(time/50)));
-			//mModelTransforms[0].SetWorldPosition(glm::vec3(0, 5, 0));
-			//mModelTransforms[0].SetWorldRotation(glm::vec3(90, 0, 0));
 		}
 
-		gfx.StartNewFrame();
+		gGraphics->StartNewFrame();
 
-		VkCommandBuffer buffer = gfx.GetCurrentGraphicsCommandBuffer();
+		VkCommandBuffer buffer = gGraphics->GetCurrentGraphicsCommandBuffer();
 #if defined(ENABLE_XR)
 		const Framebuffer* frameBuffers[3] = {
 			&gfx.GetCurrentXrFrameBuffer(0),
@@ -201,7 +193,7 @@ int main() {
 		};
 		for(int i = 0; i < 2; i++) {
 #else
-		const Framebuffer* frameBuffers[1] = {&gfx.GetCurrentFrameBuffer()};
+		const Framebuffer* frameBuffers[1] = {&gGraphics->GetCurrentFrameBuffer()};
 		const int i = 0;
 		{
 #endif
@@ -252,7 +244,7 @@ int main() {
 								   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 		}
 
-		gfx.EndFrame();
+		gGraphics->EndFrame();
 	}
 
 	mRootTransform.Clear();
@@ -270,9 +262,7 @@ int main() {
 	ssTest.Destroy();
 	ssTestBase.Destroy();
 
-	gfx.Destroy();
-
-	window.Destroy();
+	gEngine->Shutdown();
 
 	return 0;
 }

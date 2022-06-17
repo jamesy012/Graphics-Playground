@@ -5,31 +5,20 @@
 
 #include <vector>
 
+#include "Engine/IGraphicsBase.h"
+
 #include "Framebuffer.h"
 #include "Pipeline.h"
 #include "RenderPass.h"
+
+//this should be in graphics section?
+#include "Engine/AllocationCallbacks.h"
 
 class Window;
 class Devices;
 class Swapchain;
 
 class VRGraphics;
-
-static VkAllocationCallbacks* CreateAllocationCallbacks() {
-	VkAllocationCallbacks callback;
-	callback.pUserData			   = nullptr;
-	callback.pfnAllocation		   = nullptr;
-	callback.pfnReallocation	   = nullptr;
-	callback.pfnFree			   = nullptr;
-	callback.pfnInternalAllocation = nullptr;
-	callback.pfnInternalFree	   = nullptr;
-	return nullptr;
-}
-
-static VkAllocationCallbacks* GetAllocationCallback() {
-	static VkAllocationCallbacks* allocationCallback = CreateAllocationCallbacks();
-	return allocationCallback;
-}
 
 struct OneTimeCommandBuffer {
 	VkCommandBuffer mBuffer;
@@ -40,30 +29,35 @@ struct OneTimeCommandBuffer {
 };
 
 void SetVkName(VkObjectType aType, uint64_t aObject, const char* aName);
-template<typename T> inline void SetVkName(VkObjectType aType, T aObject, const char* aName) {
+template<typename T>
+inline void SetVkName(VkObjectType aType, T aObject, const char* aName) {
 	SetVkName(aType, (uint64_t)aObject, aName);
 }
-template<typename T> inline void SetVkName(VkObjectType aType, T aObject, const std::string aName) {
+template<typename T>
+inline void SetVkName(VkObjectType aType, T aObject, const std::string aName) {
 	SetVkName(aType, (uint64_t)aObject, aName.c_str());
 }
 
-class Graphics {
+//Controls Vulkan startup/Shutdown
+//swapchains
+//contains genreal render information
+class VulkanGraphics : public IGraphicsBase {
 public:
-	Graphics() {};
-	~Graphics() {};
+	VulkanGraphics() {};
+	~VulkanGraphics() {};
 
 	//~~~ creation/destruction
 	// starts vulkan
-	bool StartUp();
+	bool Startup() override;
 	// starts to set up vulkan objects, Device/Swapchain/Command buffers
-	bool Initalize();
-	bool Destroy();
+	bool Initalize() override;
+	bool Destroy() override;
 
-	void AddWindow(Window* aWindow);
+	void AddWindow(Window* aWindow) override;
 
 	//~~~ Frame Management
-	void StartNewFrame();
-	void EndFrame();
+	void StartNewFrame() override;
+	void EndFrame() override;
 
 	const uint32_t GetCurrentImageIndex() const;
 	const uint32_t GetFrameCount() const {
@@ -91,6 +85,14 @@ public:
 #if defined(ENABLE_XR)
 	const VRGraphics* GetVrGraphics() const;
 #endif
+
+	//number of final views we want to render to
+	const uint8_t GetNumActiveViews() {
+#if defined(ENABLE_XR)
+		return 2;
+#endif
+		return 1;
+	}
 
 	static const bool IsFormatDepth(VkFormat aFormat);
 	static const VkFormat GetDeafultDepthFormat();
@@ -138,4 +140,5 @@ private:
 	uint32_t mFrameCounter = 0;
 };
 
-extern Graphics* gGraphics;
+extern VulkanGraphics* gGraphics;
+typedef VulkanGraphics Graphics;

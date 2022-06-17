@@ -24,8 +24,6 @@ set(GRAPHICS_SOURCE
 "${CMAKE_CURRENT_SOURCE_DIR}/Swapchain.cpp" 
 "${CMAKE_CURRENT_SOURCE_DIR}/Framebuffer.h" 
 "${CMAKE_CURRENT_SOURCE_DIR}/Framebuffer.cpp" 
-"${CMAKE_CURRENT_SOURCE_DIR}/Window.h" 
-"${CMAKE_CURRENT_SOURCE_DIR}/Window.cpp" 
 "${CMAKE_CURRENT_SOURCE_DIR}/Devices.h" 
 "${CMAKE_CURRENT_SOURCE_DIR}/Devices.cpp" 
 "${CMAKE_CURRENT_SOURCE_DIR}/Image.h" 
@@ -51,9 +49,7 @@ ${VR_GRAPHICS_SOURCES}
 
 target_sources(GraphicsPlayground PRIVATE ${GRAPHICS_SOURCE})
 
-#~~~~~~ VULKAN/SHADERS
-
-set("GraphicsPlayground_Graphics_Vulkan" ON CACHE BOOL "Enables Vulkan")
+#~~~~~~ VULKAN
 
 if(${GraphicsPlayground_Graphics_Vulkan})
     message("Adding Vulkan")

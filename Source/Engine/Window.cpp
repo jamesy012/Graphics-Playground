@@ -2,8 +2,9 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Graphics.h"
 #include "PlatformDebug.h"
+
+#include "AllocationCallbacks.h"
 
 #if PLATFORM_WINDOWS
 #	define VK_USE_PLATFORM_WIN32_KHR
@@ -27,6 +28,7 @@ void Window::Destroy() {
 	mWindow = nullptr;
 }
 
+//vulkan stuff should call into Graphics folder not Engine?
 void* Window::CreateSurface() {
 	ASSERT(gVkInstance != VK_NULL_HANDLE);
 	VkSurfaceKHR surface  = VK_NULL_HANDLE;
