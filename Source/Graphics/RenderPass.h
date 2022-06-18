@@ -38,6 +38,11 @@ public:
 		ref.attachment			   = mAttachments.size() - 1;
 		ref.layout				   = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 	}
+
+	void SetMultiViewSupport(bool aMultiView) {
+		mIsMultiView = aMultiView;
+	}
+
 	void Create(const char* aName = 0);
 	void Destroy();
 
@@ -56,4 +61,6 @@ private:
 	std::vector<VkAttachmentDescription> mAttachments	= {};
 	std::vector<VkAttachmentReference> mColorReferences = {};
 	VkAttachmentReference mDepthReference				= {};
+
+	bool mIsMultiView = false;
 };

@@ -20,6 +20,9 @@ class Swapchain;
 
 class VRGraphics;
 
+#pragma region Vulkan Helpers
+
+
 struct OneTimeCommandBuffer {
 	VkCommandBuffer mBuffer;
 	VkFence mFence;
@@ -37,6 +40,20 @@ template<typename T>
 inline void SetVkName(VkObjectType aType, T aObject, const std::string aName) {
 	SetVkName(aType, (uint64_t)aObject, aName.c_str());
 }
+
+static void AddRecusiveTopNext(void* dst, void* pNext) {
+	if(dst == nullptr) {
+		return;
+	}
+	VkBaseInStructure* dstStruct = (VkBaseInStructure*)dst;
+	while(dstStruct->pNext != nullptr) {
+		dstStruct = (VkBaseInStructure*)dstStruct->pNext;
+	}
+	dstStruct->pNext = (VkBaseInStructure*)pNext;
+}
+
+#pragma endregion
+
 
 //Controls Vulkan startup/Shutdown
 //swapchains

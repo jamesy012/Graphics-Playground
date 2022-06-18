@@ -53,10 +53,11 @@ struct DeviceData {
 	std::vector<VkExtensionProperties> mExtensions;
 	std::vector<VkLayerProperties> mLayers;
 
-	VkPhysicalDeviceFeatures mDeviceFeatures;
-	VkPhysicalDeviceProperties mDeviceProperties;
+	VkPhysicalDeviceMultiviewFeatures mDeviceMultiViewFeatures = {};
+	VkPhysicalDeviceFeatures2 mDeviceFeatures				   = {};
+	VkPhysicalDeviceProperties mDeviceProperties			   = {};
 
-	VkSurfaceKHR mSurfaceUsed;
+	VkSurfaceKHR mSurfaceUsed = VK_NULL_HANDLE;
 };
 
 class Devices {

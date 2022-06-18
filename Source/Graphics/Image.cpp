@@ -23,7 +23,7 @@ void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const c
 	createInfo.sType		 = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 	createInfo.format		 = format;
 	createInfo.extent		 = aSize;
-	createInfo.arrayLayers	 = 1;
+	createInfo.arrayLayers	 = mArrayLayers;
 	createInfo.mipLevels	 = 1;
 	createInfo.sharingMode	 = VK_SHARING_MODE_EXCLUSIVE;
 	createInfo.samples		 = VK_SAMPLE_COUNT_1_BIT;
@@ -63,7 +63,7 @@ void Image::CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, cons
 		cmBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
 	VkBufferImageCopy imageCopy			  = {};
-	imageCopy.imageSubresource.layerCount = 1;
+	imageCopy.imageSubresource.layerCount = mArrayLayers;
 	imageCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	imageCopy.imageExtent				  = mSize;
 
@@ -141,7 +141,7 @@ void Image::SetImageLayout(const VkCommandBuffer aBuffer, VkImageLayout aOldLayo
 	}
 	memoryBarrier.subresourceRange.baseArrayLayer = 0;
 	memoryBarrier.subresourceRange.baseMipLevel	  = 0;
-	memoryBarrier.subresourceRange.layerCount	  = 1;
+	memoryBarrier.subresourceRange.layerCount	  = mArrayLayers;
 	memoryBarrier.subresourceRange.levelCount	  = 1;
 
 	switch(aOldLayout) {
@@ -196,12 +196,16 @@ void Image::CreateVkImageView(const VkFormat aFormat, const char* aName /* = 0*/
 	createInfo.sType				 = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	createInfo.image				 = mImage;
 	createInfo.format				 = aFormat;
-	createInfo.viewType				 = VK_IMAGE_VIEW_TYPE_2D;
+	if (mArrayLayers > 1) {
+		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+	} else {
+		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+	}
 
 	VkImageSubresourceRange colorRange = {};
 	colorRange.baseArrayLayer		   = 0;
 	colorRange.baseMipLevel			   = 0;
-	colorRange.layerCount			   = 1;
+	colorRange.layerCount			   = mArrayLayers;
 	colorRange.levelCount			   = 1;
 
 	if(Graphics::IsFormatDepth(aFormat)) {

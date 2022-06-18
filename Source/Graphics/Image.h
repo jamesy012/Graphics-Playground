@@ -12,6 +12,10 @@ public:
 	Image() {}
 	~Image() {}
 
+	void SetArrayLayers(uint8_t aNumLayers) {
+		mArrayLayers = aNumLayers;
+		}
+
 	void CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
 	void CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
 	void CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
@@ -43,6 +47,8 @@ private:
 
 	ImageSize mSize		  = {};
 	VkFormat mFormat;
+
+	uint8_t mArrayLayers = 1;
 
 	VmaAllocation mAllocation = VK_NULL_HANDLE;
 	VmaAllocationInfo mAllocationInfo = {};

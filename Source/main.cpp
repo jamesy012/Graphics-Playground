@@ -33,11 +33,12 @@ int main() {
 	Engine gameEngine;
 	gameEngine.Startup(&vulkanGraphics);
 
-
 	//FRAMEBUFFER TEST
 	//will need one for each eye?, container?
 	Image fbImage;
+	fbImage.SetArrayLayers(2);
 	Image fbDepthImage;
+	fbDepthImage.SetArrayLayers(2);
 	fbImage.CreateVkImage(Graphics::GetDeafultColorFormat(), {720, 720}, "Main FB Image");
 	fbDepthImage.CreateVkImage(Graphics::GetDeafultDepthFormat(), {720, 720}, "Main FB Depth Image");
 
@@ -51,6 +52,7 @@ int main() {
 
 	//we want to render with these outputs
 	RenderPass mainRenderPass;
+	mainRenderPass.SetMultiViewSupport(true);
 	mainRenderPass.AddColorAttachment(Graphics::GetDeafultColorFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
 	mainRenderPass.AddDepthAttachment(Graphics::GetDeafultDepthFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
 	mainRenderPass.Create("Main Render RP");
@@ -86,7 +88,7 @@ int main() {
 	ssTestBase.Create();
 	Screenspace ssTest;
 	ssTest.AddMaterialBase(&ssTestBase);
-	ssTest.Create("WorkDir/Shaders/Screenspace/Image.frag.spv", "ScreenSpace ImageCopy");
+	ssTest.Create("WorkDir/Shaders/Screenspace/ImageArray.frag.spv", "ScreenSpace ImageCopy");
 	ssTest.GetMaterial(0).SetImages(fbImage, 0, 0);
 	//ssTest.GetMaterial(0).SetImages(ssImage2, 1, 0);
 
@@ -166,13 +168,16 @@ int main() {
 			if(info.mFov.w != 0) {
 				proj = glm::perspective(info.mFov.w - info.mFov.z, info.mFov.y / info.mFov.w, 0.1f, 1000.0f);
 			}
-#else
-			const float time  = 0; //gGraphics->GetFrameCount() / 360.0f;
-			const float scale = 10.0f;
-			view			  = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0), glm::vec3(0, 1, 0));
-			proj			  = glm::perspectiveFov(glm::radians(60.0f), 720.0f, 720.0f, 0.1f, 1000.0f);
-#endif
 			meshUniform.mPV[0] = proj * view;
+#else
+			const float time   = 0; //gGraphics->GetFrameCount() / 360.0f;
+			const float scale  = 10.0f;
+			proj			   = glm::perspectiveFov(glm::radians(60.0f), 720.0f, 720.0f, 0.1f, 1000.0f);
+			view			   = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0), glm::vec3(0, 1, 0));
+			meshUniform.mPV[0] = proj * view;
+			view			   = glm::lookAt(glm::vec3(1.0f, -20.0f, 1.0f), glm::vec3(0), glm::vec3(0, 1, 0));
+			meshUniform.mPV[1] = proj * view;
+#endif
 
 			meshUniformBuffer.UpdateData(0, VK_WHOLE_SIZE, &meshUniform);
 		}

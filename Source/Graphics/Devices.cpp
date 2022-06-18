@@ -9,11 +9,13 @@
 #	include "VRGraphics.h"
 #endif
 
-const char* gDeviceExtensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+// clang-format off
+const char* gDeviceExtensions[] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME
 #if PLATFORM_APPLE
-								   "VK_KHR_portability_subset"
+								   , "VK_KHR_portability_subset"
 #endif
-};
+								   , VK_KHR_MULTIVIEW_EXTENSION_NAME};
+// clang-format on
 
 extern VkInstance gVkInstance;
 extern Graphics* gGraphics;
@@ -21,6 +23,7 @@ extern Graphics* gGraphics;
 std::vector<DeviceData> gDevices(0);
 
 bool Devices::Setup() {
+	VkResult result;
 	uint32_t deviceCount = 0;
 	vkEnumeratePhysicalDevices(gVkInstance, &deviceCount, nullptr);
 	if(deviceCount == 0) {
@@ -124,7 +127,10 @@ bool Devices::Setup() {
 
 		//extra info
 		{
-			vkGetPhysicalDeviceFeatures(device.mPhysicalDevice, &device.mDeviceFeatures);
+			device.mDeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+			AddRecusiveTopNext(&device.mDeviceFeatures, &device.mDeviceMultiViewFeatures);
+			device.mDeviceMultiViewFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
+			vkGetPhysicalDeviceFeatures2(device.mPhysicalDevice, &device.mDeviceFeatures);
 			vkGetPhysicalDeviceProperties(device.mPhysicalDevice, &device.mDeviceProperties);
 		}
 	}
@@ -194,10 +200,22 @@ bool Devices::Setup() {
 	deviceInfo.enabledLayerCount   = 0;
 	deviceInfo.ppEnabledLayerNames = nullptr;
 
-	VkPhysicalDeviceFeatures deviceFeatures {};
-	deviceFeatures.samplerAnisotropy = VK_TRUE;
-	deviceFeatures.multiDrawIndirect = VK_TRUE;
-	deviceInfo.pEnabledFeatures		 = &deviceFeatures;
+	VkPhysicalDeviceFeatures2 deviceFeatures {};
+	deviceFeatures.sType					  = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	deviceFeatures.features.samplerAnisotropy = VK_TRUE;
+	deviceFeatures.features.multiDrawIndirect = VK_TRUE;
+
+	if(selectedDevice.mDeviceMultiViewFeatures.multiview) {
+		VkPhysicalDeviceMultiviewFeatures multiView = {};
+		multiView.sType								= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
+		multiView.multiview							= VK_TRUE;
+		AddRecusiveTopNext(&deviceFeatures, &multiView);
+	} else {
+		ASSERT(false);
+	}
+
+	deviceInfo.pEnabledFeatures = nullptr;
+	deviceInfo.pNext			= &deviceFeatures;
 
 	vkCreateDevice(selectedDevice.mPhysicalDevice, &deviceInfo, GetAllocationCallback(), &selectedDevice.mDevice);
 

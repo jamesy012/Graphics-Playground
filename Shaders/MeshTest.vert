@@ -1,5 +1,7 @@
 #version 450 core
+
 #extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_multiview : enable
 
 #include "test.inc"
 
@@ -16,5 +18,5 @@ out gl_PerVertex {
 
 void main() {
     Out.UV = inUV;
-    gl_Position = sceneData.viewProj[0] * pc.world  * vec4(inPos,1);
+    gl_Position = sceneData.viewProj[gl_ViewIndex] * pc.world  * vec4(inPos,1);
 }

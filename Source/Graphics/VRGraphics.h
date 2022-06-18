@@ -15,7 +15,7 @@ public:
 		glm::vec3 mPos;
 		glm::quat mRot;
 		glm::vec4 mFov;
-		};
+	};
 
 	//must be called in this order, each stage depends on the last
 

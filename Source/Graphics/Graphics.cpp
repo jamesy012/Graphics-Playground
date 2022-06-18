@@ -501,6 +501,9 @@ bool VulkanGraphics::CreateInstance() {
 		extensions.assign(glfwExtentensions, glfwExtentensions + extensionCount);
 	}
 
+	//not needed?
+	extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+
 #if defined(ENABLE_XR)
 	std::vector<std::string> xrExtensions = gVrGraphics.GetVulkanInstanceExtensions();
 	extensionsTemp.insert(extensionsTemp.end(), xrExtensions.begin(), xrExtensions.end());

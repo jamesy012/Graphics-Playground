@@ -34,6 +34,28 @@ void RenderPass::Create(const char* aName /*= 0*/) {
 	create.subpassCount	   = 1;
 	create.pSubpasses	   = &subpass;
 
+	if(mIsMultiView) {
+		/*
+				Bit mask that specifies which view rendering is broadcast to
+				0011 = Broadcast to first and second view (layer)
+		*/
+		const uint32_t viewMask = 0b00000011;
+
+		/*
+				Bit mask that specifies correlation between views
+				An implementation may use this for optimizations (concurrent render)
+		*/
+		const uint32_t correlationMask = 0b00000011;
+
+		VkRenderPassMultiviewCreateInfo multiViewInfo = {};
+		multiViewInfo.sType							  = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO;
+		multiViewInfo.subpassCount					  = 1;
+		multiViewInfo.pViewMasks					  = &viewMask;
+		multiViewInfo.correlationMaskCount			  = 1;
+		multiViewInfo.pCorrelationMasks				  = &correlationMask;
+		AddRecusiveTopNext(&create, &multiViewInfo);
+	}
+
 	vkCreateRenderPass(gGraphics->GetVkDevice(), &create, GetAllocationCallback(), &mRenderPass);
 	SetVkName(VK_OBJECT_TYPE_RENDER_PASS, mRenderPass, aName ? aName : "Unnamed RenderPass");
 }
