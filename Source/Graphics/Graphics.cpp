@@ -105,9 +105,11 @@ bool VulkanGraphics::Startup() {
 
 	VkResult result;
 	{
-		LOGGER::Log("Loading Vulkan sdk: ");
-		uint32_t version = VK_HEADER_VERSION_COMPLETE;
-		LOGGER::Formated("Version: {0}.{1}.{2}\n", VK_VERSION_MAJOR(version), VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
+		LOGGER::Log("Loading Vulkan: \n");
+		uint32_t sdkVersion = VK_HEADER_VERSION_COMPLETE;
+		uint32_t version	= VULKAN_VERSION;
+		LOGGER::Formated("\tSDK: {0}.{1}.{2}\n", VK_VERSION_MAJOR(sdkVersion), VK_VERSION_MINOR(sdkVersion), VK_VERSION_PATCH(sdkVersion));
+		LOGGER::Formated("\tVersion: {0}.{1}.{2}\n", VK_VERSION_MAJOR(version), VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
 	}
 
 	// XR

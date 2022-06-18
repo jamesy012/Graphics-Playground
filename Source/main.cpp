@@ -95,7 +95,7 @@ int main() {
 	Screenspace vrMirrorPass;
 	vrMirrorPass.mAttachmentFormat = gGraphics->GetSwapchainFormat();
 	vrMirrorPass.AddMaterialBase(&ssTestBase);
-	vrMirrorPass.Create("/Shaders/Screenspace/ImageArray.frag.spv", "ScreenSpace ImageCopy");
+	vrMirrorPass.Create("/Shaders/Screenspace/ImageMirror.frag.spv", "ScreenSpace ImageCopy");
 	vrMirrorPass.GetMaterial(0).SetImages(fbImage, 0, 0);
 #endif
 	//ssTest.GetMaterial(0).SetImages(ssImage2, 1, 0);
