@@ -18,3 +18,5 @@ public:
 
 	void Destroy();
 };
+
+extern ImGuiGraphics* gImGuiGraphics;

@@ -131,13 +131,14 @@ bool Devices::Setup() {
 			AddRecusiveTopNext(&device.mDeviceFeatures, &device.mDeviceMultiViewFeatures);
 			device.mDeviceMultiViewFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
 			vkGetPhysicalDeviceFeatures2(device.mPhysicalDevice, &device.mDeviceFeatures);
-			vkGetPhysicalDeviceProperties(device.mPhysicalDevice, &device.mDeviceProperties);
+			device.mDeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
+			vkGetPhysicalDeviceProperties2(device.mPhysicalDevice, &device.mDeviceProperties);
 		}
 	}
 
 	int selectedDeviceIndex = 0;
 #if defined(ENABLE_XR)
-	VkPhysicalDevice requestedDevice = gGraphics->GetVrGraphics()->GetRequestedDevice();
+	VkPhysicalDevice requestedDevice = gVrGraphics->GetRequestedDevice();
 	selectedDeviceIndex				 = -1;
 	for(int i = 0; i < gDevices.size(); i++) {
 		if(gDevices[i].mPhysicalDevice == requestedDevice) {
@@ -149,6 +150,8 @@ bool Devices::Setup() {
 #endif
 	DeviceData& selectedDevice = gDevices[selectedDeviceIndex];
 
+	LOGGER::Formated("Selected GPU: {} \n", selectedDevice.mDeviceProperties.properties.deviceName);
+
 	VkDeviceCreateInfo deviceInfo {};
 	deviceInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 
@@ -157,7 +160,7 @@ bool Devices::Setup() {
 	extensions.assign(gDeviceExtensions, gDeviceExtensions + std::size(gDeviceExtensions));
 
 #if defined(ENABLE_XR)
-	std::vector<std::string> xrExtensions = gGraphics->GetVrGraphics()->GetVulkanDeviceExtensions();
+	std::vector<std::string> xrExtensions = gVrGraphics->GetVulkanDeviceExtensions();
 	extensionsTemp.insert(extensionsTemp.end(), xrExtensions.begin(), xrExtensions.end());
 #endif
 

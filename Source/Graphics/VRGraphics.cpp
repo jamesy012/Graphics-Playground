@@ -1,8 +1,5 @@
 #include "VRGraphics.h"
 
-#include <openxr/openxr.h>
-#include <openxr/openxr_platform.h>
-
 #include <vector>
 
 #include "PlatformDebug.h"
@@ -15,18 +12,10 @@
 #include "Devices.h"
 #pragma region XR Variables
 
-//
-//~ xr info
-//
-std::vector<XrExtensionProperties> mXrInstanceExtensions;
+VRGraphics* gVrGraphics = nullptr;
 
-//
-//~ general xr session info
-//
+
 XrInstance gXrInstance;
-XrSystemId gXrSystemId;
-XrSession gXrSession;
-bool gXrSessionActive = false;
 
 //
 //~ view/frame xr session info
@@ -74,6 +63,8 @@ XrDebugUtilsMessengerEXT gXrDebugMessenger = XR_NULL_HANDLE;
 static XRAPI_ATTR XrBool32 XRAPI_CALL XrDebugCallback(XrDebugUtilsMessageSeverityFlagsEXT messageSeverity,
 													  XrDebugUtilsMessageTypeFlagsEXT messageTypes,
 													  const XrDebugUtilsMessengerCallbackDataEXT* callbackData, void* userData) {
+	ZoneScopedC(0xFF0000);
+	TracyMessage(callbackData->message, strlen(callbackData->message));
 	BitMask maskSeverity = messageSeverity;
 	BitMask maskTypes	 = messageTypes;
 
@@ -103,9 +94,12 @@ bool getXrInstanceProcAddr(void* aFunc, const char* aName) {
 };
 
 void VRGraphics::Startup() {
-	LOGGER::Log("Loading OpenXR sdk: ");
-	uint32_t version = XR_CURRENT_API_VERSION;
-	LOGGER::Formated("Version: {}.{}.{}\n", XR_VERSION_MAJOR(version), XR_VERSION_MINOR(version), XR_VERSION_PATCH(version));
+	ZoneScoped;
+	ASSERT(gVrGraphics == nullptr);
+	gVrGraphics = this;
+	LOGGER::Log("Loading OpenXR:\n");
+	XrVersion version = XR_CURRENT_API_VERSION;
+	LOGGER::Formated("\tSDK: {}.{}.{}\n", XR_VERSION_MAJOR(version), XR_VERSION_MINOR(version), XR_VERSION_PATCH(version));
 
 	CreateInstance();
 
@@ -115,6 +109,7 @@ void VRGraphics::Startup() {
 }
 
 void VRGraphics::Initalize() {
+	ZoneScoped;
 	CreateSession();
 
 	CreateSpaces();
@@ -123,6 +118,7 @@ void VRGraphics::Initalize() {
 }
 
 void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
+	ZoneScoped;
 	XrResult result = XR_SUCCESS;
 	XrEventDataBuffer eventData;
 	result = xrPollEvent(gXrInstance, &eventData);
@@ -270,6 +266,7 @@ void VRGraphics::GetEyePoseData(uint8_t aEye, GLMViewInfo& aInfo) const {
 }
 
 void VRGraphics::FrameEnd() {
+	ZoneScoped;
 	if(gFrameActive == false) {
 		return;
 	}
@@ -383,6 +380,7 @@ const std::vector<std::string> VRGraphics::GetVulkanDeviceExtensions() const {
 }
 
 void VRGraphics::Destroy() {
+	ASSERT(gVrGraphics != nullptr);
 	for(int i = 0; i < NUM_VIEWS; i++) {
 		if(gXrSwapchains[i].mSwapchain != XR_NULL_HANDLE) {
 			for(int q = 0; q < gXrSwapchains[i].mImages.size(); q++) {
@@ -408,6 +406,7 @@ void VRGraphics::Destroy() {
 		xrDestroyInstance(gXrInstance);
 		gXrInstance = XR_NULL_HANDLE;
 	}
+	gVrGraphics = nullptr;
 }
 
 void VRGraphics::CreateInstance() {
@@ -507,11 +506,9 @@ bool VRGraphics::SessionSetup() {
 		return false;
 	}
 
-	XrInstanceProperties instanceProperties {XR_TYPE_INSTANCE_PROPERTIES};
-	result = xrGetInstanceProperties(gXrInstance, &instanceProperties);
+	result = xrGetInstanceProperties(gXrInstance, &gInstanceProperties);
 	VALIDATEXR();
-	XrSystemProperties systemProperties {XR_TYPE_SYSTEM_PROPERTIES};
-	result = xrGetSystemProperties(gXrInstance, gXrSystemId, &systemProperties);
+	result = xrGetSystemProperties(gXrInstance, gXrSystemId, &gSystemProperties);
 	VALIDATEXR();
 
 	uint32_t blendCount = 0;

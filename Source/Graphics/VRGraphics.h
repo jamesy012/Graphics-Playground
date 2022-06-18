@@ -7,6 +7,9 @@
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 
+#include <openxr/openxr.h>
+#include <openxr/openxr_platform.h>
+
 class Image;
 
 class VRGraphics {
@@ -58,5 +61,22 @@ private:
 	void CreateSpaces();
 	void PrepareSwapchainData();
 
+	//
+	//~ xr info
+	//
+	std::vector<XrExtensionProperties> mXrInstanceExtensions;
+
+	//
+	//~ general xr session info
+	//
+	XrSystemId gXrSystemId;
+	XrSession gXrSession;
+	bool gXrSessionActive = false;
+
+	XrInstanceProperties gInstanceProperties {XR_TYPE_INSTANCE_PROPERTIES};
+	XrSystemProperties gSystemProperties {XR_TYPE_SYSTEM_PROPERTIES};
+
 	VkFormat mSwapchainFormat;
 };
+
+extern VRGraphics* gVrGraphics;

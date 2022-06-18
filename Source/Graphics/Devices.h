@@ -55,7 +55,7 @@ struct DeviceData {
 
 	VkPhysicalDeviceMultiviewFeatures mDeviceMultiViewFeatures = {};
 	VkPhysicalDeviceFeatures2 mDeviceFeatures				   = {};
-	VkPhysicalDeviceProperties mDeviceProperties			   = {};
+	VkPhysicalDeviceProperties2 mDeviceProperties			   = {};
 
 	VkSurfaceKHR mSurfaceUsed = VK_NULL_HANDLE;
 };

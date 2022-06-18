@@ -15,14 +15,10 @@
 
 #if defined(ENABLE_IMGUI)
 #	include "ImGuiGraphics.h"
-
-ImGuiGraphics gImGuiGraphics;
 #endif
 
 #if defined(ENABLE_XR)
 #	include "VRGraphics.h"
-
-VRGraphics gVrGraphics;
 #endif
 
 #pragma warning(push)
@@ -75,6 +71,8 @@ bool VkResultToBool(VkResult aResult) {
 static VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 													  VkDebugUtilsMessageTypeFlagsEXT messageType,
 													  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
+	ZoneScopedC(0xFF0000);
+	TracyMessage(pCallbackData->pMessage, strlen(pCallbackData->pMessage));
 	LOGGER::Formated("VULKAN {}: \n\t{}\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);
 
 	if(pCallbackData->messageIdNumber != 0) {
@@ -99,6 +97,7 @@ void SetVkName(VkObjectType aType, uint64_t aObject, const char* aName) {
 }
 
 bool VulkanGraphics::Startup() {
+	ZoneScoped;
 	ASSERT(gGraphics == nullptr);
 	gGraphics = this;
 	LOGGER::Log("Starting Graphics\n");
@@ -114,7 +113,9 @@ bool VulkanGraphics::Startup() {
 
 	// XR
 #if defined(ENABLE_XR)
-	gVrGraphics.Startup();
+	//sets up gVrGraphics as this, will delete in shutdown
+	VRGraphics* vrGraphics = new VRGraphics();
+	vrGraphics->Startup();
 #endif
 
 	// instance data
@@ -140,6 +141,7 @@ bool VulkanGraphics::Startup() {
 }
 
 bool VulkanGraphics::Initalize() {
+	ZoneScoped;
 	ASSERT(gVkInstance != VK_NULL_HANDLE);
 	LOGGER::Log("Initalize Graphics\n");
 
@@ -154,7 +156,7 @@ bool VulkanGraphics::Initalize() {
 
 #if defined(ENABLE_XR)
 	//needs the device setup
-	gVrGraphics.Initalize();
+	gVrGraphics->Initalize();
 #endif
 
 	mDevicesHandler->CreateCommandBuffers(mSwapchain->GetNumBuffers());
@@ -190,7 +192,7 @@ bool VulkanGraphics::Initalize() {
 		mXrRenderPass.Create("Present Renderpass");
 		for(int eye = 0; eye < 2; eye++) {
 			for(int sc = 0; sc < 3; sc++) {
-				mXrFramebuffer[eye][sc].AddImage(&gVrGraphics.GetImage(eye, sc));
+				mXrFramebuffer[eye][sc].AddImage(&gVrGraphics->GetImage(eye, sc));
 				mXrFramebuffer[eye][sc].Create(mXrRenderPass, "xr Swapchain Framebuffer ");
 			}
 		}
@@ -225,7 +227,7 @@ bool VulkanGraphics::Initalize() {
 		samplerInfo.addressModeV			= VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.addressModeW			= VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.anisotropyEnable		= VK_TRUE;
-		samplerInfo.maxAnisotropy			= GetMainDevice()->GetPrimaryDeviceData().mDeviceProperties.limits.maxSamplerAnisotropy;
+		samplerInfo.maxAnisotropy			= GetMainDevice()->GetPrimaryDeviceData().mDeviceProperties.properties.limits.maxSamplerAnisotropy;
 		samplerInfo.borderColor				= VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 		samplerInfo.unnormalizedCoordinates = VK_FALSE;
 		samplerInfo.compareEnable			= VK_FALSE;
@@ -240,7 +242,9 @@ bool VulkanGraphics::Initalize() {
 
 	// imgui
 #if defined(ENABLE_IMGUI)
-	gImGuiGraphics.Create(mSurfaces[0]->GetWindow(), mRenderPass);
+	//sets up gVrGraphics as this, will delete in shutdown
+	ImGuiGraphics* imGuiGraphics = new ImGuiGraphics();
+	imGuiGraphics->Create(mSurfaces[0]->GetWindow(), mRenderPass);
 #endif
 
 #if TRACY_ENABLE
@@ -254,7 +258,7 @@ bool VulkanGraphics::Initalize() {
 }
 
 bool VulkanGraphics::Destroy() {
-
+	ZoneScoped;
 	if(gDebugMessenger) {
 		auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(gVkInstance, "vkDestroyDebugUtilsMessengerEXT");
 		ASSERT(func != nullptr);
@@ -268,7 +272,9 @@ bool VulkanGraphics::Destroy() {
 	vkDestroyDescriptorPool(GetVkDevice(), mDescriptorPool, GetAllocationCallback());
 
 #if defined(ENABLE_IMGUI)
-	gImGuiGraphics.Destroy();
+	ImGuiGraphics* tempImGuiGraphics = gImGuiGraphics;
+	gImGuiGraphics->Destroy();
+	delete tempImGuiGraphics;
 #endif
 
 #if defined(ENABLE_XR)
@@ -292,8 +298,11 @@ bool VulkanGraphics::Destroy() {
 	mSwapchain->Destroy();
 
 #if defined(ENABLE_XR)
-	gVrGraphics.Destroy();
-	LOGGER::Log("~~~~~~~~~~~~~ XR Vulkan doesnt delete a command pool\n?");
+	//Destory clears gVrGraphics
+	VRGraphics* tempVrGraphics = gVrGraphics;
+	gVrGraphics->Destroy();
+	delete tempVrGraphics;
+	LOGGER::Log("~~~~~~~~~~~~~ XR Vulkan doesnt delete a command pool?\n");
 #endif
 
 	mDevicesHandler->Destroy();
@@ -328,7 +337,7 @@ void VulkanGraphics::StartNewFrame() {
 	mFrameCounter++;
 
 #if defined(ENABLE_IMGUI)
-	gImGuiGraphics.StartNewFrame();
+	gImGuiGraphics->StartNewFrame();
 #endif
 
 	uint32_t index = mSwapchain->GetNextImage();
@@ -339,7 +348,7 @@ void VulkanGraphics::StartNewFrame() {
 	vkBeginCommandBuffer(graphics, &info);
 
 #if defined(ENABLE_XR)
-	gVrGraphics.FrameBegin(graphics);
+	gVrGraphics->FrameBegin(graphics);
 #endif
 
 	//reset viewport and scissor
@@ -369,7 +378,7 @@ void VulkanGraphics::EndFrame() {
 	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(mSwapchain->GetImageIndex());
 
 #if defined(ENABLE_IMGUI)
-	gImGuiGraphics.RenderImGui(graphics, mRenderPass, mFramebuffer[GetCurrentImageIndex()]);
+	gImGuiGraphics->RenderImGui(graphics, mRenderPass, mFramebuffer[GetCurrentImageIndex()]);
 #endif
 
 	mSwapchain->GetImage(GetCurrentImageIndex())
@@ -383,7 +392,7 @@ void VulkanGraphics::EndFrame() {
 	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, {graphics});
 
 #if defined(ENABLE_XR)
-	gVrGraphics.FrameEnd();
+	gVrGraphics->FrameEnd();
 #endif
 
 	mSwapchain->PresentImage();
@@ -399,7 +408,7 @@ VkCommandBuffer VulkanGraphics::GetCurrentGraphicsCommandBuffer() const {
 
 #if defined(ENABLE_XR)
 const Framebuffer& VulkanGraphics::GetCurrentXrFrameBuffer(uint8_t aEye) const {
-	return mXrFramebuffer[aEye][gVrGraphics.GetCurrentImageIndex(aEye)];
+	return mXrFramebuffer[aEye][gVrGraphics->GetCurrentImageIndex(aEye)];
 }
 #endif
 
@@ -470,12 +479,6 @@ const Swapchain* VulkanGraphics::GetMainSwapchain() const {
 	return mSwapchain;
 }
 
-#if defined(ENABLE_XR)
-const VRGraphics* VulkanGraphics::GetVrGraphics() const {
-	return &gVrGraphics;
-}
-#endif
-
 const bool VulkanGraphics::IsFormatDepth(VkFormat aFormat) {
 	if(aFormat >= VK_FORMAT_D16_UNORM && aFormat <= VK_FORMAT_D32_SFLOAT_S8_UINT) {
 		return true;
@@ -501,7 +504,7 @@ const VkFormat VulkanGraphics::GetSwapchainFormat() const {
 
 #if defined(ENABLE_XR)
 const VkFormat VulkanGraphics::GetXRSwapchainFormat() const {
-	return gVrGraphics.GetSwapchainFormat();
+	return gVrGraphics->GetSwapchainFormat();
 }
 #endif
 
@@ -535,7 +538,7 @@ bool VulkanGraphics::CreateInstance() {
 	extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
 #if defined(ENABLE_XR)
-	std::vector<std::string> xrExtensions = gVrGraphics.GetVulkanInstanceExtensions();
+	std::vector<std::string> xrExtensions = gVrGraphics->GetVulkanInstanceExtensions();
 	extensionsTemp.insert(extensionsTemp.end(), xrExtensions.begin(), xrExtensions.end());
 #endif
 

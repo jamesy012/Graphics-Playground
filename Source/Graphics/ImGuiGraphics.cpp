@@ -15,6 +15,8 @@
 
 #include "PlatformDebug.h"
 
+ImGuiGraphics* gImGuiGraphics = nullptr;
+
 struct ImGuiPushConstant {
 	glm::vec2 mScale;
 	glm::vec2 mUv;
@@ -30,6 +32,9 @@ MaterialBase gImGuiFontMaterialBase;
 Material gImGuiFontMaterial;
 
 void ImGuiGraphics::Create(GLFWwindow* aWindow, const RenderPass& aRenderPass) {
+	ZoneScoped;
+	ASSERT(gImGuiGraphics == nullptr);
+	gImGuiGraphics = this;
 	ASSERT(aWindow != nullptr);
 	ASSERT(gImGuiContext == nullptr);
 	gImGuiContext = ImGui::CreateContext();
@@ -204,6 +209,8 @@ void ImGuiGraphics::RenderImGui(const VkCommandBuffer aBuffer, const RenderPass&
 }
 
 void ImGuiGraphics::Destroy() {
+	ZoneScoped;
+	ASSERT(gImGuiGraphics != nullptr);
 	gImGuiFontMaterialBase.Destroy();
 	gImGuiFontImage.Destroy();
 	gImGuiPipeline.Destroy();
@@ -212,4 +219,6 @@ void ImGuiGraphics::Destroy() {
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext(gImGuiContext);
 	gImGuiContext = nullptr;
+
+	gImGuiGraphics = nullptr;
 }

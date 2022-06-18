@@ -152,7 +152,6 @@ int main() {
 	while(!gEngine->GetWindow()->ShouldClose()) {
 		ZoneScoped;
 		gEngine->GetWindow()->Update();
-
 		{
 			glm::mat4 proj;
 			glm::mat4 view;
@@ -161,7 +160,7 @@ int main() {
 #if defined(ENABLE_XR)
 			VRGraphics::GLMViewInfo info;
 			for(int i = 0; i < 2; i++) {
-				gGraphics->GetVrGraphics()->GetEyePoseData(i, info);
+				gVrGraphics->GetEyePoseData(i, info);
 
 				glm::mat4 translation;
 				glm::mat4 rotation;

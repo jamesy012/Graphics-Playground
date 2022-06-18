@@ -93,6 +93,7 @@ void Image::CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, cons
 }
 
 void Image::CreateFromData(const void* aData, const VkFormat aFormat, const ImageSize aSize, const char* aName /* = 0*/) {
+	ZoneScoped;
 	Buffer dataBuffer;
 	dataBuffer.CreateFromData(BufferType::STAGING, ConvertImageSizeToByteSize(aSize), aData, aName);
 

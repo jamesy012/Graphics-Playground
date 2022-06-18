@@ -26,7 +26,6 @@ bool Mesh::LoadMesh(FileIO::Path aFilePath) {
 		ASSERT(false);
 		return false;
 	}
-
 	ProcessNode(scene, scene->mRootNode);
 
 	importer.FreeScene();
@@ -34,6 +33,7 @@ bool Mesh::LoadMesh(FileIO::Path aFilePath) {
 }
 
 bool Mesh::ProcessNode(const aiScene* aScene, const aiNode* aNode) {
+	ZoneScoped;
 	for(uint16_t i = 0; i < aNode->mNumMeshes; i++) {
 		int meshId = aNode->mMeshes[aNode->mMeshes[i]];
 		//meshes_.push_back(this->processMesh(aScene, mesh));
@@ -46,6 +46,7 @@ bool Mesh::ProcessNode(const aiScene* aScene, const aiNode* aNode) {
 }
 
 bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
+	ZoneScoped;
 	mMesh.push_back(SubMesh());
 	SubMesh& mesh					= mMesh.back();
 	std::vector<MeshVert>& vertices = mesh.mVertices;

@@ -101,9 +101,6 @@ public:
 	const VkPhysicalDevice GetVkPhysicalDevice() const;
 	const Devices* GetMainDevice() const;
 	const Swapchain* GetMainSwapchain() const;
-#if defined(ENABLE_XR)
-	const VRGraphics* GetVrGraphics() const;
-#endif
 
 	//number of final views we want to render to
 	const uint8_t GetNumActiveViews() const {
@@ -146,9 +143,7 @@ private:
 	bool HasInstanceLayer(const char* aLayer) const;
 
 	std::vector<VkLayerProperties> mInstanceLayers		   = {};
-	std::vector<VkLayerProperties> mDeviceLayers		   = {};
 	std::vector<VkExtensionProperties> mInstanceExtensions = {};
-	std::vector<VkExtensionProperties> mDeviceExtensions   = {};
 
 	std::vector<Window*> mSurfaces = {};
 

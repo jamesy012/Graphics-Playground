@@ -88,9 +88,14 @@ target_include_directories(GraphicsPlayground PRIVATE "bullet3/src")
 # ~~~
 # Tracy Profiling
 message("Adding Tracy profiling")
+set("GraphicsPlayground_Enable_Profiling"
+    ON
+    CACHE BOOL "Enables Tracy profiling")
+if(NOT GraphicsPlayground_Enable_Profiling)
+   set( TRACY_ENABLE OFF )
+   set( TRACY_ON_DEMAND OFF )
+endif()
 add_subdirectory(tracy)
-#add_definitions(-DTRACY_ENABLE)
-target_sources(GraphicsPlayground PRIVATE ${STB_SOURCES})
 
 
 # ~~~
