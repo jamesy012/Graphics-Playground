@@ -47,6 +47,14 @@ target_compile_definitions(GraphicsPlayground
 target_compile_definitions(GraphicsPlayground
                            PUBLIC PLATFORM_LINUX=${PLATFORM_LINUX})
 
-message(STATUS "setting WORK_DIR_REL to \"${WORK_DIR_FOLDER_REL}\"")
-target_compile_definitions(GraphicsPlayground
-                            PUBLIC WORK_DIR_REL=\"${WORK_DIR_FOLDER_REL}\")
+#why is apple different?
+#is this a problem with my cmake?
+if(PLATFORM_APPLE)
+    message(STATUS "setting WORK_DIR_REL to \"build/Source/${WORK_DIR_FOLDER_REL}\"")
+    target_compile_definitions(GraphicsPlayground
+                                PUBLIC WORK_DIR_REL=\"build/Source/${WORK_DIR_FOLDER_REL}\")
+else()
+    message(STATUS "setting WORK_DIR_REL to \"${WORK_DIR_FOLDER_REL}\"")
+    target_compile_definitions(GraphicsPlayground
+                                PUBLIC WORK_DIR_REL=\"${WORK_DIR_FOLDER_REL}\")
+endif()
