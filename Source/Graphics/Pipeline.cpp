@@ -7,6 +7,7 @@
 #include "PlatformDebug.h"
 
 bool Pipeline::AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage) {
+	ZoneScoped;
 	// preload shaders??
 	FileIO::File file = FileIO::LoadFile(aPath);
 
@@ -30,6 +31,8 @@ bool Pipeline::AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage) {
 }
 
 bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
+	ZoneScoped;
+	ZoneText(aName, strlen(aName)); 
 	{
 		VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
 		pipelineCacheCreateInfo.sType					  = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;

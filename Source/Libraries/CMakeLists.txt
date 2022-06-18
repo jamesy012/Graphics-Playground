@@ -84,6 +84,15 @@ target_include_directories(GraphicsPlayground PRIVATE "bullet3/src")
 # SET(BLA ${Bullet_DIR}/${BULLET_ROOT_DIR}/${BULLET_LIBRARY_DIRS}) else()
 # message("Finding system installed Bullet") Find_Package(Bullet) endif()
 
+
+# ~~~
+# Tracy Profiling
+message("Adding Tracy profiling")
+add_subdirectory(tracy)
+#add_definitions(-DTRACY_ENABLE)
+target_sources(GraphicsPlayground PRIVATE ${STB_SOURCES})
+
+
 # ~~~
 # STB
 
@@ -110,4 +119,9 @@ target_link_libraries(
   glfw
   glm
   VulkanMemoryAllocator
-  ${OpenXR-Link})
+  ${OpenXR-Link}
+  TracyClient
+)
+
+target_include_directories(GraphicsPlayground PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+

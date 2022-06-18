@@ -243,6 +243,13 @@ bool VulkanGraphics::Initalize() {
 	gImGuiGraphics.Create(mSurfaces[0]->GetWindow(), mRenderPass);
 #endif
 
+#if TRACY_ENABLE
+	//buffer needs to stick around?
+	//auto buffer = AllocateGraphicsCommandBuffer(false);
+	//TracyVkContext(GetVkPhysicalDevice(), GetVkDevice(), GetMainDevice()->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, buffer.mBuffer);
+	//EndGraphicsCommandBuffer(buffer, false);
+#endif
+
 	return true;
 }
 
@@ -315,11 +322,15 @@ void VulkanGraphics::AddWindow(Window* aWindow) {
 }
 
 void VulkanGraphics::StartNewFrame() {
+	FrameMark;
+	ZoneScoped;
+
+	mFrameCounter++;
+
 #if defined(ENABLE_IMGUI)
 	gImGuiGraphics.StartNewFrame();
 #endif
 
-	mFrameCounter++;
 	uint32_t index = mSwapchain->GetNextImage();
 
 	VkCommandBuffer graphics	  = mDevicesHandler->GetGraphicsCB(index);
@@ -354,6 +365,7 @@ void VulkanGraphics::StartNewFrame() {
 }
 
 void VulkanGraphics::EndFrame() {
+	ZoneScoped;
 	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(mSwapchain->GetImageIndex());
 
 #if defined(ENABLE_IMGUI)
@@ -391,7 +403,7 @@ const Framebuffer& VulkanGraphics::GetCurrentXrFrameBuffer(uint8_t aEye) const {
 }
 #endif
 
-OneTimeCommandBuffer VulkanGraphics::AllocateGraphicsCommandBuffer() {
+OneTimeCommandBuffer VulkanGraphics::AllocateGraphicsCommandBuffer(bool aBegin /*= true*/) {
 	VkCommandBufferAllocateInfo allocateInfo = {};
 	allocateInfo.sType						 = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocateInfo.commandPool				 = mDevicesHandler->GetGraphicsPool();
@@ -401,10 +413,12 @@ OneTimeCommandBuffer VulkanGraphics::AllocateGraphicsCommandBuffer() {
 	VkCommandBuffer buffer;
 	vkAllocateCommandBuffers(GetVkDevice(), &allocateInfo, &buffer);
 
-	VkCommandBufferBeginInfo beginInfo = {};
-	beginInfo.sType					   = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-	beginInfo.flags					   = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-	vkBeginCommandBuffer(buffer, &beginInfo);
+	if(aBegin) {
+		VkCommandBufferBeginInfo beginInfo = {};
+		beginInfo.sType					   = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags					   = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		vkBeginCommandBuffer(buffer, &beginInfo);
+	}
 
 	VkFenceCreateInfo fenceInfo = {};
 	fenceInfo.sType				= VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
@@ -418,16 +432,19 @@ OneTimeCommandBuffer VulkanGraphics::AllocateGraphicsCommandBuffer() {
 	return {buffer, fence};
 }
 
-void VulkanGraphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer) {
-	vkEndCommandBuffer(aBuffer);
+void VulkanGraphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer, bool aEnd /*= true*/) {
+	if(aEnd) {
+		vkEndCommandBuffer(aBuffer);
 
-	VkSubmitInfo submitInfo		  = {};
-	submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.pCommandBuffers	  = &aBuffer.mBuffer;
-	submitInfo.commandBufferCount = 1;
+		VkSubmitInfo submitInfo		  = {};
+		submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.pCommandBuffers	  = &aBuffer.mBuffer;
+		submitInfo.commandBufferCount = 1;
 
-	vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, 1, &submitInfo, aBuffer.mFence);
-	vkWaitForFences(GetVkDevice(), 1, &aBuffer.mFence, true, UINT64_MAX);
+		vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, 1, &submitInfo, aBuffer.mFence);
+
+		vkWaitForFences(GetVkDevice(), 1, &aBuffer.mFence, true, UINT64_MAX);
+	}
 
 	vkDestroyFence(GetVkDevice(), aBuffer.mFence, GetAllocationCallback());
 	vkFreeCommandBuffers(GetVkDevice(), mDevicesHandler->GetGraphicsPool(), 1, &aBuffer.mBuffer);

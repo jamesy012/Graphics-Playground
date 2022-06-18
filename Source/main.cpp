@@ -36,9 +36,9 @@ int main() {
 	//FRAMEBUFFER TEST
 	//will need one for each eye?, container?
 	Image fbImage;
-	fbImage.SetArrayLayers(2);
+	fbImage.SetArrayLayers(gGraphics->GetNumActiveViews());
 	Image fbDepthImage;
-	fbDepthImage.SetArrayLayers(2);
+	fbDepthImage.SetArrayLayers(gGraphics->GetNumActiveViews());
 	fbImage.CreateVkImage(Graphics::GetDeafultColorFormat(), {720, 720}, "Main FB Image");
 	fbDepthImage.CreateVkImage(Graphics::GetDeafultDepthFormat(), {720, 720}, "Main FB Depth Image");
 
@@ -150,6 +150,7 @@ int main() {
 	mModelTransforms[1].Set(glm::vec3(-5, 8, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
 
 	while(!gEngine->GetWindow()->ShouldClose()) {
+		ZoneScoped;
 		gEngine->GetWindow()->Update();
 
 		{

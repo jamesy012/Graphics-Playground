@@ -185,7 +185,7 @@ void Swapchain::SetupSyncObjects() {
 }
 
 const uint32_t Swapchain::GetNextImage() {
-
+	ZoneScoped;
 	VkResult result = vkAcquireNextImageKHR(mAttachedDevice.mDevice, mSwapchain, UINT64_MAX, mPresentSemaphore, nullptr, &mImageIndex);
 
 	//result = vkWaitForFences(mAttachedDevice.mDevice, 1, &mFrameInfo[mImageIndex].mSubmitFence, VK_TRUE, UINT64_MAX);
@@ -195,6 +195,7 @@ const uint32_t Swapchain::GetNextImage() {
 }
 
 void Swapchain::SubmitQueue(VkQueue aQueue, std::vector<VkCommandBuffer> aCommands) {
+	ZoneScoped;
 	VkSubmitInfo submitInfo			= {};
 	submitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
 	submitInfo.pSignalSemaphores	= &mRenderSemaphore;
@@ -214,6 +215,7 @@ void Swapchain::SubmitQueue(VkQueue aQueue, std::vector<VkCommandBuffer> aComman
 }
 
 void Swapchain::PresentImage() {
+	ZoneScoped;
 	VkPresentInfoKHR presentInfo   = {};
 	presentInfo.sType			   = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	presentInfo.waitSemaphoreCount = 1;

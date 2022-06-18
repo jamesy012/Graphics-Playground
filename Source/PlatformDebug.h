@@ -13,6 +13,8 @@
 #	include <source_location>
 #endif
 
+#include <tracy/Tracy.hpp>
+
 #define ASSERT(x) assert(x);
 
 namespace LOGGER {
@@ -46,6 +48,7 @@ namespace LOGGER {
 	//("Position {},{},{}" ,x,y,z)
 	//("Path {0},{1},{0}{1}" ,"c:/", "Folder")
 	template<typename... Args> void Formated(const std::string aMessage, Args&&... args) {
+		ZoneScoped;
 #if __cpp_lib_format
 		std::string output = std::vformat(aMessage, std::make_format_args(args...));
 		Log_Internal(output.c_str());

@@ -102,6 +102,7 @@ void ImGuiGraphics::Create(GLFWwindow* aWindow, const RenderPass& aRenderPass) {
 }
 
 void ImGuiGraphics::StartNewFrame() {
+	ZoneScoped;
 	ImGui::NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 
@@ -110,6 +111,7 @@ void ImGuiGraphics::StartNewFrame() {
 }
 
 void ImGuiGraphics::RenderImGui(const VkCommandBuffer aBuffer, const RenderPass& aRenderPass, const Framebuffer& aFramebuffer) {
+	ZoneScoped;
 	ASSERT(aBuffer != VK_NULL_HANDLE);
 	ASSERT(gImGuiContext != nullptr);
 

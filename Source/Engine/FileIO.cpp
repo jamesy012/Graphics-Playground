@@ -9,6 +9,7 @@
 namespace FileIO {
 
 	File LoadFile(Path aPath) {
+		ZoneScoped;
 		LOGGER::Formated("Current Filepath: ({})/{}\n", std::filesystem::current_path().string(), aPath.mPath);
 		LOGGER::Formated("loading: {}\n", std::filesystem::absolute(aPath.mPath.c_str()).string());
 

@@ -55,6 +55,7 @@ void Window::WaitEvents() {
 }
 
 void Window::Update() {
+	ZoneScoped;
 	glfwPollEvents();
 }
 

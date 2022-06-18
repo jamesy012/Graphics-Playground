@@ -3,6 +3,8 @@
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
+#include <tracy/TracyVulkan.hpp>
+
 #include <vector>
 
 #include "Engine/IGraphicsBase.h"
@@ -89,9 +91,9 @@ public:
 	const Framebuffer& GetCurrentXrFrameBuffer(uint8_t aEye) const;
 #endif
 
-	OneTimeCommandBuffer AllocateGraphicsCommandBuffer();
+	OneTimeCommandBuffer AllocateGraphicsCommandBuffer(bool aBegin = true);
 	// submits and finish's the command buffer
-	void EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer);
+	void EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer, bool aEnd = true);
 
 	//~~~ Helpers
 	const VkInstance GetVkInstance() const;
@@ -104,11 +106,11 @@ public:
 #endif
 
 	//number of final views we want to render to
-	const uint8_t GetNumActiveViews() {
-#if defined(ENABLE_XR)
+	const uint8_t GetNumActiveViews() const {
+//#if defined(ENABLE_XR)
 		return 2;
-#endif
-		return 1;
+//#endif
+//		return 1;
 	}
 
 	static const bool IsFormatDepth(VkFormat aFormat);
