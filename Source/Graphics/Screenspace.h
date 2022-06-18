@@ -11,6 +11,10 @@
 //makes one color output
 class Screenspace {
 public:
+	struct PushConstant {
+		float mEyeIndex;
+	};
+
 	void AddMaterialBase(MaterialBase* aMaterial) {
 		mPipeline.SetMaterialBase(aMaterial);
 	};
@@ -28,6 +32,8 @@ public:
 	const Material& GetMaterial(uint8_t aIndex) const {
 		return mMaterials[aIndex];
 	}
+
+	VkFormat mAttachmentFormat = VK_FORMAT_UNDEFINED;
 
 private:
 	Pipeline mPipeline;

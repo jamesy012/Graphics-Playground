@@ -80,11 +80,11 @@ static XRAPI_ATTR XrBool32 XRAPI_CALL XrDebugCallback(XrDebugUtilsMessageSeverit
 	const char* severityText[4] = {"VERBOSE", "INFO", "WARNING", "ERROR"};
 	const char* typeText[4]		= {"GENERAL", "VALIDATION", "PERFORMANCE", "CONFORMANCE"};
 	LOGGER::Formated("XR_DEBUG {}: ({}) ({}/{})\n\t {}\n",
-			 callbackData->messageId,
-			 callbackData->functionName,
-			 severityText[messageSeverity],
-			 typeText[messageTypes],
-			 callbackData->message);
+					 callbackData->messageId,
+					 callbackData->functionName,
+					 severityText[messageSeverity],
+					 typeText[messageTypes],
+					 callbackData->message);
 
 	// if (callbackData->messageId != 0) {
 	//	ASSERT("XR Error");
@@ -631,13 +631,13 @@ void VRGraphics::PrepareSwapchainData() {
 	result = xrEnumerateSwapchainFormats(gXrSession, formatCounts, &formatCounts, formats.data());
 	VALIDATEXR();
 
-	VkFormat selectedFormat = (VkFormat)formats[0];
+	mSwapchainFormat = (VkFormat)formats[0];
 
 	for(int i = 0; i < NUM_VIEWS; i++) {
 		XrSwapchainCreateInfo createInfo {XR_TYPE_SWAPCHAIN_CREATE_INFO};
 		createInfo.width	   = gViewConfigs[i].recommendedImageRectWidth;
 		createInfo.height	   = gViewConfigs[i].recommendedImageRectHeight;
-		createInfo.format	   = selectedFormat;
+		createInfo.format	   = mSwapchainFormat;
 		createInfo.arraySize   = 1;
 		createInfo.faceCount   = 1;
 		createInfo.mipCount	   = 1;
@@ -670,7 +670,7 @@ void VRGraphics::PrepareSwapchainData() {
 			Image& image = gXrSwapchains[i].mImages[vkImage];
 
 			image.CreateFromVkImage(
-				vkImages[vkImage].image, selectedFormat, {gViewConfigs[i].recommendedImageRectWidth, gViewConfigs[i].recommendedImageRectHeight});
+				vkImages[vkImage].image, mSwapchainFormat, {gViewConfigs[i].recommendedImageRectWidth, gViewConfigs[i].recommendedImageRectHeight});
 
 			SetVkName(VK_OBJECT_TYPE_IMAGE, image.GetImage(), "XR Swapchain eye " + std::to_string(i) + " " + std::to_string(vkImage));
 			SetVkName(VK_OBJECT_TYPE_IMAGE_VIEW, image.GetImageView(), "XR Swapchain View eye " + std::to_string(i) + " " + std::to_string(vkImage));

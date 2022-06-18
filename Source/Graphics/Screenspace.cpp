@@ -7,8 +7,22 @@ void Screenspace::Create(const FileIO::Path& aFragmentPath, const char* aName /*
 	mPipeline.AddShader(std::string(WORK_DIR_REL) + aFragmentPath.mPath, VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	//this should not be making a renderpass?
-	mRenderPass.AddColorAttachment(gGraphics->GetSwapchainFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
+
+	if(mAttachmentFormat == VK_FORMAT_UNDEFINED) {
+#if defined(ENABLE_XR)
+		mAttachmentFormat = gGraphics->GetXRSwapchainFormat();
+#else
+		mAttachmentFormat = gGraphics->GetSwapchainFormat();
+#endif
+	}
+	mRenderPass.AddColorAttachment(mAttachmentFormat, VK_ATTACHMENT_LOAD_OP_LOAD);
+
 	mRenderPass.Create(aName);
+
+	VkPushConstantRange range = {};
+	range.stageFlags		  = VK_SHADER_STAGE_VERTEX_BIT;
+	range.size				  = sizeof(PushConstant);
+	mPipeline.AddPushConstant(range);
 
 	mPipeline.Create(mRenderPass.GetRenderPass(), aName ? aName : "Unnamed Screenspace");
 

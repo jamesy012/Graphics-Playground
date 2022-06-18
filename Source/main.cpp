@@ -88,8 +88,16 @@ int main() {
 	ssTestBase.Create();
 	Screenspace ssTest;
 	ssTest.AddMaterialBase(&ssTestBase);
-	ssTest.Create("WorkDir/Shaders/Screenspace/ImageArray.frag.spv", "ScreenSpace ImageCopy");
+	ssTest.Create("WorkDir/Shaders/Screenspace/ImageSingleArray.frag.spv", "ScreenSpace ImageCopy");
 	ssTest.GetMaterial(0).SetImages(fbImage, 0, 0);
+#if defined(ENABLE_XR)
+	//mirrors the left eye to the display
+	Screenspace vrMirrorPass;
+	vrMirrorPass.mAttachmentFormat = gGraphics->GetSwapchainFormat();
+	vrMirrorPass.AddMaterialBase(&ssTestBase);
+	vrMirrorPass.Create("WorkDir/Shaders/Screenspace/ImageArray.frag.spv", "ScreenSpace ImageCopy");
+	vrMirrorPass.GetMaterial(0).SetImages(fbImage, 0, 0);
+#endif
 	//ssTest.GetMaterial(0).SetImages(ssImage2, 1, 0);
 
 	//Mesh Test
@@ -151,24 +159,26 @@ int main() {
 
 #if defined(ENABLE_XR)
 			VRGraphics::GLMViewInfo info;
-			gGraphics->GetVrGraphics()->GetHeadPoseData(info);
+			for(int i = 0; i < 2; i++) {
+				gGraphics->GetVrGraphics()->GetEyePoseData(i, info);
 
-			glm::mat4 translation;
-			glm::mat4 rotation;
+				glm::mat4 translation;
+				glm::mat4 rotation;
 
-			translation = glm::translate(glm::identity<glm::mat4>(), info.mPos);
-			translation = glm::translate(glm::identity<glm::mat4>(), info.mPos);
-			rotation	= glm::mat4_cast(info.mRot);
+				translation = glm::translate(glm::identity<glm::mat4>(), info.mPos);
+				translation = glm::translate(glm::identity<glm::mat4>(), info.mPos);
+				rotation	= glm::mat4_cast(info.mRot);
 
-			view = translation * rotation;
-			view = glm::inverse(view);
-			glm::translate(view, glm::vec3(5.0f, 0.0f, 5.0f));
-			proj = glm::frustumRH_ZO(info.mFov.x, info.mFov.y, info.mFov.z, info.mFov.w, 0.1f, 100.0f);
-			proj = glm::perspectiveFov(glm::radians(60.0f), 720.0f, 720.0f, 0.1f, 1000.0f);
-			if(info.mFov.w != 0) {
-				proj = glm::perspective(info.mFov.w - info.mFov.z, info.mFov.y / info.mFov.w, 0.1f, 1000.0f);
+				view = translation * rotation;
+				view = glm::inverse(view);
+				glm::translate(view, glm::vec3(5.0f, 0.0f, 5.0f));
+				proj = glm::frustumRH_ZO(info.mFov.x, info.mFov.y, info.mFov.z, info.mFov.w, 0.1f, 100.0f);
+				proj = glm::perspectiveFov(glm::radians(60.0f), 720.0f, 720.0f, 0.1f, 1000.0f);
+				if(info.mFov.w != 0) {
+					proj = glm::perspective(info.mFov.w - info.mFov.z, info.mFov.y / info.mFov.w, 0.1f, 1000.0f);
+				}
+				meshUniform.mPV[i] = proj * view;
 			}
-			meshUniform.mPV[0] = proj * view;
 #else
 			const float time   = 0; //gGraphics->GetFrameCount() / 360.0f;
 			const float scale  = 10.0f;
@@ -184,12 +194,45 @@ int main() {
 
 		{
 			const float time = gGraphics->GetFrameCount() / 5.0f;
-			mRootTransform.SetRotation(glm::vec3(0, -time, 0));
+			//mRootTransform.SetRotation(glm::vec3(0, -time, 0));
 		}
 
 		gGraphics->StartNewFrame();
 
 		VkCommandBuffer buffer = gGraphics->GetCurrentGraphicsCommandBuffer();
+
+		const Framebuffer& framebuffer = fb;
+
+		//mesh render test
+		mainRenderPass.Begin(buffer, framebuffer);
+		meshPipeline.Begin(buffer);
+		//bind camera data
+		vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
+		//tree 1
+		{
+			//meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 5, 0));
+			//meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
+			meshPC.mWorld = mModelTransforms[0].GetWorldMatrix();
+			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+			meshTest.QuickTempRender(buffer);
+		}
+		//tree 2
+		{
+			//meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-5, 8, 0));
+			//meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
+			meshPC.mWorld = mModelTransforms[1].GetWorldMatrix();
+			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+			meshTest.QuickTempRender(buffer);
+		}
+		meshPipeline.End(buffer);
+		mainRenderPass.End(buffer);
+
+		fbImage.SetImageLayout(buffer,
+							   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+							   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+							   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+							   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
 #if defined(ENABLE_XR)
 		const Framebuffer* frameBuffers[3] = {
 			&gGraphics->GetCurrentXrFrameBuffer(0),
@@ -202,52 +245,21 @@ int main() {
 		const int i = 0;
 		{
 #endif
-			const Framebuffer& framebuffer = fb;
-
-			//mesh render test
-			mainRenderPass.Begin(buffer, framebuffer);
-			meshPipeline.Begin(buffer);
-			//bind camera data
-			vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
-			//tree 1
-			{
-				//meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 5, 0));
-				//meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
-				meshPC.mWorld = mModelTransforms[0].GetWorldMatrix();
-				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-				meshTest.QuickTempRender(buffer);
-			}
-			//tree 2
-			{
-				//meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-5, 8, 0));
-				//meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
-				meshPC.mWorld = mModelTransforms[1].GetWorldMatrix();
-				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-				meshTest.QuickTempRender(buffer);
-			}
-			meshPipeline.End(buffer);
-			mainRenderPass.End(buffer);
-
-			fbImage.SetImageLayout(buffer,
-								   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-								   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-								   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-								   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
+			Screenspace::PushConstant pc;
+			pc.mEyeIndex  = i;
+			vkCmdPushConstants(buffer, ssTest.GetPipeline().GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Screenspace::PushConstant), &pc);
 			//copies fbImage to framebuffer
 			ssTest.Render(buffer, *frameBuffers[i]);
 #if defined(ENABLE_XR)
-			if(i == 1) {
-				ssTest.Render(buffer, *frameBuffers[i + 1]);
-			}
+			vrMirrorPass.Render(buffer, *frameBuffers[i + 1]);
 #endif
-
-			fbImage.SetImageLayout(buffer,
-								   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-								   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-								   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-								   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 		}
+
+		fbImage.SetImageLayout(buffer,
+							   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+							   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+							   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+							   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
 		gGraphics->EndFrame();
 	}
@@ -264,6 +276,9 @@ int main() {
 	fbDepthImage.Destroy();
 	fbImage.Destroy();
 
+#if defined(ENABLE_XR)
+	vrMirrorPass.Destroy();
+#endif
 	ssTest.Destroy();
 	ssTestBase.Destroy();
 

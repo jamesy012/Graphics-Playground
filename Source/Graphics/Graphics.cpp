@@ -145,15 +145,15 @@ bool VulkanGraphics::Initalize() {
 	mDevicesHandler->Setup();
 	mDevicesHandler->CreateCommandPools();
 
-#if defined(ENABLE_XR)
-	//needs the device setup
-	gVrGraphics.Initalize();
-#endif
-
 	mSwapchain = new Swapchain(mDevicesHandler->GetPrimaryDeviceData());
 	int width, height;
 	mSurfaces[0]->GetSize(&width, &height);
 	mSwapchain->Setup(ImageSize(width, height));
+
+#if defined(ENABLE_XR)
+	//needs the device setup
+	gVrGraphics.Initalize();
+#endif
 
 	mDevicesHandler->CreateCommandBuffers(mSwapchain->GetNumBuffers());
 
@@ -173,28 +173,32 @@ bool VulkanGraphics::Initalize() {
 		std::vector<VkClearValue> clear(1);
 		clear[0].color.float32[0] = 0.0f;
 		mRenderPass.SetClearColors(clear);
-	}
-	mRenderPass.AddColorAttachment(GetSwapchainFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
-	mRenderPass.Create("Present Renderpass");
-	mFramebuffer[0].AddImage(&mSwapchain->GetImage(0));
-	mFramebuffer[0].Create(mRenderPass, "Swapchain Framebuffer 0");
-	mFramebuffer[1].AddImage(&mSwapchain->GetImage(1));
-	mFramebuffer[1].Create(mRenderPass, "Swapchain Framebuffer 1");
-	mFramebuffer[2].AddImage(&mSwapchain->GetImage(2));
-	mFramebuffer[2].Create(mRenderPass, "Swapchain Framebuffer 2");
+
+		mRenderPass.AddColorAttachment(GetSwapchainFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
+		mRenderPass.Create("Present Renderpass");
+		mFramebuffer[0].AddImage(&mSwapchain->GetImage(0));
+		mFramebuffer[0].Create(mRenderPass, "Swapchain Framebuffer 0");
+		mFramebuffer[1].AddImage(&mSwapchain->GetImage(1));
+		mFramebuffer[1].Create(mRenderPass, "Swapchain Framebuffer 1");
+		mFramebuffer[2].AddImage(&mSwapchain->GetImage(2));
+		mFramebuffer[2].Create(mRenderPass, "Swapchain Framebuffer 2");
 #if defined(ENABLE_XR)
-	for(int eye = 0; eye < 2; eye++) {
-		for(int sc = 0; sc < 3; sc++) {
-			mXrFramebuffer[eye][sc].AddImage(&gVrGraphics.GetImage(eye, sc));
-			mXrFramebuffer[eye][sc].Create(mRenderPass, "xr Swapchain Framebuffer ");
+		mXrRenderPass.SetClearColors(clear);
+		mXrRenderPass.AddColorAttachment(GetXRSwapchainFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
+		mXrRenderPass.Create("Present Renderpass");
+		for(int eye = 0; eye < 2; eye++) {
+			for(int sc = 0; sc < 3; sc++) {
+				mXrFramebuffer[eye][sc].AddImage(&gVrGraphics.GetImage(eye, sc));
+				mXrFramebuffer[eye][sc].Create(mXrRenderPass, "xr Swapchain Framebuffer ");
+			}
 		}
-	}
-	//mXrFramebuffer[0][1].Create(gVrGraphics.GetImage(0, 1), mRenderPass, "xr Swapchain Framebuffer 0/1");
-	//mXrFramebuffer[0][2].Create(gVrGraphics.GetImage(0, 2), mRenderPass, "xr Swapchain Framebuffer 0/2");
-	//mXrFramebuffer[1][0].Create(gVrGraphics.GetImage(1, 0), mRenderPass, "xr Swapchain Framebuffer 1/0");
-	//mXrFramebuffer[1][1].Create(gVrGraphics.GetImage(1, 1), mRenderPass, "xr Swapchain Framebuffer 1/1");
-	//mXrFramebuffer[1][2].Create(gVrGraphics.GetImage(1, 2), mRenderPass, "xr Swapchain Framebuffer 1/2");
+		//mXrFramebuffer[0][1].Create(gVrGraphics.GetImage(0, 1), mRenderPass, "xr Swapchain Framebuffer 0/1");
+		//mXrFramebuffer[0][2].Create(gVrGraphics.GetImage(0, 2), mRenderPass, "xr Swapchain Framebuffer 0/2");
+		//mXrFramebuffer[1][0].Create(gVrGraphics.GetImage(1, 0), mRenderPass, "xr Swapchain Framebuffer 1/0");
+		//mXrFramebuffer[1][1].Create(gVrGraphics.GetImage(1, 1), mRenderPass, "xr Swapchain Framebuffer 1/1");
+		//mXrFramebuffer[1][2].Create(gVrGraphics.GetImage(1, 2), mRenderPass, "xr Swapchain Framebuffer 1/2");
 #endif
+	}
 
 	{
 		VkDescriptorPoolSize pools[] = {
@@ -265,6 +269,7 @@ bool VulkanGraphics::Destroy() {
 	mXrFramebuffer[1][0].Destroy();
 	mXrFramebuffer[1][1].Destroy();
 	mXrFramebuffer[1][2].Destroy();
+	mXrRenderPass.Destroy();
 #endif
 
 	mFramebuffer[0].Destroy();
@@ -474,6 +479,12 @@ const VkFormat VulkanGraphics::GetDeafultDepthFormat() {
 const VkFormat VulkanGraphics::GetSwapchainFormat() const {
 	return GetMainSwapchain()->GetColorFormat();
 }
+
+#if defined(ENABLE_XR)
+const VkFormat VulkanGraphics::GetXRSwapchainFormat() const {
+	return gVrGraphics.GetSwapchainFormat();
+}
+#endif
 
 bool VulkanGraphics::CreateInstance() {
 	VkResult result;

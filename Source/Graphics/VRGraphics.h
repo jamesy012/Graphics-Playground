@@ -41,6 +41,10 @@ public:
 
 	void Destroy();
 
+	VkFormat GetSwapchainFormat() const {
+		return mSwapchainFormat;
+	}
+
 private:
 	//create - instance/setting up session
 	void CreateInstance();
@@ -53,4 +57,6 @@ private:
 	void CreateSession();
 	void CreateSpaces();
 	void PrepareSwapchainData();
+
+	VkFormat mSwapchainFormat;
 };

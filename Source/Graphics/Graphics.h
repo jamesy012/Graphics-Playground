@@ -115,6 +115,9 @@ public:
 	static const VkFormat GetDeafultDepthFormat();
 	static const VkFormat GetDeafultColorFormat();
 	const VkFormat GetSwapchainFormat() const;
+#if defined(ENABLE_XR)
+	const VkFormat GetXRSwapchainFormat() const;
+#endif
 
 	const VmaAllocator GetAllocator() const {
 		return mAllocator;
@@ -133,6 +136,7 @@ private:
 	RenderPass mRenderPass		= {};
 	Framebuffer mFramebuffer[3] = {};
 #if defined(ENABLE_XR)
+	RenderPass mXrRenderPass			 = {};
 	Framebuffer mXrFramebuffer[2][3] = {};
 #endif
 
