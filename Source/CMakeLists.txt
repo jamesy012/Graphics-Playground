@@ -23,10 +23,10 @@ target_include_directories(GraphicsPlayground
                            PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 message(
-  "Copying assets from ${CMAKE_SOURCE_DIR}/config/ to ${WORK_DIR_FOLDER}/WorkDir/Assets"
+  "Copying assets from ${CMAKE_SOURCE_DIR}/Assets/ to ${WORK_DIR_FOLDER}/${WORK_DIR_FOLDER_REL}/Assets"
 )
 add_custom_command(
   TARGET GraphicsPlayground
   PRE_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_SOURCE_DIR}/Assets/
-          ${WORK_DIR_FOLDER}/WorkDir/Assets)
+          ${WORK_DIR_FOLDER}/${WORK_DIR_FOLDER_REL}/Assets)

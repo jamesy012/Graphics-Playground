@@ -3,7 +3,7 @@
 #include "Graphics.h"
 
 void Screenspace::Create(const FileIO::Path& aFragmentPath, const char* aName /* = 0*/) {
-	mPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/Screenspace/Screenspace.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	mPipeline.AddShader(std::string(WORK_DIR_REL) + "/Shaders/Screenspace/Screenspace.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	mPipeline.AddShader(std::string(WORK_DIR_REL) + aFragmentPath.mPath, VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	//this should not be making a renderpass?

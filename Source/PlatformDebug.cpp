@@ -8,7 +8,6 @@
 
 //#include <cstring>
 //#include <cstdio>
-#include <format>
 
 #if PLATFORM_WINDOWS
 #	define LOGOUTPUT(x)       \

@@ -25,18 +25,18 @@ foreach(SHADER ${GLSL_SOURCE_FILES})
   cmake_path(GET SHADER FILENAME SHADER_NAME)
   cmake_path(GET SHADER PARENT_PATH SHADER_FOLDER)
 
-  set(SPIRV_OUTPUT ${WORK_DIR_FOLDER}/WorkDir/Shaders${SHADER_FOLDER})
+  set(SPIRV_OUTPUT ${WORK_DIR_FOLDER}/${WORK_DIR_FOLDER_REL}/Shaders${SHADER_FOLDER})
 
   message(STATUS "Input ${CMAKE_CURRENT_SOURCE_DIR}${SHADER}")
   message(STATUS "SHADER_NAME ${SHADER_NAME}")
   message(STATUS "SHADER_FOLDER ${SHADER_FOLDER}")
   message(STATUS "SPIRV_OUTPUT ${SPIRV_OUTPUT}")
 
-  # set(SPIRV "${WORK_DIR_FOLDER}/WorkDir/Shaders/${FILE_NAME}.spv")
-  set(SPIRV "${WORK_DIR_FOLDER}/WorkDir/Shaders${SHADER}.spv")
+  # set(SPIRV "${WORK_DIR_FOLDER}/${WORK_DIR_FOLDER_REL}/Shaders/${FILE_NAME}.spv")
+  set(SPIRV "${WORK_DIR_FOLDER}/${WORK_DIR_FOLDER_REL}/Shaders${SHADER}.spv")
   message(STATUS "compiling ${CMAKE_CURRENT_SOURCE_DIR}${SHADER} to ${SPIRV}")
 
-  file(MAKE_DIRECTORY "${WORK_DIR_FOLDER}/WorkDir/Shaders${SHADER_FOLDER}")
+  file(MAKE_DIRECTORY "${WORK_DIR_FOLDER}/${WORK_DIR_FOLDER_REL}/Shaders${SHADER_FOLDER}")
 
   if(${GraphicsPlayground_Enable_VR})
     set(VR_ENABLED --define-macro "VR_ENABLED=1")
@@ -47,9 +47,9 @@ foreach(SHADER ${GLSL_SOURCE_FILES})
   add_custom_command(
     OUTPUT ${SPIRV}
     COMMENT "Building Shader: ${SPIRV}"
-    # COMMAND ${CMAKE_COMMAND} -E make_directory "${WORK_DIR_FOLDER}/WorkDir/"
+    # COMMAND ${CMAKE_COMMAND} -E make_directory "${WORK_DIR_FOLDER}/${WORK_DIR_FOLDER_REL}/"
     # COMMAND ${CMAKE_COMMAND} -E make_directory
-    # "${WORK_DIR_FOLDER}/WorkDir/Shaders/" COMMAND
+    # "${WORK_DIR_FOLDER}/${WORK_DIR_FOLDER_REL}/Shaders/" COMMAND
     # ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V "${SHADER}" -o "${SPIRV}"
     COMMAND
       ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V

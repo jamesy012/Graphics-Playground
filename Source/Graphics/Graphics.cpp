@@ -1,6 +1,6 @@
 #include "Graphics.h"
 
-#include <string>
+#include <string.h>
 
 #include <glm/glm.hpp>
 

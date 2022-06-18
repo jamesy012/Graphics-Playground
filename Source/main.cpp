@@ -78,9 +78,9 @@ int main() {
 	//used to copy fbImage to backbuffer
 
 	//Image ssImage;
-	//ssImage.LoadImage(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_Bark.png", Graphics::GetDeafultColorFormat());
+	//ssImage.LoadImage(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_Bark.png", Graphics::GetDeafultColorFormat());
 	//Image ssImage2;
-	//ssImage2.LoadImage(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_Leaves.png", Graphics::GetDeafultColorFormat());
+	//ssImage2.LoadImage(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_Leaves.png", Graphics::GetDeafultColorFormat());
 
 	MaterialBase ssTestBase;
 	ssTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -88,21 +88,21 @@ int main() {
 	ssTestBase.Create();
 	Screenspace ssTest;
 	ssTest.AddMaterialBase(&ssTestBase);
-	ssTest.Create("WorkDir/Shaders/Screenspace/ImageSingleArray.frag.spv", "ScreenSpace ImageCopy");
+	ssTest.Create("/Shaders/Screenspace/ImageSingleArray.frag.spv", "ScreenSpace ImageCopy");
 	ssTest.GetMaterial(0).SetImages(fbImage, 0, 0);
 #if defined(ENABLE_XR)
 	//mirrors the left eye to the display
 	Screenspace vrMirrorPass;
 	vrMirrorPass.mAttachmentFormat = gGraphics->GetSwapchainFormat();
 	vrMirrorPass.AddMaterialBase(&ssTestBase);
-	vrMirrorPass.Create("WorkDir/Shaders/Screenspace/ImageArray.frag.spv", "ScreenSpace ImageCopy");
+	vrMirrorPass.Create("/Shaders/Screenspace/ImageArray.frag.spv", "ScreenSpace ImageCopy");
 	vrMirrorPass.GetMaterial(0).SetImages(fbImage, 0, 0);
 #endif
 	//ssTest.GetMaterial(0).SetImages(ssImage2, 1, 0);
 
 	//Mesh Test
 	Mesh meshTest;
-	meshTest.LoadMesh(std::string(WORK_DIR_REL) + "WorkDir/Assets/quanternius/tree/MapleTree_5.fbx");
+	meshTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_5.fbx");
 
 	struct MeshPCTest {
 		glm::mat4 mWorld;
@@ -115,8 +115,8 @@ int main() {
 	meshUniformBuffer.Create(BufferType::UNIFORM, sizeof(MeshUniformTest), "Mesh Uniform");
 
 	Pipeline meshPipeline;
-	meshPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/MeshTest.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	meshPipeline.AddShader(std::string(WORK_DIR_REL) + "WorkDir/Shaders/MeshTest.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	meshPipeline.AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	meshPipeline.AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	VkPushConstantRange meshPCRange {};
 	meshPCRange.size	   = sizeof(MeshPCTest);
