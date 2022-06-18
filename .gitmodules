@@ -25,3 +25,6 @@
 [submodule "Source/Libraries/bullet3"]
 	path = Source/Libraries/bullet3
 	url = https://github.com/bulletphysics/bullet3.git
+[submodule "Source/Libraries/tracy"]
+	path = Source/Libraries/tracy
+	url = https://github.com/wolfpld/tracy.git
