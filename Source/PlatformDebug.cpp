@@ -20,6 +20,7 @@
 namespace LOGGER {
 
 	void Log_Internal(const char* aMessage) {
+		ZoneScoped;
 		LOGOUTPUT(aMessage);
 	}
 

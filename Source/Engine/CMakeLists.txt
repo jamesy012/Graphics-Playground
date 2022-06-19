@@ -8,6 +8,8 @@ set("ENGINE_FILES"
     "Window.cpp"
     "Engine.h"
     "Engine.cpp"
+    "Job.h"
+    "Job.cpp"
     "IGraphicsBase.h")
 
 target_sources(GraphicsPlayground PRIVATE ${ENGINE_FILES})

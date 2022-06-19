@@ -3,6 +3,7 @@
 #include "IGraphicsBase.h"
 #include "Window.h"
 
+#include "Job.h"
 #include "PlatformDebug.h"
 
 Window window;
@@ -21,10 +22,14 @@ void Engine::Startup(IGraphicsBase* aGraphics) {
 	mGraphics->AddWindow(&window);
 	mGraphics->Initalize();
 	LOGGER::Log("Graphics Initalized\n");
+
+	Job::Worker::Startup();
 }
 
 void Engine::Shutdown() {
 	ASSERT(gEngine != nullptr);
+	Job::Worker::Shutdown();
+
 	mGraphics->Destroy();
 	mGraphics = nullptr;
 

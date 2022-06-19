@@ -51,6 +51,7 @@ namespace LOGGER {
 		ZoneScoped;
 #if __cpp_lib_format
 		std::string output = std::vformat(aMessage, std::make_format_args(args...));
+		ZoneText(output.c_str(), output.size());
 		Log_Internal(output.c_str());
 #else //__cpp_lib_format
 		const std::string output = "(*) " + aMessage;

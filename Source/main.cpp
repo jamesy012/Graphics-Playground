@@ -24,6 +24,9 @@
 #	include "Graphics/VRGraphics.h"
 #endif
 
+#include <chrono>
+#include "Engine/Job.h"
+
 int main() {
 	//vs code is annoying, doesnt clear the last output
 	LOGGER::Log("--------------------------------\n");
@@ -155,9 +158,15 @@ int main() {
 	mModelTransforms[0].Set(glm::vec3(0, 5, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
 	mModelTransforms[1].Set(glm::vec3(-5, 8, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
 
+	Job::QueueWork(nullptr);
+	Job::QueueWork(nullptr);
+
 	while(!gEngine->GetWindow()->ShouldClose()) {
 		ZoneScoped;
 		gEngine->GetWindow()->Update();
+		gGraphics->StartNewFrame();
+		VkCommandBuffer buffer = gGraphics->GetCurrentGraphicsCommandBuffer();
+
 		{
 			glm::mat4 proj;
 			glm::mat4 view;
@@ -203,9 +212,47 @@ int main() {
 			//mRootTransform.SetRotation(glm::vec3(0, -time, 0));
 		}
 
-		gGraphics->StartNewFrame();
+		{
+			static int value = 0;
+			ImGui::Begin("Job Test");
+			if(ImGui::Button("Add Job")) {
+				Job::QueueWork(value++);
+			}
+			if(ImGui::Button("Add Job x50")) {
+				for(int i = 0; i < 50; i++) {
+					Job::QueueWork(value++);
+				}
+			}
+			if(ImGui::Button("Add Job sleep")) {
+				Job::QueueWork([]() {
+					ZoneScopedN("Sleep");
+					_sleep(10);
+				});
+			}
+			if(ImGui::Button("Add Job sleep x20")) {
+				for(int i = 0; i < 20; i++) {
+					Job::QueueWork([]() {
+						ZoneScoped;
+						int length = 1 + (rand() % 5);
 
-		VkCommandBuffer buffer = gGraphics->GetCurrentGraphicsCommandBuffer();
+						std::string text = std::to_string(length);
+						ZoneText(text.c_str(), text.size());
+
+						//_sleep(length);
+
+						float msLength								 = length / 1000.0f;
+						std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+						double ms									 = 0;
+						while(ms < msLength) {
+							std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+							std::chrono::duration<double> time_span			  = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+							ms											 = time_span.count();
+						}
+					});
+				}
+			}
+			ImGui::End();
+		}
 
 		const Framebuffer& framebuffer = fb;
 
