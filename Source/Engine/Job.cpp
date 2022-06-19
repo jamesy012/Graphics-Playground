@@ -3,7 +3,7 @@
 #include <mutex>
 #include <thread>
 #include <vector>
-#include <queue>
+#include <deque>
 #include <atomic>
 #include <condition_variable>
 
@@ -11,13 +11,24 @@
 
 struct WorkerManager {
 public:
-	TracyLockable(std ::mutex, mWorkAccesser);
-	//std::mutex mWorkAccesser;
+	//all thread
 	std::vector<std::thread> mWorkThreads;
-	std::queue<Job::Work> mWork;
-	//std::atomic_char mWorkCount;
-	std::condition_variable_any m_CV;
+	//are we quitting and need to exit the threads
 	bool mQuit = false;
+
+	//work to do, removed when work started
+	TracyLockable(std ::mutex, mWorkAccesser);
+	std::deque<Job::Work> mWork;
+
+	//active jobs, removed when work finished
+	TracyLockable(std ::mutex, mWorkHandleAccesser);
+	std::deque<Job::Workhandle> mWorkHandles;
+
+	//to sleep threads when no work in queue
+	std::condition_variable_any m_CV;
+
+	//replacement if mWork doesnt work? probs needs to be larger than char
+	//std::atomic_char mWorkCount;
 
 } gManager;
 bool WorkAvailable() {
@@ -26,32 +37,53 @@ bool WorkAvailable() {
 }
 namespace Job {
 
-	void AddWork(Work aWork) {
+	std::atomic<Workhandle> gWorkHandleCounter;
+
+	Workhandle QueueWork(Work& aWork) {
 		ZoneScoped;
-		std::unique_lock lock(gManager.mWorkAccesser);
-		gManager.mWork.push(aWork);
-		//gManager.mWorkCount++;
-		gManager.m_CV.notify_one();
-		lock.unlock();
+		aWork.handle = gWorkHandleCounter++;
+		//add handle
+		{
+			std::unique_lock lock(gManager.mWorkHandleAccesser);
+			gManager.mWorkHandles.push_front(aWork.handle);
+			lock.unlock();
+		}
+		//add work
+		{
+			std::unique_lock lock(gManager.mWorkAccesser);
+			gManager.mWork.push_back(aWork);
+			//gManager.mWorkCount++;
+			gManager.m_CV.notify_one();
+			lock.unlock();
+		}
 		LOGGER::Formated("Work Added\n");
+		return aWork.handle;
 	}
 
-	void QueueWork(int aWork) {
+	Workhandle QueueWork(int aWork) {
 		Work work  = {};
 		work.value = aWork;
-		AddWork(work);
+		return QueueWork(work);
 	}
-	void QueueWork(WorkFunction aWork) {
-		Work work		 = {};
-		work.functionPtr = aWork;
-		AddWork(work);
+	Workhandle QueueWork(WorkFunction aWork) {
+		Work work	 = {};
+		work.workPtr = aWork;
+		return QueueWork(work);
+	}
+
+	bool IsFinished(Workhandle aHandle) {
+		std::unique_lock lock(gManager.mWorkHandleAccesser);
+		const auto result	= std::find(gManager.mWorkHandles.begin(), gManager.mWorkHandles.end(), aHandle);
+		const bool finished = result == gManager.mWorkHandles.end();
+		lock.unlock();
+		return finished;
 	}
 
 	namespace Worker {
 
-		void WorkerThread(int threadIndex) {
+		void WorkerThread(int aThreadIndex) {
 #if defined(TRACY_ENABLE)
-			std::string text = "Worker thread: " + std::to_string(threadIndex);
+			std::string text = "Worker thread: " + std::to_string(aThreadIndex);
 			tracy::SetThreadName(text.c_str());
 #endif
 
@@ -60,35 +92,52 @@ namespace Job {
 			srand(hash(std::this_thread::get_id()));
 			while(true) {
 				Work work;
+				//get work
 				{
-					//get work
 					std::unique_lock lock(gManager.mWorkAccesser);
 					gManager.m_CV.wait(lock, WorkAvailable);
 					if(gManager.mQuit) {
 						break;
 					}
 					work = gManager.mWork.front();
-					gManager.mWork.pop();
+					gManager.mWork.pop_back();
 					lock.unlock();
 				}
-				ZoneScoped;
-				LOGGER::Formated("Work Started {}\n", threadIndex);
-				if(work.functionPtr) {
-					ZoneScopedN("Fn Ptr");
-					work.functionPtr();
-				} else {
-					LOGGER::Formated("\tWork value {}\n", (int)work.value);
+				//work
+				{
+					ZoneScoped;
+					LOGGER::Formated("Work Started {}\n", aThreadIndex);
+					if(work.workPtr) {
+						ZoneScopedN("Work Ptr");
+						work.workPtr();
+					} else {
+						LOGGER::Formated("\tWork value {}\n", (int)work.value);
+					}
+					if(work.finishPtr) {
+						//todo - add work to another queue for a call later on the main thread
+						ASSERT(!work.finishOnMainThread);
+						ZoneScopedN("Finish Ptr");
+						work.finishPtr();
+					}
+					LOGGER::Formated("Work Finished {}\n", aThreadIndex);
 				}
-				LOGGER::Formated("Work Finished {}\n", threadIndex);
+				//finish work
+				{
+					std::unique_lock lock(gManager.mWorkHandleAccesser);
+					//lock.lock();
+					auto result = std::find(gManager.mWorkHandles.begin(), gManager.mWorkHandles.end(), work.handle);
+					gManager.mWorkHandles.erase(result);
+					lock.unlock();
+				}
 			}
-			LOGGER::Formated("Work Closing\n");
+			LOGGER::Formated("Worker thread {} Closing\n", aThreadIndex);
 		}
 
 		void Startup() {
 
 			// Retrieve the number of hardware threads in this system:
-			auto numCores = std::thread::hardware_concurrency() -1;//one for main
-
+			unsigned int numCores = std::thread::hardware_concurrency() - 1; //one for main
+			LOGGER::Formated("Starting Job system with {} threads", numCores);
 			// Calculate the actual number of worker threads we want:
 			int numThreads = std::max(1u, numCores);
 			for(int i = 0; i < numThreads; i++) {
@@ -102,6 +151,8 @@ namespace Job {
 			for(int i = 0; i < gManager.mWorkThreads.size(); i++) {
 				gManager.mWorkThreads[i].join();
 			}
+			//should we finish this work here or just forget about it?
+			LOGGER::Formated("We left {} work unfinished...\n", gManager.mWork.size());
 		}
 	}; // namespace Worker
 

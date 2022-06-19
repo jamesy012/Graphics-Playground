@@ -223,32 +223,46 @@ int main() {
 					Job::QueueWork(value++);
 				}
 			}
-			if(ImGui::Button("Add Job sleep")) {
-				Job::QueueWork([]() {
-					ZoneScopedN("Sleep");
-					_sleep(10);
-				});
-			}
+			static std::vector<Job::Workhandle> mWaitingHandles;
 			if(ImGui::Button("Add Job sleep x20")) {
 				for(int i = 0; i < 20; i++) {
-					Job::QueueWork([]() {
+					Job::Work work;
+					work.workPtr = []() {
 						ZoneScoped;
-						int length = 1 + (rand() % 5);
+						int length = 100 + (rand() % 1000);
 
 						std::string text = std::to_string(length);
 						ZoneText(text.c_str(), text.size());
 
 						//_sleep(length);
 
-						float msLength								 = length / 1000.0f;
+						float msLength									  = length / 1000.0f;
 						std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-						double ms									 = 0;
+						double ms										  = 0;
 						while(ms < msLength) {
 							std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
 							std::chrono::duration<double> time_span			  = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-							ms											 = time_span.count();
+							ms												  = time_span.count();
 						}
-					});
+					};
+					work.finishPtr = [](){
+						LOGGER::Formated("I have slept enough\n");
+					};
+					Job::Workhandle handle = Job::QueueWork(work);
+					mWaitingHandles.push_back(handle);
+				}
+			}
+			if(mWaitingHandles.size()) {
+				ImGui::Text("Waiting on %i sleeps", mWaitingHandles.size());
+				for(int i = 0; i < mWaitingHandles.size(); i++) {
+					Job::Workhandle handle = mWaitingHandles[i];
+					if(Job::IsFinished(handle)) {
+						mWaitingHandles.erase(mWaitingHandles.begin() + i);
+						i--;
+					}
+				}
+				if(mWaitingHandles.size() == 0) {
+					LOGGER::Formated("SLEEP Work finished\n");
 				}
 			}
 			ImGui::End();
