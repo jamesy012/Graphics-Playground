@@ -15,7 +15,7 @@ void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const c
 	VkFormat format;
 	if(aFormat == VK_FORMAT_UNDEFINED) {
 		format = Graphics::GetDeafultColorFormat();
-	}else{
+	} else {
 		format = aFormat;
 	}
 
@@ -85,8 +85,8 @@ void Image::CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, cons
 	}
 	ASSERT(aFormat != VK_FORMAT_UNDEFINED);
 
-	mImage = aImage;
-	mSize  = aSize;
+	mImage	= aImage;
+	mSize	= aSize;
 	mFormat = aFormat;
 
 	CreateVkImageView(aFormat, aName);
@@ -197,26 +197,23 @@ void Image::CreateVkImageView(const VkFormat aFormat, const char* aName /* = 0*/
 	createInfo.sType				 = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 	createInfo.image				 = mImage;
 	createInfo.format				 = aFormat;
-	if (mArrayLayers > 1) {
+	if(mArrayLayers > 1) {
 		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
 	} else {
 		createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
 	}
 
-	VkImageSubresourceRange colorRange = {};
-	colorRange.baseArrayLayer		   = 0;
-	colorRange.baseMipLevel			   = 0;
-	colorRange.layerCount			   = mArrayLayers;
-	colorRange.levelCount			   = 1;
+	createInfo.subresourceRange.baseArrayLayer = 0;
+	createInfo.subresourceRange.baseMipLevel   = 0;
+	createInfo.subresourceRange.layerCount	   = mArrayLayers;
+	createInfo.subresourceRange.levelCount	   = 1;
 
 	if(Graphics::IsFormatDepth(aFormat)) {
-		colorRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
 	} else {
-		colorRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
 	}
-
-	createInfo.subresourceRange = colorRange;
-
-	vkCreateImageView(gGraphics->GetVkDevice(), &createInfo, GetAllocationCallback(), &mImageView);
+	VkResult result;
+	result = vkCreateImageView(gGraphics->GetVkDevice(), &createInfo, GetAllocationCallback(), &mImageView);
 	SetVkName(VK_OBJECT_TYPE_IMAGE_VIEW, mImageView, aName ? aName : "Unnamed ImageView");
 }

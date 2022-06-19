@@ -1,4 +1,6 @@
 #version 450 core
+//copies one Texture to another 
+//array sampler version
 
 layout (location = 0) in vec3 inUV;
 

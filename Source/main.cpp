@@ -52,7 +52,9 @@ int main() {
 
 	//we want to render with these outputs
 	RenderPass mainRenderPass;
+#if defined(ENABLE_XR)
 	mainRenderPass.SetMultiViewSupport(true);
+#endif
 	mainRenderPass.AddColorAttachment(Graphics::GetDeafultColorFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
 	mainRenderPass.AddDepthAttachment(Graphics::GetDeafultDepthFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
 	mainRenderPass.Create("Main Render RP");
@@ -88,16 +90,20 @@ int main() {
 	ssTestBase.Create();
 	Screenspace ssTest;
 	ssTest.AddMaterialBase(&ssTestBase);
-	ssTest.Create("/Shaders/Screenspace/ImageSingleArray.frag.spv", "ScreenSpace ImageCopy");
-	ssTest.GetMaterial(0).SetImages(fbImage, 0, 0);
 #if defined(ENABLE_XR)
-	//mirrors the left eye to the display
+	//xr needs the array version
+	ssTest.Create("/Shaders/Screenspace/ImageSingleArray.frag.spv", "ScreenSpace ImageCopy");
+	//mirrors the left eye to the PC display
 	Screenspace vrMirrorPass;
 	vrMirrorPass.mAttachmentFormat = gGraphics->GetSwapchainFormat();
 	vrMirrorPass.AddMaterialBase(&ssTestBase);
-	vrMirrorPass.Create("/Shaders/Screenspace/ImageMirror.frag.spv", "ScreenSpace ImageCopy");
+	vrMirrorPass.Create("/Shaders/Screenspace/ImageMirror.frag.spv", "ScreenSpace Mirror ImageCopy");
 	vrMirrorPass.GetMaterial(0).SetImages(fbImage, 0, 0);
+#else
+	//windows doesnt do multiview so just needs the non array version
+	ssTest.Create("/Shaders/Screenspace/ImageSingle.frag.spv", "ScreenSpace ImageCopy");
 #endif
+	ssTest.GetMaterial(0).SetImages(fbImage, 0, 0);
 	//ssTest.GetMaterial(0).SetImages(ssImage2, 1, 0);
 
 	//Mesh Test
@@ -234,26 +240,19 @@ int main() {
 							   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 #if defined(ENABLE_XR)
-		const Framebuffer* frameBuffers[3] = {
-			&gGraphics->GetCurrentXrFrameBuffer(0),
-			&gGraphics->GetCurrentXrFrameBuffer(1),
-			&gGraphics->GetCurrentFrameBuffer(),
-		};
-		for(int i = 0; i < 2; i++) {
-#else
-		const Framebuffer* frameBuffers[1] = {&gGraphics->GetCurrentFrameBuffer()};
-		const int i = 0;
-		{
-#endif
+		//copy fbImage to computer view (using two eye version)
+		vrMirrorPass.Render(buffer, gGraphics->GetCurrentFrameBuffer());
+		//copy to headset views
+		for(int i = 0; i < gGraphics->GetNumActiveViews(); i++) {
 			Screenspace::PushConstant pc;
-			pc.mEyeIndex  = i;
+			pc.mEyeIndex = i;
 			vkCmdPushConstants(buffer, ssTest.GetPipeline().GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Screenspace::PushConstant), &pc);
 			//copies fbImage to framebuffer
-			ssTest.Render(buffer, *frameBuffers[i]);
-#if defined(ENABLE_XR)
-			vrMirrorPass.Render(buffer, *frameBuffers[i + 1]);
-#endif
+			ssTest.Render(buffer, gGraphics->GetCurrentXrFrameBuffer(i));
 		}
+#else
+		ssTest.Render(buffer, gGraphics->GetCurrentFrameBuffer());
+#endif
 
 		fbImage.SetImageLayout(buffer,
 							   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,

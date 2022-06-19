@@ -1,5 +1,5 @@
 #version 450 core
-//Mirrors 
+//Mirrors two textures to the framebuffer
 
 layout (location = 0) in vec3 inUV;
 

@@ -54,6 +54,10 @@ static void AddRecusiveTopNext(void* dst, void* pNext) {
 	dstStruct->pNext = (VkBaseInStructure*)pNext;
 }
 
+//Turns off and on validation messages
+//XR Runtime seems to have issues?
+void VulkanValidationMessage(int32_t aMessageId, bool aEnabled);
+
 #pragma endregion
 
 
@@ -104,10 +108,10 @@ public:
 
 	//number of final views we want to render to
 	const uint8_t GetNumActiveViews() const {
-//#if defined(ENABLE_XR)
+#if defined(ENABLE_XR)
 		return 2;
-//#endif
-//		return 1;
+#endif
+		return 1;
 	}
 
 	static const bool IsFormatDepth(VkFormat aFormat);

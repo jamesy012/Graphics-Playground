@@ -65,6 +65,7 @@ private:
 	//~ xr info
 	//
 	std::vector<XrExtensionProperties> mXrInstanceExtensions;
+	std::vector<XrApiLayerProperties> mXrLayerProperties;
 
 	//
 	//~ general xr session info

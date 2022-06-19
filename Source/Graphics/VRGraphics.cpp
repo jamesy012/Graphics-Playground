@@ -14,7 +14,6 @@
 
 VRGraphics* gVrGraphics = nullptr;
 
-
 XrInstance gXrInstance;
 
 //
@@ -56,7 +55,7 @@ struct SpaceInfo {
 
 #pragma region XR Debug
 
-#define VALIDATEXR() ASSERT(result == XR_SUCCESS);
+#define VALIDATEXR() ASSERT(XR_UNQUALIFIED_SUCCESS(result));
 
 XrDebugUtilsMessengerEXT gXrDebugMessenger = XR_NULL_HANDLE;
 
@@ -65,17 +64,21 @@ static XRAPI_ATTR XrBool32 XRAPI_CALL XrDebugCallback(XrDebugUtilsMessageSeverit
 													  const XrDebugUtilsMessengerCallbackDataEXT* callbackData, void* userData) {
 	ZoneScopedC(0xFF0000);
 	TracyMessage(callbackData->message, strlen(callbackData->message));
-	BitMask maskSeverity = messageSeverity;
-	BitMask maskTypes	 = messageTypes;
 
 	const char* severityText[4] = {"VERBOSE", "INFO", "WARNING", "ERROR"};
 	const char* typeText[4]		= {"GENERAL", "VALIDATION", "PERFORMANCE", "CONFORMANCE"};
-	LOGGER::Formated("XR_DEBUG {}: ({}) ({}/{})\n\t {}\n",
-					 callbackData->messageId,
-					 callbackData->functionName,
-					 severityText[messageSeverity],
-					 typeText[messageTypes],
-					 callbackData->message);
+	std::string severity		= "";
+	std::string type			= "";
+	for(int i = 0; i < 4; i++) {
+		if(messageSeverity & (1 << i)) {
+			severity += std::string(";") + severityText[i];
+		}
+		if(messageTypes & (1 << i)) {
+			type += std::string(";") + typeText[i];
+		}
+	}
+	LOGGER::Formated(
+		"XR_DEBUG {}: ({}) ({}/{})\n\t {}\n", callbackData->messageId, callbackData->functionName, severity, type, callbackData->message);
 
 	// if (callbackData->messageId != 0) {
 	//	ASSERT("XR Error");
@@ -83,6 +86,27 @@ static XRAPI_ATTR XrBool32 XRAPI_CALL XrDebugCallback(XrDebugUtilsMessageSeverit
 
 	return XR_FALSE;
 }
+
+XrDebugUtilsMessengerCreateInfoEXT GetMessengerCreateInfo() {
+	XrDebugUtilsMessengerCreateInfoEXT debugCreateInfo {};
+	debugCreateInfo.type = XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+	// clang-format off
+	debugCreateInfo.messageTypes =
+		XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT     |
+		XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT  |
+		XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+		XR_DEBUG_UTILS_MESSAGE_TYPE_CONFORMANCE_BIT_EXT;
+	debugCreateInfo.messageSeverities =
+		XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+		XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT    |
+		XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+		XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+	// clang-format on
+	debugCreateInfo.userCallback = XrDebugCallback;
+	debugCreateInfo.next		 = nullptr;
+	return debugCreateInfo;
+}
+
 #pragma endregion
 
 //helper for getting function ptr from XR
@@ -103,7 +127,7 @@ void VRGraphics::Startup() {
 
 	CreateInstance();
 
-	CreateDebugUtils();
+	//CreateDebugUtils();
 
 	SessionSetup();
 }
@@ -303,6 +327,7 @@ void VRGraphics::FrameEnd() {
 	projectionLayer.space									  = gSpaces[1].mSpace;
 	projectionLayer.viewCount								  = NUM_VIEWS;
 	projectionLayer.views									  = projectionViews;
+	projectionLayer.layerFlags								  = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
 
 	XrFrameEndInfo endInfo		 = {XR_TYPE_FRAME_END_INFO};
 	endInfo.displayTime			 = gFrameState.predictedDisplayTime;
@@ -311,7 +336,13 @@ void VRGraphics::FrameEnd() {
 	endInfo.layers	   = &projectionLayerHeader;
 	endInfo.layerCount = 1;
 
+	VulkanValidationMessage(416909302, false);
+	VulkanValidationMessage(1303270965, false);
+
 	result = xrEndFrame(gXrSession, &endInfo);
+
+	VulkanValidationMessage(416909302, true);
+	VulkanValidationMessage(1303270965, true);
 	VALIDATEXR();
 }
 
@@ -402,6 +433,14 @@ void VRGraphics::Destroy() {
 		xrDestroySession(gXrSession);
 		gXrSession = XR_NULL_HANDLE;
 	}
+	if(gXrDebugMessenger) {
+		PFN_xrDestroyDebugUtilsMessengerEXT xrDestroyDebugUtilsMessengerEXT;
+		if(getXrInstanceProcAddr(&xrDestroyDebugUtilsMessengerEXT, "xrDestroyDebugUtilsMessengerEXT")) {
+			XrResult result = xrDestroyDebugUtilsMessengerEXT(gXrDebugMessenger);
+			VALIDATEXR();
+		}
+		gXrDebugMessenger = XR_NULL_HANDLE;
+	}
 	if(gXrInstance != XR_NULL_HANDLE) {
 		xrDestroyInstance(gXrInstance);
 		gXrInstance = XR_NULL_HANDLE;
@@ -412,7 +451,7 @@ void VRGraphics::Destroy() {
 void VRGraphics::CreateInstance() {
 	XrResult result;
 	uint32_t extensionCount = 0;
-	result					= xrEnumerateInstanceExtensionProperties(NULL, 0, &extensionCount, NULL);
+	result					= xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr);
 	VALIDATEXR();
 	mXrInstanceExtensions.resize(extensionCount);
 
@@ -420,7 +459,18 @@ void VRGraphics::CreateInstance() {
 		mXrInstanceExtensions[i].type = XR_TYPE_EXTENSION_PROPERTIES;
 	}
 
-	result = xrEnumerateInstanceExtensionProperties(NULL, extensionCount, &extensionCount, mXrInstanceExtensions.data());
+	result = xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, mXrInstanceExtensions.data());
+	VALIDATEXR();
+
+	uint32_t layerCount = 0;
+	result = xrEnumerateApiLayerProperties(0, &layerCount, nullptr);
+	VALIDATEXR();
+	mXrLayerProperties.resize(layerCount);
+
+	for(int i = 0; i < layerCount; i++) {
+		mXrLayerProperties[i].type = XR_TYPE_API_LAYER_PROPERTIES;
+	}
+	result = xrEnumerateApiLayerProperties(layerCount, &layerCount, mXrLayerProperties.data());
 	VALIDATEXR();
 
 	std::vector<const char*> extensions; // = { XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME };
@@ -448,37 +498,34 @@ void VRGraphics::CreateInstance() {
 	// }
 	// requireXrExtension(XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME);
 	requireXrExtension(XR_KHR_VULKAN_ENABLE_EXTENSION_NAME);
-	optionalXrExtension(XR_KHR_VISIBILITY_MASK_EXTENSION_NAME);
-	optionalXrExtension(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
+	//optionalXrExtension(XR_KHR_VISIBILITY_MASK_EXTENSION_NAME);
+	//optionalXrExtension(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
 	optionalXrExtension(XR_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 	XrInstanceCreateInfo create				  = {};
 	create.type								  = XR_TYPE_INSTANCE_CREATE_INFO;
-	create.applicationInfo.apiVersion		  = XR_CURRENT_API_VERSION;
-	create.applicationInfo.applicationVersion = 1;
-	create.applicationInfo.applicationName;
+	create.applicationInfo.apiVersion		  = XR_MAKE_VERSION(1, 0, 0);
+	create.applicationInfo.applicationVersion = 0;
+	create.applicationInfo.engineVersion	  = 0;
 	strcpy(create.applicationInfo.applicationName, "Graphics-Playground");
+	strcpy(create.applicationInfo.engineName, "Graphics-Playground");
 	create.enabledExtensionCount = extensions.size();
 	create.enabledExtensionNames = extensions.data();
-	result						 = xrCreateInstance(&create, &gXrInstance);
+
+	XrDebugUtilsMessengerCreateInfoEXT debugCreateInfo = GetMessengerCreateInfo();
+	create.next										   = &debugCreateInfo;
+
+	result = xrCreateInstance(&create, &gXrInstance);
 	VALIDATEXR();
 }
 
 void VRGraphics::CreateDebugUtils() {
-	XrDebugUtilsMessengerCreateInfoEXT debugCreateInfo {};
-	debugCreateInfo.type = XR_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-	debugCreateInfo.messageSeverities =
-		// XR_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-	debugCreateInfo.messageTypes = XR_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-		XR_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | XR_DEBUG_UTILS_MESSAGE_TYPE_CONFORMANCE_BIT_EXT;
-	debugCreateInfo.userCallback = XrDebugCallback;
-	debugCreateInfo.next		 = nullptr;
+	XrDebugUtilsMessengerCreateInfoEXT debugCreateInfo = GetMessengerCreateInfo();
 
 	PFN_xrCreateDebugUtilsMessengerEXT xrCreateDebugUtilsMessengerEXT;
 	if(getXrInstanceProcAddr(&xrCreateDebugUtilsMessengerEXT, "xrCreateDebugUtilsMessengerEXT")) {
-		xrCreateDebugUtilsMessengerEXT(gXrInstance, &debugCreateInfo, &gXrDebugMessenger);
+		XrResult result = xrCreateDebugUtilsMessengerEXT(gXrInstance, &debugCreateInfo, &gXrDebugMessenger);
+		VALIDATEXR();
 	}
 }
 
@@ -640,6 +687,7 @@ void VRGraphics::PrepareSwapchainData() {
 		createInfo.mipCount	   = 1;
 		createInfo.sampleCount = 1;
 		createInfo.usageFlags  = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+		createInfo.createFlags = XR_SWAPCHAIN_CREATE_PROTECTED_CONTENT_BIT;
 
 		result = xrCreateSwapchain(gXrSession, &createInfo, &gXrSwapchains[i].mSwapchain);
 		VALIDATEXR();

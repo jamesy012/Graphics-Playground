@@ -2,9 +2,9 @@ set(GLSL_SOURCE_FILES
     "/ImGui.vert"
     "/ImGui.frag"
     "/Screenspace/Screenspace.vert"
-    "/Screenspace/Image.frag"
-    "/Screenspace/ImageMirror.frag"
+    "/Screenspace/ImageSingle.frag"
     "/Screenspace/ImageSingleArray.frag"
+    "/Screenspace/ImageTwoArray.frag"
     "/MeshTest.vert"
     "/MeshTest.frag")
 set(GLSL_INCLUDE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/Include/test.inc")

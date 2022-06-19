@@ -1,6 +1,7 @@
 #include "Graphics.h"
 
 #include <string.h>
+#include <map>
 
 #include <glm/glm.hpp>
 
@@ -68,18 +69,34 @@ bool VkResultToBool(VkResult aResult) {
 	return VK_SUCCESS == aResult;
 }
 
+std::map<uint32_t, bool> gVulkanValidationToggle;
+
 static VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 													  VkDebugUtilsMessageTypeFlagsEXT messageType,
 													  const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
 	ZoneScopedC(0xFF0000);
 	TracyMessage(pCallbackData->pMessage, strlen(pCallbackData->pMessage));
-	LOGGER::Formated("VULKAN {}: \n\t{}\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);
 
-	if(pCallbackData->messageIdNumber != 0) {
-		ASSERT("Vulkan Error");
+	bool shouldLog	 = true;
+
+	auto toggleValue = gVulkanValidationToggle.find(pCallbackData->messageIdNumber);
+	if(toggleValue != gVulkanValidationToggle.end()) {
+		shouldLog = toggleValue->second;
+	}
+
+	if(shouldLog) {
+		LOGGER::Formated("VULKAN {}: \n\t{}\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+
+		if(pCallbackData->messageIdNumber != 0) {
+			ASSERT(false); //"Vulkan Error");
+		}
 	}
 
 	return VK_FALSE;
+}
+
+void ::VulkanValidationMessage(int32_t aMessageId, bool aEnabled) {
+	gVulkanValidationToggle[aMessageId] = aEnabled;
 }
 
 // template<typename T>
