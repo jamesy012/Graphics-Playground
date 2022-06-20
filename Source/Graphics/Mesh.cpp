@@ -10,25 +10,66 @@
 static_assert(NUM_UVS <= AI_MAX_NUMBER_OF_TEXTURECOORDS);
 static_assert(NUM_VERT_COLS <= AI_MAX_NUMBER_OF_COLOR_SETS);
 
+struct AsyncLoadData {
+	const aiScene* mScene;
+	Assimp::Importer importer;
+};
+Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
+	Job::Work asyncWork;
+	asyncWork.userData = new AsyncLoadData();
+	asyncWork.workPtr  = [aFilePath](void* aData) {
+		 AsyncLoadData* data  = (AsyncLoadData*)aData;
+		 const aiScene* scene = data->importer.ReadFile(aFilePath.mPath.c_str(),
+														aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices |
+															aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_OptimizeMeshes |
+															aiProcess_OptimizeGraph | aiProcess_GenBoundingBoxes);
+
+		 if(scene == nullptr) {
+			 ASSERT(false);
+			 //return false;
+			 return;
+		 }
+		 data->mScene = scene;
+	};
+	asyncWork.finishOnMainThread = true;
+	asyncWork.finishPtr			 = [this](void* aData) {
+		 AsyncLoadData* data = (AsyncLoadData*)aData;
+		 if(data->mScene) {
+			 ProcessNode(data->mScene, data->mScene->mRootNode);
+			 data->importer.FreeScene();
+			 mLoaded = true;
+		 }
+		 //we create this for the work, lets delete it now
+		 delete data;
+	};
+	return asyncWork;
+}
+
+bool Mesh::LoadMeshSync(FileIO::Path aFilePath) {
+	ZoneScoped;
+	ZoneText(aFilePath.mPath.c_str(), aFilePath.mPath.size());
+	LOGGER::Formated("Loading: {}\n", aFilePath.mPath);
+	LOGGER::Log("Mesh Loading should not load a mesh that is already loaded?\n");
+
+	mLoaded = false;
+
+	Job::Work asyncWork = GetWork(aFilePath);
+	asyncWork.DoWork();
+
+	return true;
+}
+
 bool Mesh::LoadMesh(FileIO::Path aFilePath) {
 	ZoneScoped;
 	ZoneText(aFilePath.mPath.c_str(), aFilePath.mPath.size());
 	LOGGER::Formated("Loading: {}\n", aFilePath.mPath);
 	LOGGER::Log("Mesh Loading should not load a mesh that is already loaded?\n");
 
-	Assimp::Importer importer;
-	const aiScene* scene =
-		importer.ReadFile(aFilePath.mPath.c_str(),
-						  aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices | aiProcess_GenSmoothNormals |
-							  aiProcess_FlipUVs | aiProcess_OptimizeMeshes | aiProcess_OptimizeGraph | aiProcess_GenBoundingBoxes);
+	mLoaded = false;
 
-	if(scene == nullptr) {
-		ASSERT(false);
-		return false;
-	}
-	ProcessNode(scene, scene->mRootNode);
+	Job::Work asyncWork = GetWork(aFilePath);
+	Job::QueueWork(asyncWork);
 
-	importer.FreeScene();
 	return true;
 }
 
@@ -147,6 +188,7 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 }
 
 void Mesh::Destroy() {
+	ASSERT(mLoaded); //how to wait for work to be done?
 	for(int i = 0; i < mMesh.size(); i++) {
 		SubMesh& mesh = mMesh[i];
 		mesh.mVertexBuffer.Destroy();
@@ -157,6 +199,9 @@ void Mesh::Destroy() {
 
 //temp
 void Mesh::QuickTempRender(VkCommandBuffer aBuffer) {
+	if(mLoaded == false) {
+		return;
+	}
 	for(int i = 0; i < mMesh.size(); i++) {
 		SubMesh& mesh			= mMesh[i];
 		VkDeviceSize offsets[1] = {0};

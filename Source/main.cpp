@@ -220,7 +220,7 @@ int main() {
 				for(int i = 0; i < 100; i++) {
 					Job::Work work;
 					work.finishOnMainThread = true;
-					work.finishPtr			= []() {
+					work.finishPtr			= [](void*) {
 						 ZoneScoped;
 						 int length = 1 + (rand() % 50);
 
@@ -246,7 +246,7 @@ int main() {
 			if(ImGui::Button("Add Job sleep x20")) {
 				for(int i = 0; i < 20; i++) {
 					Job::Work work;
-					work.workPtr = []() {
+					work.workPtr = [](void*) {
 						ZoneScoped;
 						int length = 100 + (rand() % 1000);
 
@@ -264,7 +264,7 @@ int main() {
 							ms												  = time_span.count();
 						}
 					};
-					work.finishPtr = []() {
+					work.finishPtr = [](void*) {
 						LOGGER::Formated("I have slept enough\n");
 					};
 					Job::Workhandle handle = Job::QueueWork(work);
@@ -273,7 +273,7 @@ int main() {
 			}
 			if(mWaitingHandles.size()) {
 				ImGui::Text("Main: Did %i work %f", Job::Worker::GetWorkCompleted(), Job::Worker::GetWorkLength());
-				ImGui::Text("Waiting on %i sleeps", mWaitingHandles.size());
+				ImGui::Text("Waiting on %i sleeps", (int)mWaitingHandles.size());
 				for(int i = 0; i < mWaitingHandles.size(); i++) {
 					Job::Workhandle handle = mWaitingHandles[i];
 					if(Job::IsFinished(handle)) {

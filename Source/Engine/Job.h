@@ -3,7 +3,7 @@
 #include <functional>
 
 namespace Job {
-	typedef std::function<void()> WorkFunction;
+	typedef std::function<void(void*)> WorkFunction;
 	typedef int Workhandle;
 	struct Work {
 		WorkFunction workPtr = nullptr;
@@ -13,7 +13,11 @@ namespace Job {
 		//before game loop
 		bool finishOnMainThread = false;
 
+		void* userData = nullptr;
+
 		Workhandle handle = -1;
+
+		void DoWork(bool aOnlyFinish = false);
 	};
 
 	Workhandle QueueWork(Work& aWork);

@@ -9,6 +9,8 @@
 #include "Engine/AABB.h"
 
 #include "Buffer.h"
+#include "Engine/Job.h"
+
 
 struct aiScene;
 struct aiNode;
@@ -30,6 +32,7 @@ typedef uint32_t MeshIndex;
 
 class Mesh {
 public:
+	bool LoadMeshSync(FileIO::Path aFilePath);
 	bool LoadMesh(FileIO::Path aFilePath);
     void Destroy();
 
@@ -56,6 +59,9 @@ private:
 	bool ProcessNode(const aiScene* aScene, const aiNode* aNode);
 	bool ProcessMesh(const aiScene* aScene, const aiMesh* aMesh);
 
+	Job::Work GetWork(FileIO::Path aFilePath);
+
 	AABB mAABB;
 	std::vector<SubMesh> mMesh;
+	bool mLoaded = false;
 };

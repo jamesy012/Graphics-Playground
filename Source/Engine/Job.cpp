@@ -44,6 +44,41 @@ std::thread::id gMainThreadId;
 
 namespace Job {
 
+	void Job::Work::DoWork(bool aOnlyFinish /*= false*/) {
+		ZoneScoped;
+		//work
+		{
+			if(workPtr && aOnlyFinish == false) {
+				ZoneScoped;
+				ZoneScopedN("Work Ptr");
+				workPtr(userData);
+			}
+			if(finishPtr) {
+				ZoneScoped;
+				//should we finish on the main thread?
+				if(finishOnMainThread && !IsMainThread()) {
+					ZoneScopedN("Queue to main thread");
+					std::unique_lock lock(gManager.mWorkMainAccesser);
+					gManager.mWorkMain.push_back(*this);
+					lock.unlock();
+					//dont do anything else here, work is done
+					return;
+				} else { //otherwise just continue on
+					ZoneScopedN("Finish Ptr");
+					finishPtr(userData);
+				}
+			}
+		}
+		//finish work
+		{
+			std::unique_lock lock(gManager.mWorkHandleAccesser);
+			//lock.lock();
+			auto result = std::find(gManager.mWorkHandles.begin(), gManager.mWorkHandles.end(), handle);
+			gManager.mWorkHandles.erase(result);
+			lock.unlock();
+		}
+	}
+
 	std::atomic<Workhandle> gWorkHandleCounter;
 
 	Workhandle QueueWork(Work& aWork) {
@@ -113,37 +148,8 @@ namespace Job {
 					gManager.mWork.pop_back();
 					lock.unlock();
 				}
-				//work
-				{
-					ZoneScoped;
-					LOGGER::Formated("Work Started {}\n", aThreadIndex);
-					if(work.workPtr) {
-						ZoneScopedN("Work Ptr");
-						work.workPtr();
-					}
-					if(work.finishPtr) {
-						//todo - add work to another queue for a call later on the main thread
-						if(work.finishOnMainThread) {
-							std::unique_lock lock(gManager.mWorkMainAccesser);
-							gManager.mWorkMain.push_back(work);
-							lock.unlock();
-							//dont do anything else here, work is done
-							continue;
-						} else {
-							ZoneScopedN("Finish Ptr");
-							work.finishPtr();
-						}
-					}
-					LOGGER::Formated("Work Finished {}\n", aThreadIndex);
-				}
-				//finish work
-				{
-					std::unique_lock lock(gManager.mWorkHandleAccesser);
-					//lock.lock();
-					auto result = std::find(gManager.mWorkHandles.begin(), gManager.mWorkHandles.end(), work.handle);
-					gManager.mWorkHandles.erase(result);
-					lock.unlock();
-				}
+
+				work.DoWork();
 			}
 			LOGGER::Formated("Worker thread {} Closing\n", aThreadIndex);
 		}
@@ -191,18 +197,9 @@ namespace Job {
 					gManager.mWorkMain.pop_front();
 					lock.unlock();
 				}
-				{ //do work
-					ZoneScoped;
-					work.finishPtr();
-				}
-				{ //finish work
-					ZoneScoped;
-					std::unique_lock lock(gManager.mWorkHandleAccesser);
-					auto result = std::find(gManager.mWorkHandles.begin(), gManager.mWorkHandles.end(), work.handle);
-					gManager.mWorkHandles.erase(result);
-					lock.unlock();
-					gWorkDone++;
-				}
+				//do work without calling the main work part
+				//since that's already been done
+				work.DoWork(true);
 			}
 		}
 
@@ -213,14 +210,16 @@ namespace Job {
 			for(int i = 0; i < gManager.mWorkThreads.size(); i++) {
 				gManager.mWorkThreads[i].join();
 			}
-			//should we finish this work here or just forget about it?
-			LOGGER::Formated("We left async:{} main:{} work unfinished...\n", gManager.mWork.size(), gManager.mWorkMain.size());
+			if(gManager.mWork.size() + gManager.mWorkMain.size()) {
+				//should we finish this work here or just forget about it?
+				LOGGER::Formated("We left async:{} main:{} work unfinished...\n", gManager.mWork.size(), gManager.mWorkMain.size());
+			}
 		}
 
-		int GetWorkCompleted(){
+		int GetWorkCompleted() {
 			return gWorkDone;
 		}
-		double GetWorkLength(){
+		double GetWorkLength() {
 			return gMsTimeTaken;
 		}
 	}; // namespace Worker
