@@ -1,11 +1,11 @@
 #pragma once
 
+#include <functional>
+
 namespace Job {
-	typedef void (*WorkFunction)();
+	typedef std::function<void()> WorkFunction;
 	typedef int Workhandle;
 	struct Work {
-		int value;//temp
-
 		WorkFunction workPtr = nullptr;
 		WorkFunction finishPtr = nullptr;
 
@@ -17,14 +17,20 @@ namespace Job {
 	};
 
 	Workhandle QueueWork(Work& aWork);
-	Workhandle QueueWork(int aWork);
 	Workhandle QueueWork(WorkFunction aWork);
+	Workhandle QueueWork();
 
 	bool IsFinished(Workhandle aHandle);
 
+	bool IsMainThread();
+
 	namespace Worker {
 		void Startup();
+		void ProcessMainThreadWork();
 		void Shutdown();
+			//temp
+	int GetWorkCompleted();
+	double GetWorkLength();
 	};
 
 }; // namespace Job

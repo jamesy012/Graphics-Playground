@@ -26,6 +26,13 @@ void Engine::Startup(IGraphicsBase* aGraphics) {
 	Job::Worker::Startup();
 }
 
+bool Engine::GameLoop() {
+	ZoneScoped;
+	GetWindow()->Update();
+	Job::Worker::ProcessMainThreadWork();
+	return 0;
+}
+
 void Engine::Shutdown() {
 	ASSERT(gEngine != nullptr);
 	Job::Worker::Shutdown();

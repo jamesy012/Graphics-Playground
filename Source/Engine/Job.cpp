@@ -24,6 +24,10 @@ public:
 	TracyLockable(std ::mutex, mWorkHandleAccesser);
 	std::deque<Job::Workhandle> mWorkHandles;
 
+	//finish jobs for the main thread to complete
+	TracyLockable(std ::mutex, mWorkMainAccesser);
+	std::deque<Job::Work> mWorkMain;
+
 	//to sleep threads when no work in queue
 	std::condition_variable_any m_CV;
 
@@ -35,6 +39,9 @@ bool WorkAvailable() {
 	//return gManager.mWorkCount != 0 || gManager.mQuit == true;
 	return gManager.mWork.size() != 0 || gManager.mQuit == true;
 }
+
+std::thread::id gMainThreadId;
+
 namespace Job {
 
 	std::atomic<Workhandle> gWorkHandleCounter;
@@ -60,14 +67,13 @@ namespace Job {
 		return aWork.handle;
 	}
 
-	Workhandle QueueWork(int aWork) {
-		Work work  = {};
-		work.value = aWork;
-		return QueueWork(work);
-	}
 	Workhandle QueueWork(WorkFunction aWork) {
 		Work work	 = {};
 		work.workPtr = aWork;
+		return QueueWork(work);
+	}
+	Workhandle QueueWork() {
+		Work work = {};
 		return QueueWork(work);
 	}
 
@@ -77,6 +83,10 @@ namespace Job {
 		const bool finished = result == gManager.mWorkHandles.end();
 		lock.unlock();
 		return finished;
+	}
+
+	bool IsMainThread() {
+		return std::this_thread::get_id() == gMainThreadId;
 	}
 
 	namespace Worker {
@@ -110,14 +120,19 @@ namespace Job {
 					if(work.workPtr) {
 						ZoneScopedN("Work Ptr");
 						work.workPtr();
-					} else {
-						LOGGER::Formated("\tWork value {}\n", (int)work.value);
 					}
 					if(work.finishPtr) {
 						//todo - add work to another queue for a call later on the main thread
-						ASSERT(!work.finishOnMainThread);
-						ZoneScopedN("Finish Ptr");
-						work.finishPtr();
+						if(work.finishOnMainThread) {
+							std::unique_lock lock(gManager.mWorkMainAccesser);
+							gManager.mWorkMain.push_back(work);
+							lock.unlock();
+							//dont do anything else here, work is done
+							continue;
+						} else {
+							ZoneScopedN("Finish Ptr");
+							work.finishPtr();
+						}
 					}
 					LOGGER::Formated("Work Finished {}\n", aThreadIndex);
 				}
@@ -134,6 +149,7 @@ namespace Job {
 		}
 
 		void Startup() {
+			gMainThreadId = std::this_thread::get_id();
 
 			// Retrieve the number of hardware threads in this system:
 			unsigned int numCores = std::thread::hardware_concurrency() - 1; //one for main
@@ -144,6 +160,52 @@ namespace Job {
 				gManager.mWorkThreads.push_back(std::thread(&WorkerThread, i));
 			}
 		}
+		double gMsTimeTaken;
+		int gWorkDone;
+		void ProcessMainThreadWork() {
+			ZoneScoped;
+			gWorkDone										  = 0;
+			const double maxLength							  = 0.05f;
+			std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+			gMsTimeTaken									  = 0;
+			while(true) {
+				{ //limit time
+					std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+					std::chrono::duration<double> time_span			  = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+					gMsTimeTaken									  = time_span.count();
+					if(gMsTimeTaken > maxLength) {
+						return;
+					}
+				}
+				ZoneScoped;
+				Work work;
+				{ //get work
+					ZoneScoped;
+					std::unique_lock lock(gManager.mWorkMainAccesser);
+					if(gManager.mWorkMain.size() == 0) {
+						//no work
+						lock.unlock();
+						return;
+					}
+					work = gManager.mWorkMain.front();
+					gManager.mWorkMain.pop_front();
+					lock.unlock();
+				}
+				{ //do work
+					ZoneScoped;
+					work.finishPtr();
+				}
+				{ //finish work
+					ZoneScoped;
+					std::unique_lock lock(gManager.mWorkHandleAccesser);
+					auto result = std::find(gManager.mWorkHandles.begin(), gManager.mWorkHandles.end(), work.handle);
+					gManager.mWorkHandles.erase(result);
+					lock.unlock();
+					gWorkDone++;
+				}
+			}
+		}
+
 		void Shutdown() {
 			//
 			gManager.mQuit = true;
@@ -152,7 +214,14 @@ namespace Job {
 				gManager.mWorkThreads[i].join();
 			}
 			//should we finish this work here or just forget about it?
-			LOGGER::Formated("We left {} work unfinished...\n", gManager.mWork.size());
+			LOGGER::Formated("We left async:{} main:{} work unfinished...\n", gManager.mWork.size(), gManager.mWorkMain.size());
+		}
+
+		int GetWorkCompleted(){
+			return gWorkDone;
+		}
+		double GetWorkLength(){
+			return gMsTimeTaken;
 		}
 	}; // namespace Worker
 

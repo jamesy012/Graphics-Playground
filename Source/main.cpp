@@ -25,6 +25,7 @@
 #endif
 
 #include <chrono>
+#include <thread>
 #include "Engine/Job.h"
 
 int main() {
@@ -158,12 +159,12 @@ int main() {
 	mModelTransforms[0].Set(glm::vec3(0, 5, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
 	mModelTransforms[1].Set(glm::vec3(-5, 8, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
 
-	Job::QueueWork(nullptr);
-	Job::QueueWork(nullptr);
+	Job::QueueWork();
+	Job::QueueWork();
 
 	while(!gEngine->GetWindow()->ShouldClose()) {
 		ZoneScoped;
-		gEngine->GetWindow()->Update();
+		gEngine->GameLoop();
 		gGraphics->StartNewFrame();
 		VkCommandBuffer buffer = gGraphics->GetCurrentGraphicsCommandBuffer();
 
@@ -209,21 +210,39 @@ int main() {
 
 		{
 			const float time = gGraphics->GetFrameCount() / 5.0f;
-			//mRootTransform.SetRotation(glm::vec3(0, -time, 0));
+			mRootTransform.SetRotation(glm::vec3(0, -time, 0));
 		}
 
 		{
-			static int value = 0;
 			ImGui::Begin("Job Test");
-			if(ImGui::Button("Add Job")) {
-				Job::QueueWork(value++);
-			}
-			if(ImGui::Button("Add Job x50")) {
-				for(int i = 0; i < 50; i++) {
-					Job::QueueWork(value++);
+			static std::vector<Job::Workhandle> mWaitingHandles;
+			if(ImGui::Button("Add Job main short sleep x100")) {
+				for(int i = 0; i < 100; i++) {
+					Job::Work work;
+					work.finishOnMainThread = true;
+					work.finishPtr			= []() {
+						 ZoneScoped;
+						 int length = 1 + (rand() % 50);
+
+						 std::string text = std::to_string(length);
+						 ZoneText(text.c_str(), text.size());
+
+						 //_sleep(length);
+
+						 float msLength									   = length / 1000.0f;
+						 std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
+						 double ms										   = 0;
+						 while(ms < msLength) {
+							 std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+							 std::chrono::duration<double> time_span		   = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
+							 ms												   = time_span.count();
+						 }
+						 LOGGER::Formated("I have finished {}\n", Job::IsMainThread());
+					};
+					Job::Workhandle handle = Job::QueueWork(work);
+					mWaitingHandles.push_back(handle);
 				}
 			}
-			static std::vector<Job::Workhandle> mWaitingHandles;
 			if(ImGui::Button("Add Job sleep x20")) {
 				for(int i = 0; i < 20; i++) {
 					Job::Work work;
@@ -245,7 +264,7 @@ int main() {
 							ms												  = time_span.count();
 						}
 					};
-					work.finishPtr = [](){
+					work.finishPtr = []() {
 						LOGGER::Formated("I have slept enough\n");
 					};
 					Job::Workhandle handle = Job::QueueWork(work);
@@ -253,6 +272,7 @@ int main() {
 				}
 			}
 			if(mWaitingHandles.size()) {
+				ImGui::Text("Main: Did %i work %f", Job::Worker::GetWorkCompleted(), Job::Worker::GetWorkLength());
 				ImGui::Text("Waiting on %i sleeps", mWaitingHandles.size());
 				for(int i = 0; i < mWaitingHandles.size(); i++) {
 					Job::Workhandle handle = mWaitingHandles[i];
