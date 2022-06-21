@@ -159,9 +159,6 @@ int main() {
 	mModelTransforms[0].Set(glm::vec3(0, 5, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
 	mModelTransforms[1].Set(glm::vec3(-5, 8, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
 
-	Job::QueueWork();
-	Job::QueueWork();
-
 	while(!gEngine->GetWindow()->ShouldClose()) {
 		ZoneScoped;
 		gEngine->GameLoop();
@@ -212,41 +209,47 @@ int main() {
 			const float time = gGraphics->GetFrameCount() / 5.0f;
 			mRootTransform.SetRotation(glm::vec3(0, -time, 0));
 		}
-
 		{
 			ImGui::Begin("Job Test");
-			static std::vector<Job::Workhandle> mWaitingHandles;
+			static std::vector<Job::WorkHandle*> mWaitingHandles;
+			if(ImGui::Button("Add Job that queues jobs")) {
+				Job::Work work;
+				work.mWorkPtr = [](void*) {
+					Job::Work work;
+					work.mWorkPtr = [](void*) {
+						Job::SpinSleep(50 / 1000.0f);
+					};
+					for(int i = 0; i < 100; i++) {
+						Job::QueueWork(work);
+					}
+				};
+				Job::QueueWork(work, Job::WorkPriority::TOP_OF_QUEUE);
+			};
+			if(ImGui::IsItemHovered()) {
+				ImGui::SetTooltip("Does not add to the waiting handles list due to multithreading");
+			}
 			if(ImGui::Button("Add Job main short sleep x100")) {
 				for(int i = 0; i < 100; i++) {
 					Job::Work work;
-					work.finishOnMainThread = true;
-					work.finishPtr			= [](void*) {
+					work.mFinishOnMainThread = true;
+					work.mFinishPtr			 = [](void*) {
 						 ZoneScoped;
 						 int length = 1 + (rand() % 50);
 
 						 std::string text = std::to_string(length);
 						 ZoneText(text.c_str(), text.size());
 
-						 //_sleep(length);
-
-						 float msLength									   = length / 1000.0f;
-						 std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-						 double ms										   = 0;
-						 while(ms < msLength) {
-							 std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-							 std::chrono::duration<double> time_span		   = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-							 ms												   = time_span.count();
-						 }
+						 float msLength = length / 1000.0f;
+						 Job::SpinSleep(msLength);
 						 LOGGER::Formated("I have finished {}\n", Job::IsMainThread());
 					};
-					Job::Workhandle handle = Job::QueueWork(work);
-					mWaitingHandles.push_back(handle);
+					mWaitingHandles.push_back(Job::QueueWorkHandle(work));
 				}
 			}
 			if(ImGui::Button("Add Job sleep x20")) {
 				for(int i = 0; i < 20; i++) {
 					Job::Work work;
-					work.workPtr = [](void*) {
+					work.mWorkPtr = [](void*) {
 						ZoneScoped;
 						int length = 100 + (rand() % 1000);
 
@@ -255,30 +258,25 @@ int main() {
 
 						//_sleep(length);
 
-						float msLength									  = length / 1000.0f;
-						std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
-						double ms										  = 0;
-						while(ms < msLength) {
-							std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-							std::chrono::duration<double> time_span			  = std::chrono::duration_cast<std::chrono::duration<double>>(t2 - t1);
-							ms												  = time_span.count();
-						}
+						float msLength = length / 1000.0f;
+						Job::SpinSleep(msLength);
 					};
-					work.finishPtr = [](void*) {
+					work.mFinishPtr = [](void*) {
 						LOGGER::Formated("I have slept enough\n");
 					};
-					Job::Workhandle handle = Job::QueueWork(work);
-					mWaitingHandles.push_back(handle);
+					mWaitingHandles.push_back(Job::QueueWorkHandle(work));
 				}
 			}
+			ImGui::Text("Async Work Remaining: %i", Job::GetWorkRemaining());
 			if(mWaitingHandles.size()) {
 				ImGui::Text("Main: Did %i work %f", Job::Worker::GetWorkCompleted(), Job::Worker::GetWorkLength());
 				ImGui::Text("Waiting on %i sleeps", (int)mWaitingHandles.size());
 				for(int i = 0; i < mWaitingHandles.size(); i++) {
-					Job::Workhandle handle = mWaitingHandles[i];
-					if(Job::IsFinished(handle)) {
+					Job::WorkHandle* handle = mWaitingHandles[i];
+					if(handle->mIsDone) {
 						mWaitingHandles.erase(mWaitingHandles.begin() + i);
 						i--;
+						delete handle;
 					}
 				}
 				if(mWaitingHandles.size() == 0) {

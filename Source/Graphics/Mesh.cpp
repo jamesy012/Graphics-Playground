@@ -16,8 +16,8 @@ struct AsyncLoadData {
 };
 Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
 	Job::Work asyncWork;
-	asyncWork.userData = new AsyncLoadData();
-	asyncWork.workPtr  = [aFilePath](void* aData) {
+	asyncWork.mUserData = new AsyncLoadData();
+	asyncWork.mWorkPtr	= [aFilePath](void* aData) {
 		 AsyncLoadData* data  = (AsyncLoadData*)aData;
 		 const aiScene* scene = data->importer.ReadFile(aFilePath.mPath.c_str(),
 														aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices |
@@ -31,8 +31,8 @@ Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
 		 }
 		 data->mScene = scene;
 	};
-	asyncWork.finishOnMainThread = true;
-	asyncWork.finishPtr			 = [this](void* aData) {
+	asyncWork.mFinishOnMainThread = true;
+	asyncWork.mFinishPtr		  = [this](void* aData) {
 		 AsyncLoadData* data = (AsyncLoadData*)aData;
 		 if(data->mScene) {
 			 ProcessNode(data->mScene, data->mScene->mRootNode);
