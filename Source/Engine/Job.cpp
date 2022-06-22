@@ -19,21 +19,27 @@ public:
 	bool mQuit = false;
 
 	//work to do, removed when work started
-	TracyLockable(std ::mutex, mWorkAccesser);
+	TracyLockable(std::mutex, mWorkAccesser);
 	std::deque<Job::Work*> mWork;
 
 	//finish jobs for the main thread to complete
-	TracyLockable(std ::mutex, mWorkMainAccesser);
+	TracyLockable(std::mutex, mWorkMainAccesser);
 	std::deque<Job::Work*> mWorkMain;
 
 	//to sleep threads when no work in queue
 	std::condition_variable_any m_CV;
 } gManager;
+
+//used for condition variable
 bool WorkAvailable() {
 	return gManager.mWork.size() != 0 || gManager.mQuit == true;
 }
 
 std::thread::id gMainThreadId;
+
+Job::WorkState Job::WorkHandle::GetState() const {
+	return mWorkRef ? mWorkRef->mWorkState : Job::WorkState::FINISHED;
+}
 
 void Job::Work::DoWork(bool aOnlyFinish /*= false*/) {
 	ZoneScoped;
@@ -113,20 +119,42 @@ Job::WorkHandle* Job::QueueWorkHandle(Job::Work& aWork, WorkPriority aWorkPriori
 
 bool Job::WaitForWork(const Job::WorkHandle* aHandle) {
 	ZoneScoped;
+	if(aHandle == nullptr) {
+		return false;
+	}
 	if(aHandle->mIsDone) {
 		return true;
 	}
+	//modifying arrays, lock thread
 	std::unique_lock<std::mutex> lock(gManager.mWorkAccesser);
 	Work* work = aHandle->mWorkRef;
 	switch(work->mWorkState) {
-		case WorkState::QUEUED:
-			ASSERT(false); //do work and remove from queue?
-			break;
-		case WorkState::FINISHED:
+		case WorkState::FINISHED: //task already finished, no waiting
 			lock.unlock();
 			return true;
+		case WorkState::QUEUED: //task not started, wait by doing the task in this thread
+		{
+			auto result = std::find(gManager.mWorkMain.begin(), gManager.mWorkMain.end(), work);
+			gManager.mWorkMain.erase(result);
+			lock.unlock();
+			if(Job::IsMainThread() && work->mFinishOnMainThread) {
+				ASSERT(false); //on main thread, needing finish work on main thread?
+				return false;
+			} else {
+				work->DoWork();
+			}
+		}
+			return true;
 		default: //work started, wait for it to finish
-			break;
+			lock.unlock();
+			if(Job::IsMainThread() && work->mFinishOnMainThread) {
+				ASSERT(false); //on main thread, needing finish work on main thread?
+				return false;
+			}
+			//todo revisit Work wait
+			do {
+			} while(!aHandle->mIsDone); //keep checking
+			return true;
 	}
 	lock.unlock();
 	return true;
@@ -160,6 +188,8 @@ void Job::SpinSleep(float aLength) {
 	}
 }
 
+//Manager/Async Thread
+
 void WorkerThread(int aThreadIndex) {
 #if defined(TRACY_ENABLE)
 	std::string text = "Worker thread: " + std::to_string(aThreadIndex);
@@ -188,7 +218,7 @@ void WorkerThread(int aThreadIndex) {
 	LOGGER::Formated("Worker thread {} Closing\n", aThreadIndex);
 }
 
-void Job::Worker::Startup() {
+void WorkManager::Startup() {
 	gMainThreadId = std::this_thread::get_id();
 
 	// Retrieve the number of hardware threads in this system:
@@ -202,7 +232,7 @@ void Job::Worker::Startup() {
 }
 double gMsTimeTaken;
 int gWorkDone;
-void Job::Worker::ProcessMainThreadWork() {
+void WorkManager::ProcessMainThreadWork() {
 	ZoneScoped;
 	gWorkDone										  = 0;
 	const double maxLength							  = 0.05f;
@@ -238,7 +268,7 @@ void Job::Worker::ProcessMainThreadWork() {
 	}
 }
 
-void Job::Worker::Shutdown() {
+void WorkManager::Shutdown() {
 	//
 	gManager.mQuit = true;
 	gManager.m_CV.notify_all();
@@ -252,9 +282,9 @@ void Job::Worker::Shutdown() {
 	}
 }
 
-int Job::Worker::GetWorkCompleted() {
+int WorkManager::GetWorkCompleted() {
 	return gWorkDone;
 }
-double Job::Worker::GetWorkLength() {
+double WorkManager::GetWorkLength() {
 	return gMsTimeTaken;
 }

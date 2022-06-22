@@ -23,19 +23,19 @@ void Engine::Startup(IGraphicsBase* aGraphics) {
 	mGraphics->Initalize();
 	LOGGER::Log("Graphics Initalized\n");
 
-	Job::Worker::Startup();
+	WorkManager::Startup();
 }
 
 bool Engine::GameLoop() {
 	ZoneScoped;
 	GetWindow()->Update();
-	Job::Worker::ProcessMainThreadWork();
+	WorkManager::ProcessMainThreadWork();
 	return 0;
 }
 
 void Engine::Shutdown() {
 	ASSERT(gEngine != nullptr);
-	Job::Worker::Shutdown();
+	WorkManager::Shutdown();
 
 	mGraphics->Destroy();
 	mGraphics = nullptr;

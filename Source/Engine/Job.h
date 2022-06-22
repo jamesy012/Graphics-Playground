@@ -2,6 +2,16 @@
 
 #include <functional>
 
+struct WorkManager {
+	static void Startup();
+	static void ProcessMainThreadWork();
+	static void Shutdown();
+
+	//temp for imgui thread testing
+	static int GetWorkCompleted();
+	static double GetWorkLength();
+};
+
 struct Job {
 	typedef std::function<void(void*)> WorkFunction;
 	enum class WorkPriority
@@ -24,6 +34,8 @@ struct Job {
 	struct Worker;
 
 	struct WorkHandle {
+		public:
+		WorkState GetState() const;
 	protected:
 		bool mIsDone		 = false;
 		class Work* mWorkRef = nullptr;
@@ -46,6 +58,7 @@ struct Job {
 		void* mUserData = nullptr;
 
 		//somewhat useless since once it hits the finished state this is deleted
+		//does work state need a mutex/atomic for access?
 		WorkState mWorkState = WorkState::QUEUED;
 
 	protected:
@@ -76,13 +89,6 @@ struct Job {
 	//sleeps by using a while loop
 	static void SpinSleep(float aLength);
 
-	struct Worker {
-		static void Startup();
-		static void ProcessMainThreadWork();
-		static void Shutdown();
 
-		//temp for imgui thread testing
-		static int GetWorkCompleted();
-		static double GetWorkLength();
-	};
+	private:
 };

@@ -228,6 +228,28 @@ int main() {
 			if(ImGui::IsItemHovered()) {
 				ImGui::SetTooltip("Does not add to the waiting handles list due to multithreading");
 			}
+			static Job::WorkHandle* handleWaitTest = nullptr;
+			if(ImGui::Button("Add Job Wait Test") && handleWaitTest == nullptr) {
+				Job::Work work;
+				work.mWorkPtr = [](void*) {
+					Job::Work work;
+					work.mWorkPtr = [](void*) {
+						Job::SpinSleep(5000 / 1000.0f);
+					};
+					handleWaitTest = Job::QueueWorkHandle(work);
+				};
+				Job::QueueWork(work, Job::WorkPriority::TOP_OF_QUEUE);
+			}
+			if(handleWaitTest && handleWaitTest->GetState() != Job::WorkState::QUEUED) {
+				ImGui::SameLine();
+				if(ImGui::Button("Main thread wait for job")) {
+					Job::WaitForWork(handleWaitTest);
+				}
+				if(handleWaitTest->GetState() == Job::WorkState::FINISHED) {
+					handleWaitTest = nullptr;
+					delete handleWaitTest;
+				}
+			}
 			if(ImGui::Button("Add Job main short sleep x100")) {
 				for(int i = 0; i < 100; i++) {
 					Job::Work work;
@@ -269,7 +291,7 @@ int main() {
 			}
 			ImGui::Text("Async Work Remaining: %i", Job::GetWorkRemaining());
 			if(mWaitingHandles.size()) {
-				ImGui::Text("Main: Did %i work %f", Job::Worker::GetWorkCompleted(), Job::Worker::GetWorkLength());
+				ImGui::Text("Main: Did %i work %f", WorkManager::GetWorkCompleted(), WorkManager::GetWorkLength());
 				ImGui::Text("Waiting on %i sleeps", (int)mWaitingHandles.size());
 				for(int i = 0; i < mWaitingHandles.size(); i++) {
 					Job::WorkHandle* handle = mWaitingHandles[i];
