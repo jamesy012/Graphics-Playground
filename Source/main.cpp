@@ -273,7 +273,7 @@ int main() {
 				ImGui::Text("Waiting on %i sleeps", (int)mWaitingHandles.size());
 				for(int i = 0; i < mWaitingHandles.size(); i++) {
 					Job::WorkHandle* handle = mWaitingHandles[i];
-					if(handle->mIsDone) {
+					if(Job::IsDone(handle)) {
 						mWaitingHandles.erase(mWaitingHandles.begin() + i);
 						i--;
 						delete handle;

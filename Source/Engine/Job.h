@@ -2,7 +2,7 @@
 
 #include <functional>
 
-namespace Job {
+struct Job {
 	typedef std::function<void(void*)> WorkFunction;
 	enum class WorkPriority
 	{
@@ -19,9 +19,18 @@ namespace Job {
 		FINISHING, // finishing on thread
 		FINISHED // work done, cleaning up
 	};
+
+	struct Work;
+	struct Worker;
+
 	struct WorkHandle {
+	protected:
 		bool mIsDone		 = false;
 		class Work* mWorkRef = nullptr;
+
+		friend Work;
+		friend Worker;
+		friend Job;
 	};
 	struct Work {
 		//runs the work on whatever thread calls it
@@ -39,31 +48,41 @@ namespace Job {
 		//somewhat useless since once it hits the finished state this is deleted
 		WorkState mWorkState = WorkState::QUEUED;
 
+	protected:
 		WorkHandle* mHandle = nullptr;
+
+		friend Job;
 	};
 
-	void QueueWork(Work& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
+	static void QueueWork(Work& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
 	//make sure to reset the handle when finished
-	WorkHandle* QueueWorkHandle(Work& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
+	static WorkHandle* QueueWorkHandle(Work& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
+
+	static bool IsDone(const WorkHandle* aHandle){
+		return aHandle->mIsDone;
+	}
+
+	//returns true if we waited for work to finish
+	//false if handle
+	static bool WaitForWork(const WorkHandle* aHandle);
 
 	//checks if the current thread was the thread that created the job system
-	bool IsMainThread();
+	static bool IsMainThread();
 
 	//locks work mutex's to check how much work is still in the lists
 	//does not include active work
-	int GetWorkRemaining();
+	static int GetWorkRemaining();
 
 	//sleeps by using a while loop
-	void SpinSleep(float aLength);
+	static void SpinSleep(float aLength);
 
-	namespace Worker {
-		void Startup();
-		void ProcessMainThreadWork();
-		void Shutdown();
+	struct Worker {
+		static void Startup();
+		static void ProcessMainThreadWork();
+		static void Shutdown();
 
 		//temp for imgui thread testing
-		int GetWorkCompleted();
-		double GetWorkLength();
-	}; // namespace Worker
-
-}; // namespace Job
+		static int GetWorkCompleted();
+		static double GetWorkLength();
+	};
+};
