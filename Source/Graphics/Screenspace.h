@@ -16,7 +16,7 @@ public:
 	};
 
 	void AddMaterialBase(MaterialBase* aMaterial) {
-		mPipeline.SetMaterialBase(aMaterial);
+		mPipeline.AddMaterialBase(aMaterial);
 	};
 
 	void Create(const FileIO::Path& aFragmentPath, const char* aName = 0);

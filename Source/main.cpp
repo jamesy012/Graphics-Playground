@@ -83,8 +83,8 @@ int main() {
 	//SCREEN SPACE TEST
 	//used to copy fbImage to backbuffer
 
-	//Image ssImage;
-	//ssImage.LoadImage(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_Bark.png", Graphics::GetDeafultColorFormat());
+	Image ssImage;
+	ssImage.LoadImage(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_Bark.png", Graphics::GetDeafultColorFormat());
 	//Image ssImage2;
 	//ssImage2.LoadImage(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_Leaves.png", Graphics::GetDeafultColorFormat());
 
@@ -147,12 +147,20 @@ int main() {
 
 	MaterialBase meshTestBase;
 	meshTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
+	//meshTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 	meshTestBase.Create();
-	meshPipeline.SetMaterialBase(&meshTestBase);
+	meshPipeline.AddMaterialBase(&meshTestBase);
+	MaterialBase meshImageTestBase;
+	meshImageTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+	meshImageTestBase.Create();
+	meshPipeline.AddMaterialBase(&meshImageTestBase);
 	meshPipeline.Create(mainRenderPass.GetRenderPass(), "Mesh");
 
 	Material meshMaterial = meshTestBase.MakeMaterials()[0];
 	meshMaterial.SetBuffers(meshUniformBuffer, 0, 0);
+
+	Material meshImageTest = meshImageTestBase.MakeMaterials()[0];
+	meshImageTest.SetImages(ssImage, 0, 0);
 
 	Transform mModelTransforms[2];
 	Transform mRootTransform;
@@ -209,124 +217,8 @@ int main() {
 			const float time = gGraphics->GetFrameCount() / 5.0f;
 			mRootTransform.SetRotation(glm::vec3(0, -time, 0));
 		}
-		{
-			ImGui::Begin("Job Test");
-			static std::vector<Job::WorkHandle*> mWaitingHandles;
-			if(ImGui::Button("Add Job that queues jobs")) {
-				Job::Work work;
-				work.mWorkPtr = [](void*) {
-					Job::Work work;
-					work.mWorkPtr = [](void*) {
-						Job::SpinSleep(50 / 1000.0f);
-					};
-					for(int i = 0; i < 100; i++) {
-						Job::QueueWork(work);
-					}
-				};
-				Job::QueueWork(work, Job::WorkPriority::TOP_OF_QUEUE);
-			};
-			if(ImGui::IsItemHovered()) {
-				ImGui::SetTooltip("Does not add to the waiting handles list due to multithreading");
-			}
-			static Job::WorkHandle* handleWaitTest = nullptr;
-			if(ImGui::Button("Add Job Wait Test") && handleWaitTest == nullptr) {
-				Job::Work work;
-				work.mWorkPtr = [](void*) {
-					Job::Work work;
-					work.mWorkPtr = [](void*) {
-						Job::SpinSleep(5000 / 1000.0f);
-					};
-					handleWaitTest = Job::QueueWorkHandle(work);
-				};
-				Job::QueueWork(work, Job::WorkPriority::TOP_OF_QUEUE);
-			}
-			if(handleWaitTest && handleWaitTest->GetState() != Job::WorkState::QUEUED) {
-				ImGui::SameLine();
-				if(ImGui::Button("Main thread wait for job")) {
-					Job::WaitForWork(handleWaitTest);
-				}
-				if(handleWaitTest->GetState() == Job::WorkState::FINISHED) {
-					handleWaitTest = nullptr;
-					delete handleWaitTest;
-				}
-			}
-			if(ImGui::Button("Add Job main short sleep x100")) {
-				for(int i = 0; i < 100; i++) {
-					Job::Work work;
-					work.mFinishOnMainThread = true;
-					work.mFinishPtr			 = [](void*) {
-						 ZoneScoped;
-						 int length = 1 + (rand() % 50);
 
-						 std::string text = std::to_string(length);
-						 ZoneText(text.c_str(), text.size());
-
-						 float msLength = length / 1000.0f;
-						 Job::SpinSleep(msLength);
-						 LOGGER::Formated("I have finished {}\n", Job::IsMainThread());
-					};
-					mWaitingHandles.push_back(Job::QueueWorkHandle(work));
-				}
-			}	
-			if(ImGui::Button("Add Batch Job main short sleep x100")) {
-				std::vector<Job::Work> workArray(100);
-				for(int i = 0; i < workArray.size(); i++) {
-					Job::Work& work			 = workArray[i];
-					work.mFinishOnMainThread = true;
-					work.mFinishPtr			 = [](void*) {
-						 ZoneScoped;
-						 int length = 1 + (rand() % 50);
-
-						 std::string text = std::to_string(length);
-						 ZoneText(text.c_str(), text.size());
-
-						 float msLength = length / 1000.0f;
-						 Job::SpinSleep(msLength);
-						 LOGGER::Formated("I have finished {}\n", Job::IsMainThread());
-					};
-				}
-				std::vector<Job::WorkHandle*> workHandle = Job::QueueWorkHandle(workArray);
-				mWaitingHandles.insert(mWaitingHandles.end(), workHandle.begin(), workHandle.end());
-			}
-			if(ImGui::Button("Add Job sleep x20")) {
-				for(int i = 0; i < 20; i++) {
-					Job::Work work;
-					work.mWorkPtr = [](void*) {
-						ZoneScoped;
-						int length = 100 + (rand() % 1000);
-
-						std::string text = std::to_string(length);
-						ZoneText(text.c_str(), text.size());
-
-						//_sleep(length);
-
-						float msLength = length / 1000.0f;
-						Job::SpinSleep(msLength);
-					};
-					work.mFinishPtr = [](void*) {
-						LOGGER::Formated("I have slept enough\n");
-					};
-					mWaitingHandles.push_back(Job::QueueWorkHandle(work));
-				}
-			}
-			ImGui::Text("Async Work Remaining: %i", Job::GetWorkRemaining());
-			if(mWaitingHandles.size()) {
-				ImGui::Text("Main: Did %i work %f", WorkManager::GetWorkCompleted(), WorkManager::GetWorkLength());
-				ImGui::Text("Waiting on %i sleeps", (int)mWaitingHandles.size());
-				for(int i = 0; i < mWaitingHandles.size(); i++) {
-					Job::WorkHandle* handle = mWaitingHandles[i];
-					if(Job::IsDone(handle)) {
-						mWaitingHandles.erase(mWaitingHandles.begin() + i);
-						i--;
-						delete handle;
-					}
-				}
-				if(mWaitingHandles.size() == 0) {
-					LOGGER::Formated("SLEEP Work finished\n");
-				}
-			}
-			ImGui::End();
-		}
+		WorkManager::ImGuiTesting();
 
 		const Framebuffer& framebuffer = fb;
 
@@ -335,6 +227,7 @@ int main() {
 		meshPipeline.Begin(buffer);
 		//bind camera data
 		vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
+		vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 1, 1, meshImageTest.GetSet(), 0, nullptr);
 		//tree 1
 		{
 			//meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 5, 0));
@@ -390,6 +283,8 @@ int main() {
 	meshTestBase.Destroy();
 	meshTest.Destroy();
 	meshUniformBuffer.Destroy();
+
+	ssImage.Destroy();
 
 	mainRenderPass.Destroy();
 	fb.Destroy();

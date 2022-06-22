@@ -72,7 +72,7 @@ void ImGuiGraphics::Create(GLFWwindow* aWindow, const RenderPass& aRenderPass) {
 
 	gImGuiFontMaterialBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 	gImGuiFontMaterialBase.Create("ImGui Material Layout");
-	gImGuiPipeline.SetMaterialBase(&gImGuiFontMaterialBase);
+	gImGuiPipeline.AddMaterialBase(&gImGuiFontMaterialBase);
 
 	VkPushConstantRange pushRange = {};
 	pushRange.stageFlags		  = VK_SHADER_STAGE_VERTEX_BIT;

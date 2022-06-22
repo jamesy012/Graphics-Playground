@@ -34,7 +34,7 @@ void Screenspace::Create(const FileIO::Path& aFragmentPath, const char* aName /*
 	data[2]		   = 2;
 	mIndexBuffer.UnMap();
 
-	mMaterials = mPipeline.MakeMaterials();
+	mMaterials = mPipeline.MakeMaterials(0);
 }
 
 void Screenspace::Render(const VkCommandBuffer aBuffer, const Framebuffer& aFramebuffer) const {

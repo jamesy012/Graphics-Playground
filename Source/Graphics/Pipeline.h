@@ -14,8 +14,8 @@ public:
 	// Pre Create
 
 	bool AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage);
-	void SetMaterialBase(MaterialBase* aBase) {
-		mMaterialBase = aBase;
+	void AddMaterialBase(MaterialBase* aBase) {
+		mMaterials.push_back(aBase);
 	};
 
 	void AddPushConstant(const VkPushConstantRange& aPush) {
@@ -39,7 +39,7 @@ public:
 		return mPipelineLayout;
 	}
 
-	std::vector<Material> MakeMaterials() const ;
+	std::vector<Material> MakeMaterials(uint8_t aBinding) const;
 
 	//Temp
 	VkVertexInputBindingDescription vertexBinding				   = {};
@@ -48,7 +48,7 @@ public:
 private:
 	std::vector<VkPipelineShaderStageCreateInfo> mShaders = {};
 	std::vector<VkPushConstantRange> mPushConstants		  = {};
-	MaterialBase* mMaterialBase							  = nullptr;
+	std::vector<MaterialBase*> mMaterials				  = {};
 
 	VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
 	VkPipelineCache mPipelineCache	 = VK_NULL_HANDLE;

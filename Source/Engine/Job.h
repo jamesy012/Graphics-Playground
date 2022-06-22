@@ -7,6 +7,8 @@ struct WorkManager {
 	static void ProcessMainThreadWork();
 	static void Shutdown();
 
+	static void ImGuiTesting();
+
 	//temp for imgui thread testing
 	static int GetWorkCompleted();
 	static double GetWorkLength();
@@ -34,8 +36,13 @@ struct Job {
 	struct Worker;
 
 	struct WorkHandle {
-		public:
+	public:
 		WorkState GetState() const;
+		void Reset() ;
+
+	private:
+		~WorkHandle(){};
+
 	protected:
 		bool mIsDone		 = false;
 		class Work* mWorkRef = nullptr;
@@ -73,12 +80,12 @@ struct Job {
 	static std::vector<WorkHandle*> QueueWorkHandle(std::vector<Work>& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
 	static WorkHandle* QueueWorkHandle(Work& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
 
-	static bool IsDone(const WorkHandle* aHandle){
+	static bool IsDone(const WorkHandle* aHandle) {
 		return aHandle->mIsDone;
 	}
 
-	//returns true if we waited for work to finish
-	//false if handle
+	//returns true if the work is done
+	//false if there was a problem
 	static bool WaitForWork(const WorkHandle* aHandle);
 
 	//checks if the current thread was the thread that created the job system
@@ -91,6 +98,5 @@ struct Job {
 	//sleeps by using a while loop
 	static void SpinSleep(float aLength);
 
-
-	private:
+private:
 };

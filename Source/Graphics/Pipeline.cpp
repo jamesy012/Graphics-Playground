@@ -32,7 +32,7 @@ bool Pipeline::AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage) {
 
 bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 	ZoneScoped;
-	ZoneText(aName, strlen(aName)); 
+	ZoneText(aName, strlen(aName));
 	{
 		VkPipelineCacheCreateInfo pipelineCacheCreateInfo = {};
 		pipelineCacheCreateInfo.sType					  = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
@@ -141,11 +141,13 @@ bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 		pipelineLayoutInfo.pPushConstantRanges	  = mPushConstants.data();
 		pipelineLayoutInfo.pushConstantRangeCount = mPushConstants.size();
 
-		if(mMaterialBase != nullptr) {
-			VkDescriptorSetLayout layout	  = mMaterialBase->mLayout;
-			pipelineLayoutInfo.pSetLayouts	  = &layout;
-			pipelineLayoutInfo.setLayoutCount = 1;
+		const size_t numMaterials = mMaterials.size();
+		std::vector<VkDescriptorSetLayout> layouts(numMaterials);
+		for(int i = 0; i < numMaterials; i++) {
+			layouts[i] = mMaterials[i]->mLayout;
 		}
+		pipelineLayoutInfo.pSetLayouts	  = layouts.data();
+		pipelineLayoutInfo.setLayoutCount = numMaterials;
 
 		vkCreatePipelineLayout(gGraphics->GetVkDevice(), &pipelineLayoutInfo, GetAllocationCallback(), &mPipelineLayout);
 		SetVkName(VK_OBJECT_TYPE_PIPELINE_LAYOUT, mPipelineLayout, aName);
@@ -193,6 +195,6 @@ void Pipeline::Begin(VkCommandBuffer aBuffer) const {
 
 void Pipeline::End(VkCommandBuffer aBuffer) const {}
 
-std::vector<Material> Pipeline::MakeMaterials() const {
-	return mMaterialBase->MakeMaterials();
+std::vector<Material> Pipeline::MakeMaterials(uint8_t aBinding) const {
+	return mMaterials[aBinding]->MakeMaterials();
 }
