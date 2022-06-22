@@ -46,13 +46,11 @@ void Job::Work::DoWork(bool aOnlyFinish /*= false*/) {
 	//work
 	{
 		if(mWorkPtr && aOnlyFinish == false) {
-			ZoneScoped;
 			ZoneScopedN("Work Ptr");
 			mWorkPtr(mUserData);
 			mWorkState = WorkState::MAIN_DONE;
 		}
 		if(mFinishPtr) {
-			ZoneScoped;
 			//should we finish on the main thread?
 			if(mFinishOnMainThread && !Job::IsMainThread()) {
 				ZoneScopedN("Queue to main thread");
@@ -85,6 +83,39 @@ void Job::Work::DoWork(bool aOnlyFinish /*= false*/) {
 	}
 }
 
+void Job::QueueWork(std::vector<Job::Work>& aWork, Job::WorkPriority aWorkPriority /* = WorkPriority::BOTTOM_OF_QUEUE*/) {
+	ZoneScopedN("Queue Work Batched");
+	const size_t numWork = aWork.size();
+	std::string taskText = "Creating tasks - " + std::to_string(numWork);
+	ZoneText(taskText.c_str(), taskText.size());
+	
+	std::vector<Job::Work*> work(numWork);
+	for (int i = 0; i < numWork; i++) {
+		work[i] = new Job::Work(aWork[i]);
+		//pass through the new work to the handle if we have one
+		if(work[i]->mHandle) {
+			work[i]->mHandle->mWorkRef = work[i];
+		}
+	}
+	
+	//add work
+	{
+		std::unique_lock lock(gManager.mWorkAccesser);
+		switch(aWorkPriority) {
+			case WorkPriority::BOTTOM_OF_QUEUE:
+				gManager.mWork.insert(gManager.mWork.end(), work.begin(), work.end());
+				break;
+			case WorkPriority::TOP_OF_QUEUE:
+				gManager.mWork.insert(gManager.mWork.begin(), work.begin(), work.end());
+				break;
+			default:
+				ASSERT(false);
+		}
+		gManager.m_CV.notify_all();
+		lock.unlock();
+	}
+}
+
 void Job::QueueWork(Job::Work& aWork, Job::WorkPriority aWorkPriority /* = WorkPriority::BOTTOM_OF_QUEUE*/) {
 	ZoneScoped;
 	Work* work = new Work(aWork);
@@ -111,6 +142,17 @@ void Job::QueueWork(Job::Work& aWork, Job::WorkPriority aWorkPriority /* = WorkP
 	}
 }
 
+std::vector<Job::WorkHandle*> Job::QueueWorkHandle(std::vector<Job::Work>& aWork, WorkPriority aWorkPriority /* = WorkPriority::BOTTOM_OF_QUEUE*/) {
+	const size_t numWork = aWork.size();
+	std::vector<Job::WorkHandle*> handles(numWork);
+	for(int i = 0; i < numWork; i++) {
+		handles[i]		 = new Job::WorkHandle();
+		aWork[i].mHandle = handles[i];
+	}
+	QueueWork(aWork, aWorkPriority);
+	return handles;
+}
+
 Job::WorkHandle* Job::QueueWorkHandle(Job::Work& aWork, WorkPriority aWorkPriority /* = WorkPriority::BOTTOM_OF_QUEUE*/) {
 	aWork.mHandle = new Job::WorkHandle();
 	QueueWork(aWork, aWorkPriority);
@@ -126,7 +168,7 @@ bool Job::WaitForWork(const Job::WorkHandle* aHandle) {
 		return true;
 	}
 	//modifying arrays, lock thread
-	std::unique_lock<std::mutex> lock(gManager.mWorkAccesser);
+	std::unique_lock lock(gManager.mWorkAccesser);
 	Work* work = aHandle->mWorkRef;
 	switch(work->mWorkState) {
 		case WorkState::FINISHED: //task already finished, no waiting
@@ -166,8 +208,8 @@ bool Job::IsMainThread() {
 
 int Job::GetWorkRemaining() {
 	ZoneScoped;
-	std::unique_lock<std::mutex> lock(gManager.mWorkAccesser);
-	std::unique_lock<std::mutex> lock2(gManager.mWorkMainAccesser);
+	std::unique_lock lock(gManager.mWorkAccesser);
+	std::unique_lock lock2(gManager.mWorkMainAccesser);
 	int result = gManager.mWork.size() + gManager.mWorkMain.size();
 	lock.unlock();
 	lock2.unlock();
@@ -176,7 +218,7 @@ int Job::GetWorkRemaining() {
 
 void Job::SpinSleep(float aLength) {
 	ZoneScoped;
-	std::string lengthText = "Sleep for " + std::to_string(aLength);
+	std::string lengthText = "Sleep for " + std::to_string(aLength * 1000) + "ms";
 	ZoneText(lengthText.c_str(), lengthText.size());
 
 	std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
@@ -189,7 +231,6 @@ void Job::SpinSleep(float aLength) {
 }
 
 //Manager/Async Thread
-
 void WorkerThread(int aThreadIndex) {
 #if defined(TRACY_ENABLE)
 	std::string text = "Worker thread: " + std::to_string(aThreadIndex);

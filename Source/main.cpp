@@ -267,6 +267,26 @@ int main() {
 					};
 					mWaitingHandles.push_back(Job::QueueWorkHandle(work));
 				}
+			}	
+			if(ImGui::Button("Add Batch Job main short sleep x100")) {
+				std::vector<Job::Work> workArray(100);
+				for(int i = 0; i < workArray.size(); i++) {
+					Job::Work& work			 = workArray[i];
+					work.mFinishOnMainThread = true;
+					work.mFinishPtr			 = [](void*) {
+						 ZoneScoped;
+						 int length = 1 + (rand() % 50);
+
+						 std::string text = std::to_string(length);
+						 ZoneText(text.c_str(), text.size());
+
+						 float msLength = length / 1000.0f;
+						 Job::SpinSleep(msLength);
+						 LOGGER::Formated("I have finished {}\n", Job::IsMainThread());
+					};
+				}
+				std::vector<Job::WorkHandle*> workHandle = Job::QueueWorkHandle(workArray);
+				mWaitingHandles.insert(mWaitingHandles.end(), workHandle.begin(), workHandle.end());
 			}
 			if(ImGui::Button("Add Job sleep x20")) {
 				for(int i = 0; i < 20; i++) {
