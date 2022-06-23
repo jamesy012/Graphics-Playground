@@ -16,6 +16,8 @@ struct aiScene;
 struct aiNode;
 struct aiMesh;
 
+class Material;
+
 static constexpr char NUM_UVS		= 1;
 static constexpr char NUM_VERT_COLS = 1;
 
@@ -30,6 +32,7 @@ struct MeshVert {
 };
 typedef uint32_t MeshIndex;
 
+
 class Mesh {
 public:
 	bool LoadMeshSync(FileIO::Path aFilePath);
@@ -43,9 +46,12 @@ public:
 
         Buffer mVertexBuffer;
         Buffer mIndexBuffer;
+
+		Material* mMaterial = nullptr;
 	};
 
-    void QuickTempRender(VkCommandBuffer aBuffer);
+    void QuickTempRender(VkCommandBuffer aBuffer, VkPipelineLayout aPipelineLayout);
+    void QuickTempRenderSetMaterial(int mesh, Material* aMat);
 
 	uint32_t GetNumMesh() const {
 		return mMesh.size();
@@ -53,6 +59,10 @@ public:
 
 	const SubMesh& GetMesh(uint32_t mesh) const {
 		return mMesh[mesh];
+	}
+
+	const bool HasLoaded() const {
+		return mLoaded;
 	}
 
 private:

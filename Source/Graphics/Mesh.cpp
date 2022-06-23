@@ -7,6 +7,8 @@
 #include "PlatformDebug.h"
 #include "Conversions.h"
 
+#include "Material.h"
+
 static_assert(NUM_UVS <= AI_MAX_NUMBER_OF_TEXTURECOORDS);
 static_assert(NUM_VERT_COLS <= AI_MAX_NUMBER_OF_COLOR_SETS);
 
@@ -198,15 +200,22 @@ void Mesh::Destroy() {
 }
 
 //temp
-void Mesh::QuickTempRender(VkCommandBuffer aBuffer) {
+void Mesh::QuickTempRender(VkCommandBuffer aBuffer, VkPipelineLayout aPipelineLayout) {
 	if(mLoaded == false) {
 		return;
 	}
 	for(int i = 0; i < mMesh.size(); i++) {
-		SubMesh& mesh			= mMesh[i];
+		SubMesh& mesh = mMesh[i];
+		if(mesh.mMaterial != nullptr) {
+			vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 1, 1, mesh.mMaterial->GetSet(), 0, nullptr);
+		}
 		VkDeviceSize offsets[1] = {0};
 		vkCmdBindVertexBuffers(aBuffer, 0, 1, mesh.mVertexBuffer.GetBufferRef(), offsets);
 		vkCmdBindIndexBuffer(aBuffer, mesh.mIndexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 		vkCmdDrawIndexed(aBuffer, mesh.mIndices.size(), 1, 0, 0, 0);
 	}
+}
+
+void Mesh::QuickTempRenderSetMaterial(int mesh, Material* aMat) {
+	mMesh[mesh].mMaterial = aMat;
 }

@@ -54,6 +54,9 @@ public:
 	}
 
 	void SetClearColors(std::vector<VkClearValue> aClearColors);
+	const std::vector<VkClearValue> GetClearColors() const {
+		return mClearColors;
+	}
 
 private:
 	std::vector<VkClearValue> mClearColors				= {};

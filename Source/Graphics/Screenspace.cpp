@@ -15,7 +15,11 @@ void Screenspace::Create(const FileIO::Path& aFragmentPath, const char* aName /*
 		mAttachmentFormat = gGraphics->GetSwapchainFormat();
 #endif
 	}
-	mRenderPass.AddColorAttachment(mAttachmentFormat, VK_ATTACHMENT_LOAD_OP_LOAD);
+	if(mRenderPass.GetClearColors().size() != 0) {
+		mRenderPass.AddColorAttachment(mAttachmentFormat, VK_ATTACHMENT_LOAD_OP_CLEAR);
+	} else {
+		mRenderPass.AddColorAttachment(mAttachmentFormat, VK_ATTACHMENT_LOAD_OP_LOAD);
+	}
 
 	mRenderPass.Create(aName);
 

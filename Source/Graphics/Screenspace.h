@@ -33,6 +33,11 @@ public:
 		return mMaterials[aIndex];
 	}
 
+	void SetClearColors(std::vector<VkClearValue> aClearColors){
+		mRenderPass.SetClearColors(aClearColors);
+	}
+
+
 	VkFormat mAttachmentFormat = VK_FORMAT_UNDEFINED;
 
 private:
