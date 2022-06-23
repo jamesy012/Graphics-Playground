@@ -133,6 +133,8 @@ public:
 		return mSampler;
 	};
 
+	const ImageSize GetDesiredSize() const;
+
 private:
 	bool CreateInstance();
 

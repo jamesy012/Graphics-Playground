@@ -1,6 +1,9 @@
 #version 450 core
 //copies one Texture to another 
 //array sampler version
+#extension GL_GOOGLE_include_directive : enable
+
+#include "Color.inc"
 
 layout (location = 0) in vec3 inUV;
 
@@ -10,5 +13,5 @@ layout(location = 0) out vec4 fColor;
 
 void main()
 {
-    fColor = texture(sTextures, inUV);
+    fColor = toLinear(texture(sTextures, inUV));
 }

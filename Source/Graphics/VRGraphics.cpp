@@ -463,7 +463,7 @@ void VRGraphics::CreateInstance() {
 	VALIDATEXR();
 
 	uint32_t layerCount = 0;
-	result = xrEnumerateApiLayerProperties(0, &layerCount, nullptr);
+	result				= xrEnumerateApiLayerProperties(0, &layerCount, nullptr);
 	VALIDATEXR();
 	mXrLayerProperties.resize(layerCount);
 
@@ -584,6 +584,8 @@ bool VRGraphics::SessionSetup() {
 	result = xrEnumerateViewConfigurationViews(gXrInstance, gXrSystemId, viewType, viewConfigCount, &viewConfigCount, gViewConfigs.data());
 	VALIDATEXR();
 
+	mDesiredSize = {gViewConfigs[0].recommendedImageRectWidth, gViewConfigs[0].recommendedImageRectHeight};
+
 	CreateActions();
 
 	PFN_xrGetVulkanGraphicsRequirementsKHR xrGetVulkanGraphicsRequirementsKHR;
@@ -621,10 +623,10 @@ void VRGraphics::CreateSession() {
 	vulkanInfo.instance					  = gGraphics->GetVkInstance();
 	vulkanInfo.physicalDevice			  = gGraphics->GetVkPhysicalDevice();
 	vulkanInfo.device					  = gGraphics->GetVkDevice();
-	vulkanInfo.queueFamilyIndex			  = 0;
+	vulkanInfo.queueFamilyIndex			  = gGraphics->GetMainDevice()->GetPrimaryDeviceData().mQueue.mPresentQueue.mQueueFamily;
 	vulkanInfo.queueIndex				  = 0;
-	//vulkanInfo.queueFamilyIndex					  = gGraphics->GetMainDevice()->GetPrimaryDeviceData().mQueue.mPresentQueue.mQueueFamily;
-	//vulkanInfo.queueIndex						  = gGraphics->GetMainDevice()->GetPrimaryDeviceData().mQueue.mQueueFamilies[0].;
+	//vulkanInfo.queueFamilyIndex			  = 0;
+	//vulkanInfo.queueIndex				  = 0;
 
 	LOGGER::Log("Creating Xr Session\n");
 	XrSessionCreateInfo info = {XR_TYPE_SESSION_CREATE_INFO};
@@ -675,7 +677,33 @@ void VRGraphics::PrepareSwapchainData() {
 	result = xrEnumerateSwapchainFormats(gXrSession, formatCounts, &formatCounts, formats.data());
 	VALIDATEXR();
 
-	mSwapchainFormat = (VkFormat)formats[0];
+#if _DEBUG
+	std::vector<VkFormat> vkFormats(formatCounts);
+	for(int i = 0; i < formatCounts; i++) {
+		vkFormats[i] = (VkFormat)formats[i];
+	}
+#endif
+
+	mSwapchainFormat = VK_FORMAT_UNDEFINED;
+	//get desired swapchain
+	{
+		//got from debug list above
+		const VkFormat desiredFormats[] = {VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R8G8B8A8_SRGB};
+		const int count					= sizeof(desiredFormats) / sizeof(VkFormat);
+		for(int i = 0; i < count && mSwapchainFormat == VK_FORMAT_UNDEFINED; i++) {
+			for(int q = 0; q < formatCounts; q++) {
+				if(formats[q] == desiredFormats[i]) {
+					mSwapchainFormat = desiredFormats[i];
+					break;
+				}
+			}
+		}
+	}
+
+	if(mSwapchainFormat == VK_FORMAT_UNDEFINED) {
+		LOGGER::Formated("Failed to find a desired swapchain format?\n");
+		mSwapchainFormat = (VkFormat)formats[0];
+	}
 
 	for(int i = 0; i < NUM_VIEWS; i++) {
 		XrSwapchainCreateInfo createInfo {XR_TYPE_SWAPCHAIN_CREATE_INFO};

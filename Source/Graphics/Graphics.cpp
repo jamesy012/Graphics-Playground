@@ -271,6 +271,8 @@ bool VulkanGraphics::Initalize() {
 	//EndGraphicsCommandBuffer(buffer, false);
 #endif
 
+
+	LOGGER::Formated("Starting Display with ({}, {}) resolution\n", GetDesiredSize().mWidth, GetDesiredSize().mHeight);
 	return true;
 }
 
@@ -524,6 +526,15 @@ const VkFormat VulkanGraphics::GetXRSwapchainFormat() const {
 	return gVrGraphics->GetSwapchainFormat();
 }
 #endif
+
+const ImageSize VulkanGraphics::GetDesiredSize() const {
+#if defined(ENABLE_XR)
+	return gVrGraphics->GetDesiredSize();
+	#else
+	return GetMainSwapchain()->GetSize();
+#endif
+
+		}
 
 bool VulkanGraphics::CreateInstance() {
 	VkResult result;

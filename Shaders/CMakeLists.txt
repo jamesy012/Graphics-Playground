@@ -7,7 +7,10 @@ set(GLSL_SOURCE_FILES
     "/Screenspace/ImageTwoArray.frag"
     "/MeshTest.vert"
     "/MeshTest.frag")
-set(GLSL_INCLUDE_FILES "${CMAKE_CURRENT_SOURCE_DIR}/Include/test.inc")
+set(GLSL_INCLUDE_FILES 
+"${CMAKE_CURRENT_SOURCE_DIR}/Include/test.inc"
+"${CMAKE_CURRENT_SOURCE_DIR}/Include/Color.inc"
+)
 
 # file(GLOB_RECURSE GLSL_SOURCE_FILES "${PROJECT_SOURCE_DIR}/Shaders/*.frag"
 # "${PROJECT_SOURCE_DIR}/Shaders/*.vert" "${PROJECT_SOURCE_DIR}/Shaders/*.comp"

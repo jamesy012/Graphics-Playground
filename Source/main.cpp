@@ -43,8 +43,8 @@ int main() {
 	fbImage.SetArrayLayers(gGraphics->GetNumActiveViews());
 	Image fbDepthImage;
 	fbDepthImage.SetArrayLayers(gGraphics->GetNumActiveViews());
-	fbImage.CreateVkImage(Graphics::GetDeafultColorFormat(), {720, 720}, "Main FB Image");
-	fbDepthImage.CreateVkImage(Graphics::GetDeafultDepthFormat(), {720, 720}, "Main FB Depth Image");
+	fbImage.CreateVkImage(Graphics::GetDeafultColorFormat(), gGraphics->GetDesiredSize(), "Main FB Image");
+	fbDepthImage.CreateVkImage(Graphics::GetDeafultDepthFormat(), gGraphics->GetDesiredSize(), "Main FB Depth Image");
 
 	//convert to correct layout
 	{
@@ -189,11 +189,13 @@ int main() {
 			meshTest.QuickTempRenderSetMaterial(1, &meshImageTest2);
 		}
 
+#if !defined(ENABLE_XR)
 		static glm::vec3 camPos = glm::vec3(0, 0, 10);
 		if(ImGui::Begin("Camera")) {
 			ImGui::DragFloat3("Pos", glm::value_ptr(camPos), 0.1f, -999, 999);
 			ImGui::End();
 		}
+#endif
 
 		{
 			glm::mat4 proj;
@@ -216,7 +218,8 @@ int main() {
 				view = glm::inverse(view);
 				glm::translate(view, glm::vec3(5.0f, 0.0f, 5.0f));
 				proj = glm::frustumRH_ZO(info.mFov.x, info.mFov.y, info.mFov.z, info.mFov.w, 0.1f, 100.0f);
-				proj = glm::perspectiveFov(glm::radians(60.0f), 720.0f, 720.0f, 0.1f, 1000.0f);
+				proj = glm::perspectiveFov(
+					glm::radians(60.0f), (float)gGraphics->GetDesiredSize().mWidth, (float)gGraphics->GetDesiredSize().mHeight, 0.1f, 1000.0f);
 				if(info.mFov.w != 0) {
 					proj = glm::perspective(info.mFov.w - info.mFov.z, info.mFov.y / info.mFov.w, 0.1f, 1000.0f);
 				}
@@ -225,7 +228,8 @@ int main() {
 #else
 			const float time  = 0; //gGraphics->GetFrameCount() / 360.0f;
 			const float scale = 10.0f;
-			proj			  = glm::perspectiveFov(glm::radians(60.0f), 720.0f, 720.0f, 0.1f, 1000.0f);
+			proj			  = glm::perspectiveFov(
+				 glm::radians(60.0f), (float)gGraphics->GetDesiredSize().mWidth, (float)gGraphics->GetDesiredSize().mHeight, 0.1f, 1000.0f);
 			//view			   = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0), glm::vec3(0, 1, 0));
 			view			   = glm::lookAt(camPos, glm::vec3(0), glm::vec3(0, 1, 0));
 			meshUniform.mPV[0] = proj * view;

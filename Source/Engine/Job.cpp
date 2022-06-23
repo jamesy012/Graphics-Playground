@@ -270,7 +270,9 @@ void WorkManager::Startup() {
 
 	// Retrieve the number of hardware threads in this system:
 	unsigned int numCores = std::thread::hardware_concurrency() - 1; //one for main
-	LOGGER::Formated("Starting Job system with {} threads", numCores);
+
+	LOGGER::Formated("Starting Job system with {} threads\n", numCores);
+
 	// Calculate the actual number of worker threads we want:
 	int numThreads = std::max(1u, numCores);
 	for(int i = 0; i < numThreads; i++) {

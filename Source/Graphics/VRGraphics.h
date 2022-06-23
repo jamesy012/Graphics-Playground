@@ -10,6 +10,8 @@
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 
+#include "Helpers.h"
+
 class Image;
 
 class VRGraphics {
@@ -48,6 +50,10 @@ public:
 		return mSwapchainFormat;
 	}
 
+	const ImageSize GetDesiredSize() const {
+		return mDesiredSize;
+	}
+
 private:
 	//create - instance/setting up session
 	void CreateInstance();
@@ -78,6 +84,7 @@ private:
 	XrSystemProperties gSystemProperties {XR_TYPE_SYSTEM_PROPERTIES};
 
 	VkFormat mSwapchainFormat;
+	ImageSize mDesiredSize;
 };
 
 extern VRGraphics* gVrGraphics;
