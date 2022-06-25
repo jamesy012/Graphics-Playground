@@ -16,10 +16,52 @@ class Image;
 
 class VRGraphics {
 public:
-	struct GLMViewInfo {
+
+	struct Pose {
 		glm::vec3 mPos;
 		glm::quat mRot;
+	};
+
+	struct View : public Pose {
 		glm::vec4 mFov;
+	};
+
+
+	void PoseConvert(XrPosef& aFrom, Pose& aTo) {
+		aTo.mPos.x = aFrom.position.x;
+		aTo.mPos.y = -aFrom.position.y;
+		aTo.mPos.z = aFrom.position.z;
+
+		//Rotation when using euler to change rotation
+		//aTo.mRot.x = aFrom.orientation.x;
+		//aTo.mRot.y = aFrom.orientation.y;
+		//aTo.mRot.z = aFrom.orientation.z;
+		//aTo.mRot.w = aFrom.orientation.w;
+		//const glm::vec3 euler	   = glm::eulerAngles(aTo.mRot);
+		//aTo.mRot   = glm::quat(euler * glm::vec3(-1, 1, -1));
+		aTo.mRot.x = aFrom.orientation.x;
+		aTo.mRot.y = -aFrom.orientation.y;
+		aTo.mRot.z = aFrom.orientation.z;
+		aTo.mRot.w = -aFrom.orientation.w;
+	}
+	void ViewConvert(XrView& aFrom, View& aTo) {
+		PoseConvert(aFrom.pose, aTo);
+
+		aTo.mFov.x = (aFrom.fov.angleLeft);
+		aTo.mFov.y = (aFrom.fov.angleRight);
+		aTo.mFov.z = (aFrom.fov.angleDown);
+		aTo.mFov.w = (aFrom.fov.angleUp);
+	}
+
+	struct ControllerInfo {
+		VRGraphics::Pose mHandPose;
+		bool mActive;
+	};
+
+	enum Side {
+		LEFT,
+		RIGHT,
+		COUNT
 	};
 
 	//must be called in this order, each stage depends on the last
@@ -36,8 +78,9 @@ public:
 		GetImage(aEye, GetCurrentImageIndex(aEye));
 	};
 
-	void GetHeadPoseData(GLMViewInfo& aInfo) const;
-	void GetEyePoseData(uint8_t aEye, GLMViewInfo& aInfo) const;
+	void GetHeadPoseData(View& aInfo) const;
+	void GetEyePoseData(uint8_t aEye, View& aInfo) const;
+	void GetHandInfo(Side aSide, ControllerInfo& aInfo) const;
 
 	void FrameEnd();
 

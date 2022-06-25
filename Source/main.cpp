@@ -1,6 +1,8 @@
 #include <vulkan/vulkan.h>
 #include <imgui.h>
 
+#include <numbers>
+
 #include "Engine/Engine.h"
 
 #include "Engine/Window.h"
@@ -105,7 +107,7 @@ int main() {
 	Screenspace vrMirrorPass;
 	vrMirrorPass.mAttachmentFormat = gGraphics->GetSwapchainFormat();
 	vrMirrorPass.AddMaterialBase(&ssTestBase);
-	vrMirrorPass.Create("/Shaders/Screenspace/ImageMirror.frag.spv", "ScreenSpace Mirror ImageCopy");
+	vrMirrorPass.Create("/Shaders/Screenspace/ImageTwoArray.frag.spv", "ScreenSpace Mirror ImageCopy");
 	vrMirrorPass.GetMaterial(0).SetImages(fbImage, 0, 0);
 #else
 	//windows doesnt do multiview so just needs the non array version
@@ -115,7 +117,8 @@ int main() {
 
 	//Mesh Test
 	Mesh meshTest;
-	meshTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_5.fbx", std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/");
+	meshTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_5.fbx",
+					  std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/");
 
 	struct MeshPCTest {
 		glm::mat4 mWorld;
@@ -194,7 +197,7 @@ int main() {
 			glm::mat4 world;
 
 #if defined(ENABLE_XR)
-			VRGraphics::GLMViewInfo info;
+			VRGraphics::View info;
 			for(int i = 0; i < 2; i++) {
 				gVrGraphics->GetEyePoseData(i, info);
 
@@ -232,8 +235,34 @@ int main() {
 		}
 
 		{
+			static bool updateRoot = true;
+#if defined(ENABLE_XR)
+			static bool updateControllers = true;
+#endif
+			if(ImGui::Begin("Scene")) {
+				ImGui::Checkbox("UpdateRoot", &updateRoot);
+#if defined(ENABLE_XR)
+				ImGui::Checkbox("updateControllers", &updateControllers);
+#endif
+				ImGui::End();
+			}
 			const float time = gGraphics->GetFrameCount() / 5.0f;
-			mRootTransform.SetRotation(glm::vec3(0, -time, 0));
+			if(updateRoot) {
+				mRootTransform.SetRotation(glm::vec3(0, -time, 0));
+			}
+#if defined(ENABLE_XR)
+			if(updateControllers) {
+				for(int i = 0; i < VRGraphics::Side::COUNT; i++) {
+					VRGraphics::ControllerInfo info;
+					gVrGraphics->GetHandInfo((VRGraphics::Side)i, info);
+					if(info.mActive) {
+						mModelTransforms[i].SetWorldPosition(info.mHandPose.mPos);
+						mModelTransforms[i].SetWorldRotation(info.mHandPose.mRot * glm::quat(glm::vec3(std::numbers::pi, 0, 0)));
+						mModelTransforms[i].SetScale(0.1f);
+					}
+				}
+			}
+#endif
 		}
 
 		WorkManager::ImGuiTesting();

@@ -95,7 +95,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(VkDebugUtilsMessageSeverit
 	return VK_FALSE;
 }
 
-void ::VulkanValidationMessage(int32_t aMessageId, bool aEnabled) {
+void VulkanValidationMessage(int32_t aMessageId, bool aEnabled) {
 	gVulkanValidationToggle[aMessageId] = aEnabled;
 }
 

@@ -46,10 +46,20 @@ struct SpaceInfo {
 	XrExtent2Df mBounds;
 	XrPosef mLastPose;
 	XrView mViews[NUM_VIEWS];
-	VRGraphics::GLMViewInfo mInfos[NUM_VIEWS];
+	VRGraphics::View mInfos[NUM_VIEWS];
 } gSpaces[NUM_SPACES];
 
-//hand space
+//hands
+XrPath handSubactionPath[VRGraphics::Side::COUNT]			  = {};
+XrActionSet actionSet										  = XR_NULL_HANDLE;
+XrAction poseAction											  = XR_NULL_HANDLE;
+XrAction grabAction											  = XR_NULL_HANDLE;
+XrAction vibrateAction										  = XR_NULL_HANDLE;
+XrAction quitAction											  = XR_NULL_HANDLE;
+XrSpace handSpace[VRGraphics::Side::COUNT]					  = {XR_NULL_HANDLE};
+XrSpaceLocation handLocation[VRGraphics::Side::COUNT]		  = {{XR_TYPE_SPACE_LOCATION}, {XR_TYPE_SPACE_LOCATION}};
+VRGraphics::ControllerInfo gHandInfo[VRGraphics::Side::COUNT] = {};
+
 //todo
 #pragma endregion
 
@@ -138,6 +148,8 @@ void VRGraphics::Initalize() {
 
 	CreateSpaces();
 
+	CreateActions();
+
 	PrepareSwapchainData();
 }
 
@@ -200,8 +212,10 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 		return;
 	}
 
-	XrActionsSyncInfo syncInfo	   = {XR_TYPE_ACTIONS_SYNC_INFO};
-	syncInfo.countActiveActionSets = 0;
+	XrActionsSyncInfo syncInfo = {XR_TYPE_ACTIONS_SYNC_INFO};
+	const XrActiveActionSet activeActionSet {actionSet, XR_NULL_PATH};
+	syncInfo.countActiveActionSets = 1;
+	syncInfo.activeActionSets	   = &activeActionSet;
 	result						   = xrSyncActions(gXrSession, &syncInfo);
 	ASSERT(result == XR_SUCCESS || result == XR_SESSION_LOSS_PENDING || result == XR_SESSION_NOT_FOCUSED);
 	if(result != XR_SUCCESS && result != XR_SESSION_LOSS_PENDING && result != XR_SESSION_NOT_FOCUSED) {
@@ -258,20 +272,61 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 		VALIDATEXR();
 
 		for(int q = 0; q < NUM_VIEWS; q++) {
-			spaceInfo.mInfos[q].mPos.x = spaceInfo.mViews[q].pose.position.x;
-			spaceInfo.mInfos[q].mPos.y = -spaceInfo.mViews[q].pose.position.y;
-			spaceInfo.mInfos[q].mPos.z = spaceInfo.mViews[q].pose.position.z;
-			spaceInfo.mInfos[q].mRot.x = spaceInfo.mViews[q].pose.orientation.x;
-			spaceInfo.mInfos[q].mRot.y = spaceInfo.mViews[q].pose.orientation.y;
-			spaceInfo.mInfos[q].mRot.z = spaceInfo.mViews[q].pose.orientation.z;
-			spaceInfo.mInfos[q].mRot.w = spaceInfo.mViews[q].pose.orientation.w;
-			const glm::vec3 euler	   = glm::eulerAngles(spaceInfo.mInfos[q].mRot);
-			spaceInfo.mInfos[q].mRot   = glm::quat(euler * glm::vec3(-1, 1, -1));
-			spaceInfo.mInfos[q].mFov.x = (spaceInfo.mViews[q].fov.angleLeft);
-			spaceInfo.mInfos[q].mFov.y = (spaceInfo.mViews[q].fov.angleRight);
-			spaceInfo.mInfos[q].mFov.z = (spaceInfo.mViews[q].fov.angleDown);
-			spaceInfo.mInfos[q].mFov.w = (spaceInfo.mViews[q].fov.angleUp);
+			ViewConvert(spaceInfo.mViews[q], spaceInfo.mInfos[q]);
 		}
+	}
+
+	for(int i = 0; i < Side::COUNT; i++) {
+
+		XrActionStateGetInfo getInfo {XR_TYPE_ACTION_STATE_GET_INFO};
+		getInfo.subactionPath = handSubactionPath[i];
+
+		//grip
+		getInfo.action = grabAction;
+		XrActionStateFloat grabValue {XR_TYPE_ACTION_STATE_FLOAT};
+		result = xrGetActionStateFloat(gXrSession, &getInfo, &grabValue);
+		VALIDATEXR();
+
+		//pose? hand avaliable?
+		getInfo.action = poseAction;
+		XrActionStatePose poseState {XR_TYPE_ACTION_STATE_POSE};
+		result = xrGetActionStatePose(gXrSession, &getInfo, &poseState);
+		VALIDATEXR();
+		gHandInfo[i].mActive = poseState.isActive;
+		//m_input.handActive[hand] = poseState.isActive;
+
+		//quit?
+		//getInfo.action		  = quitAction;
+		////getInfo.subactionPath = XR_NULL_PATH;
+		////getInfo.next		  = nullptr;
+		//XrActionStateBoolean quitValue {XR_TYPE_ACTION_STATE_BOOLEAN};
+		//result = xrGetActionStateBoolean(gXrSession, &getInfo, &quitValue);
+		//VALIDATEXR();
+		//if((quitValue.isActive == XR_TRUE) && (quitValue.changedSinceLastSync == XR_TRUE) && (quitValue.currentState == XR_TRUE)) {
+		//	xrRequestExitSession(gXrSession);
+		//}
+
+		//vibration test?
+		if(grabValue.isActive == XR_TRUE) {
+			// Scale the rendered hand by 1.0f (open) to 0.5f (fully squeezed).
+			//handScale[i] = 1.0f - 0.5f * grabValue.currentState;
+			if(grabValue.currentState > 0.9f) {
+				XrHapticVibration vibration {XR_TYPE_HAPTIC_VIBRATION};
+				vibration.amplitude = 0.5;
+				vibration.duration	= XR_MIN_HAPTIC_DURATION;
+				vibration.frequency = XR_FREQUENCY_UNSPECIFIED;
+
+				XrHapticActionInfo hapticActionInfo {XR_TYPE_HAPTIC_ACTION_INFO};
+				hapticActionInfo.action		   = vibrateAction;
+				hapticActionInfo.subactionPath = handSubactionPath[i];
+				result						   = xrApplyHapticFeedback(gXrSession, &hapticActionInfo, (XrHapticBaseHeader*)&vibration);
+				VALIDATEXR();
+			}
+		}
+
+		result = xrLocateSpace(handSpace[i], gSpaces[1].mSpace, gFrameState.predictedDisplayTime, &handLocation[i]);
+		VALIDATEXR();
+		PoseConvert(handLocation[i].pose, gHandInfo[i].mHandPose);
 	}
 }
 
@@ -282,11 +337,15 @@ const Image& VRGraphics::GetImage(uint8_t aEye, uint8_t aIndex) const {
 	return gXrSwapchains[aEye].mImages[aIndex];
 }
 
-void VRGraphics::GetHeadPoseData(GLMViewInfo& aInfo) const {
+void VRGraphics::GetHeadPoseData(View& aInfo) const {
 	aInfo = gSpaces[1].mInfos[0];
 }
-void VRGraphics::GetEyePoseData(uint8_t aEye, GLMViewInfo& aInfo) const {
+void VRGraphics::GetEyePoseData(uint8_t aEye, View& aInfo) const {
 	aInfo = gSpaces[1].mInfos[aEye];
+}
+
+void VRGraphics::GetHandInfo(Side aSide, ControllerInfo& aInfo) const {
+	aInfo = gHandInfo[aSide];
 }
 
 void VRGraphics::FrameEnd() {
@@ -462,6 +521,15 @@ void VRGraphics::CreateInstance() {
 	result = xrEnumerateInstanceExtensionProperties(nullptr, extensionCount, &extensionCount, mXrInstanceExtensions.data());
 	VALIDATEXR();
 
+#if _DEBUG
+	std::vector<char*> extensionReadable(extensionCount);
+	LOGGER::Formated("XR Extensions:\n");
+	for(int i = 0; i < extensionCount; i++) {
+		extensionReadable[i] = mXrInstanceExtensions[i].extensionName;
+		LOGGER::Formated("\tFound extension {}\n", extensionReadable[i]);
+	}
+#endif
+
 	uint32_t layerCount = 0;
 	result				= xrEnumerateApiLayerProperties(0, &layerCount, nullptr);
 	VALIDATEXR();
@@ -586,8 +654,6 @@ bool VRGraphics::SessionSetup() {
 
 	mDesiredSize = {gViewConfigs[0].recommendedImageRectWidth, gViewConfigs[0].recommendedImageRectHeight};
 
-	CreateActions();
-
 	PFN_xrGetVulkanGraphicsRequirementsKHR xrGetVulkanGraphicsRequirementsKHR;
 	XrGraphicsRequirementsVulkanKHR graphicsRequirements = {XR_TYPE_GRAPHICS_REQUIREMENTS_VULKAN_KHR};
 	if(getXrInstanceProcAddr(&xrGetVulkanGraphicsRequirementsKHR, "xrGetVulkanGraphicsRequirementsKHR")) {
@@ -600,19 +666,151 @@ bool VRGraphics::SessionSetup() {
 }
 
 void VRGraphics::CreateActions() {
-	//todo
-	/*
-	XrActionSet actionSet				= XR_NULL_HANDLE;
+	XrResult result;
+
+	result = xrStringToPath(gXrInstance, "/user/hand/left", &handSubactionPath[Side::LEFT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/right", &handSubactionPath[Side::RIGHT]);
+	VALIDATEXR();
+
 	XrActionSetCreateInfo actionSetInfo = {XR_TYPE_ACTION_SET_CREATE_INFO};
 	strcpy(actionSetInfo.actionSetName, "gameplay");
 	strcpy(actionSetInfo.localizedActionSetName, "Gameplay");
 	actionSetInfo.priority = 0;
-	xrCreateActionSet(gXrInstance, &actionSetInfo, &actionSet);
+	result				   = xrCreateActionSet(gXrInstance, &actionSetInfo, &actionSet);
+	VALIDATEXR();
 
-	XrAction action				  = XR_NULL_HANDLE;
-	XrActionCreateInfo actionInfo = {XR_TYPE_ACTION_CREATE_INFO};
-	xrCreateAction(actionSet, &actionInfo, &action)
-	*/
+	XrActionCreateInfo actionInfo  = {XR_TYPE_ACTION_CREATE_INFO};
+	actionInfo.countSubactionPaths = Side::COUNT;
+	actionInfo.subactionPaths	   = handSubactionPath;
+
+	actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+	strcpy_s(actionInfo.actionName, "hand_pose");
+	strcpy_s(actionInfo.localizedActionName, "Hand Pose");
+	result = xrCreateAction(actionSet, &actionInfo, &poseAction);
+	VALIDATEXR();
+
+	actionInfo.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
+	strcpy_s(actionInfo.actionName, "grab_object");
+	strcpy_s(actionInfo.localizedActionName, "Grab Object");
+	result = xrCreateAction(actionSet, &actionInfo, &grabAction);
+	VALIDATEXR();
+
+	actionInfo.actionType = XR_ACTION_TYPE_VIBRATION_OUTPUT;
+	strcpy_s(actionInfo.actionName, "vibrate_hand");
+	strcpy_s(actionInfo.localizedActionName, "Vibrate Hand");
+	result = xrCreateAction(actionSet, &actionInfo, &vibrateAction);
+	VALIDATEXR();
+
+	actionInfo.actionType = XR_ACTION_TYPE_VIBRATION_OUTPUT;
+	strcpy_s(actionInfo.actionName, "quit_session");
+	strcpy_s(actionInfo.localizedActionName, "Quit Session");
+	result = xrCreateAction(actionSet, &actionInfo, &quitAction);
+	VALIDATEXR();
+
+	XrPath selectPath[Side::COUNT];
+	XrPath squeezeValuePath[Side::COUNT];
+	XrPath squeezeForcePath[Side::COUNT];
+	XrPath squeezeClickPath[Side::COUNT];
+	XrPath posePath[Side::COUNT];
+	XrPath hapticPath[Side::COUNT];
+	XrPath menuClickPath[Side::COUNT];
+	XrPath bClickPath[Side::COUNT];
+	XrPath triggerValuePath[Side::COUNT];
+	result = xrStringToPath(gXrInstance, "/user/hand/left/input/select/click", &selectPath[Side::LEFT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/right/input/select/click", &selectPath[Side::RIGHT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/left/input/squeeze/value", &squeezeValuePath[Side::LEFT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/right/input/squeeze/value", &squeezeValuePath[Side::RIGHT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/left/input/squeeze/force", &squeezeForcePath[Side::LEFT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/right/input/squeeze/force", &squeezeForcePath[Side::RIGHT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/left/input/squeeze/click", &squeezeClickPath[Side::LEFT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/right/input/squeeze/click", &squeezeClickPath[Side::RIGHT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/left/input/grip/pose", &posePath[Side::LEFT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/right/input/grip/pose", &posePath[Side::RIGHT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/left/output/haptic", &hapticPath[Side::LEFT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/right/output/haptic", &hapticPath[Side::RIGHT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/left/input/menu/click", &menuClickPath[Side::LEFT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/right/input/menu/click", &menuClickPath[Side::RIGHT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/left/input/b/click", &bClickPath[Side::LEFT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/right/input/b/click", &bClickPath[Side::RIGHT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/left/input/trigger/value", &triggerValuePath[Side::LEFT]);
+	VALIDATEXR();
+	result = xrStringToPath(gXrInstance, "/user/hand/right/input/trigger/value", &triggerValuePath[Side::RIGHT]);
+	VALIDATEXR();
+	// Suggest bindings for KHR Simple.
+	{
+		XrPath khrSimpleInteractionProfilePath;
+		result = xrStringToPath(gXrInstance, "/interaction_profiles/khr/simple_controller", &khrSimpleInteractionProfilePath);
+		VALIDATEXR();
+		std::vector<XrActionSuggestedBinding> bindings {{// Fall back to a click input for the grab action.
+														 {grabAction, selectPath[Side::LEFT]},
+														 {grabAction, selectPath[Side::RIGHT]},
+														 {poseAction, posePath[Side::LEFT]},
+														 {poseAction, posePath[Side::RIGHT]},
+														 {quitAction, menuClickPath[Side::LEFT]},
+														 {quitAction, menuClickPath[Side::RIGHT]},
+														 {vibrateAction, hapticPath[Side::LEFT]},
+														 {vibrateAction, hapticPath[Side::RIGHT]}}};
+		XrInteractionProfileSuggestedBinding suggestedBindings {XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
+		suggestedBindings.interactionProfile	 = khrSimpleInteractionProfilePath;
+		suggestedBindings.suggestedBindings		 = bindings.data();
+		suggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
+		result									 = xrSuggestInteractionProfileBindings(gXrInstance, &suggestedBindings);
+		VALIDATEXR();
+	}
+	// Suggest bindings for the Vive Controller.
+	{
+		XrPath viveControllerInteractionProfilePath;
+		result = xrStringToPath(gXrInstance, "/interaction_profiles/htc/vive_controller", &viveControllerInteractionProfilePath);
+		VALIDATEXR();
+		std::vector<XrActionSuggestedBinding> bindings {{{grabAction, triggerValuePath[Side::LEFT]},
+														 {grabAction, triggerValuePath[Side::RIGHT]},
+														 {poseAction, posePath[Side::LEFT]},
+														 {poseAction, posePath[Side::RIGHT]},
+														 {quitAction, menuClickPath[Side::LEFT]},
+														 {quitAction, menuClickPath[Side::RIGHT]},
+														 {vibrateAction, hapticPath[Side::LEFT]},
+														 {vibrateAction, hapticPath[Side::RIGHT]}}};
+		XrInteractionProfileSuggestedBinding suggestedBindings {XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
+		suggestedBindings.interactionProfile	 = viveControllerInteractionProfilePath;
+		suggestedBindings.suggestedBindings		 = bindings.data();
+		suggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
+		result									 = xrSuggestInteractionProfileBindings(gXrInstance, &suggestedBindings);
+		VALIDATEXR();
+	}
+
+	XrActionSpaceCreateInfo actionSpaceInfo {XR_TYPE_ACTION_SPACE_CREATE_INFO};
+	actionSpaceInfo.action							= poseAction;
+	actionSpaceInfo.poseInActionSpace.orientation.w = 1.f;
+	actionSpaceInfo.subactionPath					= handSubactionPath[Side::LEFT];
+
+	result = xrCreateActionSpace(gXrSession, &actionSpaceInfo, &handSpace[Side::LEFT]);
+	VALIDATEXR();
+	actionSpaceInfo.subactionPath = handSubactionPath[Side::RIGHT];
+	result						  = xrCreateActionSpace(gXrSession, &actionSpaceInfo, &handSpace[Side::RIGHT]);
+	VALIDATEXR();
+
+	XrSessionActionSetsAttachInfo attachInfo {XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO};
+	attachInfo.countActionSets = 1;
+	attachInfo.actionSets	   = &actionSet;
+	result					   = xrAttachSessionActionSets(gXrSession, &attachInfo);
+	VALIDATEXR();
 
 	//xrDestroyActionSet;
 	//xrDestroyAction;
