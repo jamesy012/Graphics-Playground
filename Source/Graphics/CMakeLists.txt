@@ -4,42 +4,44 @@ message("Adding Graphics")
 # GRAPHICS CODE
 
 if(GraphicsPlayground_Enable_ImGui)
-  set(IMGUI_GRAPHICS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/ImGuiGraphics.h"
-                             "${CMAKE_CURRENT_SOURCE_DIR}/ImGuiGraphics.cpp")
+  set(IMGUI_GRAPHICS_SOURCES "ImGuiGraphics.h"
+                             "ImGuiGraphics.cpp")
 endif()
 
 if(GraphicsPlayground_Enable_VR)
-  set(VR_GRAPHICS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/VRGraphics.h"
-                          "${CMAKE_CURRENT_SOURCE_DIR}/VRGraphics.cpp")
+  set(VR_GRAPHICS_SOURCES "VRGraphics.h"
+                          "VRGraphics.cpp")
 endif()
 
 set(GRAPHICS_SOURCE
-    "${CMAKE_CURRENT_SOURCE_DIR}/Graphics.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Graphics.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Helpers.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Swapchain.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Swapchain.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Framebuffer.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Framebuffer.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Devices.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Devices.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Image.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Image.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/RenderPass.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/RenderPass.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Buffer.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Buffer.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Pipeline.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Pipeline.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/RenderTarget.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/RenderTarget.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Material.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Material.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Screenspace.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Screenspace.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Mesh.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Mesh.cpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/Conversions.h"
+    "Graphics.h"
+    "Graphics.cpp"
+    "Helpers.h"
+    "Swapchain.h"
+    "Swapchain.cpp"
+    "Framebuffer.h"
+    "Framebuffer.cpp"
+    "Devices.h"
+    "Devices.cpp"
+    "Image.h"
+    "Image.cpp"
+    "RenderPass.h"
+    "RenderPass.cpp"
+    "Buffer.h"
+    "Buffer.cpp"
+    "Pipeline.h"
+    "Pipeline.cpp"
+    "RenderTarget.h"
+    "RenderTarget.cpp"
+    "Material.h"
+    "Material.cpp"
+    "Screenspace.h"
+    "Screenspace.cpp"
+    "Mesh.h"
+    "Mesh.cpp"
+    "Model.h"
+    "Model.cpp"
+    "Conversions.h"
     ${IMGUI_GRAPHICS_SOURCES}
     ${VR_GRAPHICS_SOURCES})
 

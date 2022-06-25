@@ -5,9 +5,10 @@
 #include <assimp/postprocess.h> // Post processing flags
 
 #include "PlatformDebug.h"
-#include "Conversions.h"
+#include "Graphics/Conversions.h"
 
-#include "Material.h"
+#include "Graphics/Material.h"
+#include "Graphics/Image.h"
 
 static_assert(NUM_UVS <= AI_MAX_NUMBER_OF_TEXTURECOORDS);
 static_assert(NUM_VERT_COLS <= AI_MAX_NUMBER_OF_COLOR_SETS);
@@ -37,6 +38,7 @@ Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
 	asyncWork.mFinishPtr		  = [this](void* aData) {
 		 AsyncLoadData* data = (AsyncLoadData*)aData;
 		 if(data->mScene) {
+			 mMaterials.resize(data->mScene->mNumMaterials);
 			 ProcessNode(data->mScene, data->mScene->mRootNode);
 			 data->importer.FreeScene();
 			 mLoaded = true;
@@ -61,13 +63,15 @@ bool Mesh::LoadMeshSync(FileIO::Path aFilePath) {
 	return true;
 }
 
-bool Mesh::LoadMesh(FileIO::Path aFilePath) {
+bool Mesh::LoadMesh(FileIO::Path aFilePath, FileIO::Path aImagePath /*= ""*/) {
 	ZoneScoped;
 	ZoneText(aFilePath.mPath.c_str(), aFilePath.mPath.size());
 	LOGGER::Formated("Loading: {}\n", aFilePath.mPath);
 	LOGGER::Log("Mesh Loading should not load a mesh that is already loaded?\n");
 
 	mLoaded = false;
+
+	mImagePath = aImagePath;
 
 	Job::Work asyncWork = GetWork(aFilePath);
 	Job::QueueWork(asyncWork);
@@ -175,7 +179,36 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 
 	//Material
 	if(aMesh->mMaterialIndex >= 0) {
+		mesh.mMaterialID = aMesh->mMaterialIndex;
 		const aiMaterial* material = aScene->mMaterials[aMesh->mMaterialIndex];
+		for(int i = 0; i < material->mNumProperties; i++) {
+			const aiMaterialProperty* prop = material->mProperties[i];
+			//if(strcmp(prop->mKey.data, _AI_MATKEY_TEXTURE_BASE)){
+			LOGGER::Formated("Material semantic {}, {}\n", prop->mKey.C_Str(), prop->mSemantic);
+			//}
+		}
+		for(unsigned int i = 0; i < material->GetTextureCount(aiTextureType_DIFFUSE); i++) {
+			aiString str;
+			material->GetTexture(aiTextureType_DIFFUSE, i, &str);
+			const std::string fileName = str.C_Str();
+			//bool loaded				   = false;
+			//for(size_t q = 0; q < mMaterials.size(); q++) {
+			//	if(mMaterials[q].mFileName == fileName) {
+			//		mesh.mMaterialID = aMesh->mMaterialIndex;
+			//		loaded			 = true;
+			//	}
+			//}
+			//if(loaded) {
+			//	continue;
+			//}
+			MeshMaterialData& materialData = mMaterials[aMesh->mMaterialIndex];
+			if(materialData.mImage == nullptr) {
+				Image* image = new Image();
+				image->LoadImage(mImagePath + fileName, VK_FORMAT_UNDEFINED);
+				materialData.mFileName = fileName;
+				materialData.mImage	   = image;
+			}
+		}
 
 		//std::vector<Texture> diffuseMaps = this->loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse", scene);
 	}
@@ -200,22 +233,18 @@ void Mesh::Destroy() {
 }
 
 //temp
-void Mesh::QuickTempRender(VkCommandBuffer aBuffer, VkPipelineLayout aPipelineLayout) {
+void Mesh::QuickTempRender(VkCommandBuffer aBuffer, int aMeshIndex) const {
 	if(mLoaded == false) {
 		return;
 	}
-	for(int i = 0; i < mMesh.size(); i++) {
-		SubMesh& mesh = mMesh[i];
-		if(mesh.mMaterial != nullptr) {
-			vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 1, 1, mesh.mMaterial->GetSet(), 0, nullptr);
-		}
-		VkDeviceSize offsets[1] = {0};
-		vkCmdBindVertexBuffers(aBuffer, 0, 1, mesh.mVertexBuffer.GetBufferRef(), offsets);
-		vkCmdBindIndexBuffer(aBuffer, mesh.mIndexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(aBuffer, mesh.mIndices.size(), 1, 0, 0, 0);
-	}
-}
-
-void Mesh::QuickTempRenderSetMaterial(int mesh, Material* aMat) {
-	mMesh[mesh].mMaterial = aMat;
+	//for(int i = 0; i < mMesh.size(); i++) {
+	const SubMesh& mesh = mMesh[aMeshIndex];
+	//if(mesh.mMaterial != nullptr) {
+	//	vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aPipelineLayout, 1, 1, mesh.mMaterial->GetSet(), 0, nullptr);
+	//}
+	VkDeviceSize offsets[1] = {0};
+	vkCmdBindVertexBuffers(aBuffer, 0, 1, mesh.mVertexBuffer.GetBufferRef(), offsets);
+	vkCmdBindIndexBuffer(aBuffer, mesh.mIndexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+	vkCmdDrawIndexed(aBuffer, mesh.mIndices.size(), 1, 0, 0, 0);
+	//}
 }

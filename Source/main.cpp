@@ -14,6 +14,7 @@
 #include "Graphics/Material.h"
 
 #include "Graphics/Mesh.h"
+#include "Graphics/Model.h"
 #include "Graphics/Pipeline.h"
 #include <glm/ext.hpp>
 
@@ -83,11 +84,6 @@ int main() {
 	//SCREEN SPACE TEST
 	//used to copy fbImage to backbuffer
 
-	Image imageTree_Bark;
-	imageTree_Bark.LoadImage(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_Bark.png", Graphics::GetDeafultColorFormat());
-	Image imageTree_Leaves;
-	imageTree_Leaves.LoadImage(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_Leaves.png", Graphics::GetDeafultColorFormat());
-
 	MaterialBase ssTestBase;
 	ssTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 	//ssTestBase.AddBinding(1, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -116,11 +112,10 @@ int main() {
 	ssTest.Create("/Shaders/Screenspace/ImageSingle.frag.spv", "ScreenSpace ImageCopy");
 #endif
 	ssTest.GetMaterial(0).SetImages(fbImage, 0, 0);
-	//ssTest.GetMaterial(0).SetImages(imageTree_Leaves, 1, 0);
 
 	//Mesh Test
 	Mesh meshTest;
-	meshTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_5.fbx");
+	meshTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_5.fbx", std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/");
 
 	struct MeshPCTest {
 		glm::mat4 mWorld;
@@ -167,10 +162,12 @@ int main() {
 	Material meshMaterial = meshTestBase.MakeMaterials()[0];
 	meshMaterial.SetBuffers(meshUniformBuffer, 0, 0);
 
-	Material meshImageTest1 = meshImageTestBase.MakeMaterials()[0];
-	Material meshImageTest2 = meshImageTestBase.MakeMaterials()[0];
-	meshImageTest1.SetImages(imageTree_Bark, 0, 0);
-	meshImageTest2.SetImages(imageTree_Leaves, 0, 0);
+	Model modelTest1;
+	modelTest1.SetMesh(&meshTest);
+	modelTest1.SetMaterialBase(&meshImageTestBase);
+	Model modelTest2;
+	modelTest2.SetMesh(&meshTest);
+	modelTest2.SetMaterialBase(&meshImageTestBase);
 
 	Transform mModelTransforms[2];
 	Transform mRootTransform;
@@ -182,12 +179,6 @@ int main() {
 		gEngine->GameLoop();
 		gGraphics->StartNewFrame();
 		VkCommandBuffer buffer = gGraphics->GetCurrentGraphicsCommandBuffer();
-
-		//temp
-		if(meshTest.HasLoaded()) {
-			meshTest.QuickTempRenderSetMaterial(0, &meshImageTest1);
-			meshTest.QuickTempRenderSetMaterial(1, &meshImageTest2);
-		}
 
 #if !defined(ENABLE_XR)
 		static glm::vec3 camPos = glm::vec3(0, 0, 10);
@@ -260,7 +251,7 @@ int main() {
 			//meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
 			meshPC.mWorld = mModelTransforms[0].GetWorldMatrix();
 			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-			meshTest.QuickTempRender(buffer, meshPipeline.GetLayout());
+			modelTest1.Render(buffer, meshPipeline.GetLayout());
 		}
 		//tree 2
 		{
@@ -268,7 +259,7 @@ int main() {
 			//meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
 			meshPC.mWorld = mModelTransforms[1].GetWorldMatrix();
 			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-			meshTest.QuickTempRender(buffer, meshPipeline.GetLayout());
+			modelTest2.Render(buffer, meshPipeline.GetLayout());
 		}
 		meshPipeline.End(buffer);
 		mainRenderPass.End(buffer);
@@ -310,9 +301,6 @@ int main() {
 	meshTestBase.Destroy();
 	meshTest.Destroy();
 	meshUniformBuffer.Destroy();
-
-	imageTree_Bark.Destroy();
-	imageTree_Leaves.Destroy();
 
 	mainRenderPass.Destroy();
 	fb.Destroy();
