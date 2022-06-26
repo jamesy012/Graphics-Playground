@@ -19,7 +19,7 @@ if(${GraphicsPlayground_Enable_VR})
                                PUBLIC XR_USE_GRAPHICS_API_VULKAN)    
   endif()
   # find_package(OpenXR)
-  add_subdirectory(OpenXR-SDK)
+  add_subdirectory(OpenXR-SDK-Source)
   target_include_directories(
     GraphicsPlayground PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/OpenXR-SDK/include")
 endif()
