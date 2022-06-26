@@ -81,7 +81,10 @@ struct Job {
 	static WorkHandle* QueueWorkHandle(Work& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
 
 	static bool IsDone(const WorkHandle* aHandle) {
-		return aHandle->mIsDone;
+		if(aHandle == nullptr){
+			return true;
+		}
+		return aHandle->GetState() == WorkState::FINISHED;
 	}
 
 	//returns true if the work is done

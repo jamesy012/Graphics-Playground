@@ -43,8 +43,9 @@ Job::WorkState Job::WorkHandle::GetState() const {
 void Job::WorkHandle::Reset() {
 	if(mWorkRef != nullptr) {
 		mWorkRef->mHandle = nullptr;
+		mWorkRef = nullptr;
 	}
-	delete this;
+	//delete this;
 }
 
 void Job::Work::DoWork(bool aOnlyFinish /*= false*/) {

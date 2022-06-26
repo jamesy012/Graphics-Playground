@@ -70,9 +70,8 @@ friend class Model;
 		return mMaterials[aMaterialIndex];
 	}
 
-	const bool HasLoaded() const {
-		return mLoaded;
-	}
+	//checks if this mesh and it's images are loaded
+	const bool HasLoaded() const;
 
 protected:
     void QuickTempRender(VkCommandBuffer aBuffer, int aMeshIndex) const;
@@ -86,7 +85,8 @@ private:
 	AABB mAABB;
 	std::vector<SubMesh> mMesh;
 	std::vector<MeshMaterialData> mMaterials;
-	bool mLoaded = false;
+
+	Job::WorkHandle* mLoadingHandle;
 
 	std::string mImagePath;
 };

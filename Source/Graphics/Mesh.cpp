@@ -41,7 +41,6 @@ Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
 			 mMaterials.resize(data->mScene->mNumMaterials);
 			 ProcessNode(data->mScene, data->mScene->mRootNode);
 			 data->importer.FreeScene();
-			 mLoaded = true;
 		 }
 		 //we create this for the work, lets delete it now
 		 delete data;
@@ -55,8 +54,6 @@ bool Mesh::LoadMeshSync(FileIO::Path aFilePath) {
 	LOGGER::Formated("Loading: {}\n", aFilePath.mPath);
 	LOGGER::Log("Mesh Loading should not load a mesh that is already loaded?\n");
 
-	mLoaded = false;
-
 	Job::Work asyncWork = GetWork(aFilePath);
 	asyncWork.DoWork();
 
@@ -69,12 +66,10 @@ bool Mesh::LoadMesh(FileIO::Path aFilePath, FileIO::Path aImagePath /*= ""*/) {
 	LOGGER::Formated("Loading: {}\n", aFilePath.mPath);
 	LOGGER::Log("Mesh Loading should not load a mesh that is already loaded?\n");
 
-	mLoaded = false;
-
 	mImagePath = aImagePath;
 
 	Job::Work asyncWork = GetWork(aFilePath);
-	Job::QueueWork(asyncWork);
+	mLoadingHandle		= Job::QueueWorkHandle(asyncWork);
 
 	return true;
 }
@@ -179,7 +174,7 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 
 	//Material
 	if(aMesh->mMaterialIndex >= 0) {
-		mesh.mMaterialID = aMesh->mMaterialIndex;
+		mesh.mMaterialID		   = aMesh->mMaterialIndex;
 		const aiMaterial* material = aScene->mMaterials[aMesh->mMaterialIndex];
 		for(int i = 0; i < material->mNumProperties; i++) {
 			const aiMaterialProperty* prop = material->mProperties[i];
@@ -223,7 +218,14 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 }
 
 void Mesh::Destroy() {
-	ASSERT(mLoaded); //how to wait for work to be done?
+	Job::WaitForWork(mLoadingHandle);
+
+	for(int i = 0; i < mMaterials.size(); i++) {
+		if(mMaterials[i].mImage) {
+			mMaterials[i].mImage->Destroy();
+			mMaterials[i].mImage = nullptr;
+		}
+	}
 	for(int i = 0; i < mMesh.size(); i++) {
 		SubMesh& mesh = mMesh[i];
 		mesh.mVertexBuffer.Destroy();
@@ -232,9 +234,29 @@ void Mesh::Destroy() {
 	mMesh.clear();
 }
 
+const bool Mesh::HasLoaded() const {
+	if(Job::IsDone(mLoadingHandle)) {
+		for(auto image: mMaterials) {
+			if(image.mImage && !image.mImage->HasLoaded()) {
+				return false;
+			}
+		}
+		return true;
+	} else {
+		//const bool jobDone = Job::IsDone(mLoadingHandle);
+		//if(jobDone) {
+		//	mLoadingHandle->Reset();
+		//	//mLoadingHandle = nullptr;
+		//	//try the check again
+		//	return HasLoaded();
+		//}
+	}
+	return false;
+}
+
 //temp
 void Mesh::QuickTempRender(VkCommandBuffer aBuffer, int aMeshIndex) const {
-	if(mLoaded == false) {
+	if(false == HasLoaded()) {
 		return;
 	}
 	//for(int i = 0; i < mMesh.size(); i++) {

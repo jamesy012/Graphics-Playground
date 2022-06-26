@@ -5,6 +5,9 @@
 #include "Helpers.h"
 #include "Engine/FileIO.h"
 
+//for file loading
+#include "Engine/Job.h"
+
 class Buffer;
 
 class Image {
@@ -38,7 +41,10 @@ public:
 	const ImageSize GetImageSize() const {
 		return mSize;
 	}
-
+	
+	const bool HasLoaded() const {
+		return mLoadedHandle == nullptr;
+	}
 private:
 	void CreateVkImageView(const VkFormat aFormat, const char* aName = 0);
 
@@ -52,4 +58,6 @@ private:
 
 	VmaAllocation mAllocation = VK_NULL_HANDLE;
 	VmaAllocationInfo mAllocationInfo = {};
+
+	Job::WorkHandle* mLoadedHandle = nullptr;
 };

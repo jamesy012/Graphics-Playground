@@ -378,6 +378,7 @@ int main() {
 	meshPipeline.Destroy();
 	meshImageTestBase.Destroy();
 	meshTestBase.Destroy();
+	handMesh.Destroy();
 	meshTest.Destroy();
 	meshUniformBuffer.Destroy();
 
