@@ -120,6 +120,9 @@ int main() {
 	meshTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_5.fbx",
 					  std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/");
 
+	Mesh handMesh;
+	handMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/handModel.fbx");
+
 	struct MeshPCTest {
 		glm::mat4 mWorld;
 	} meshPC;
@@ -142,13 +145,16 @@ int main() {
 		meshPipeline.vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 		meshPipeline.vertexBinding.stride	 = sizeof(MeshVert);
 		MeshVert temp;
-		meshPipeline.vertexAttribute			 = std::vector<VkVertexInputAttributeDescription>(2);
+		meshPipeline.vertexAttribute			 = std::vector<VkVertexInputAttributeDescription>(3);
 		meshPipeline.vertexAttribute[0].location = 0;
 		meshPipeline.vertexAttribute[0].format	 = VK_FORMAT_R32G32B32_SFLOAT;
 		meshPipeline.vertexAttribute[0].offset	 = offsetof(MeshVert, mPos);
 		meshPipeline.vertexAttribute[1].location = 1;
-		meshPipeline.vertexAttribute[1].format	 = VK_FORMAT_R32G32_SFLOAT;
-		meshPipeline.vertexAttribute[1].offset	 = offsetof(MeshVert, mUVs[0]);
+		meshPipeline.vertexAttribute[1].format	 = VK_FORMAT_R32G32B32A32_SFLOAT;
+		meshPipeline.vertexAttribute[1].offset	 = offsetof(MeshVert, mColors[0]);
+		meshPipeline.vertexAttribute[2].location = 2;
+		meshPipeline.vertexAttribute[2].format	 = VK_FORMAT_R32G32_SFLOAT;
+		meshPipeline.vertexAttribute[2].offset	 = offsetof(MeshVert, mUVs[0]);
 	}
 
 	MaterialBase meshTestBase;
@@ -171,12 +177,26 @@ int main() {
 	Model modelTest2;
 	modelTest2.SetMesh(&meshTest);
 	modelTest2.SetMaterialBase(&meshImageTestBase);
+	Model controllerTest1;
+	controllerTest1.SetMesh(&handMesh);
+	controllerTest1.SetMaterialBase(&meshImageTestBase);
+	Model controllerTest2;
+	controllerTest2.SetMesh(&handMesh);
+	controllerTest2.SetMaterialBase(&meshImageTestBase);
+	Model worldBase;
+	worldBase.SetMesh(&handMesh);
+	worldBase.SetMaterialBase(&meshImageTestBase);
 
 	Transform mModelTransforms[2];
 	Transform mRootTransform;
+	mModelTransforms[0].Set(glm::vec3(0, 0, 0), 1.0f, glm::vec3(-90, 0, 0), &mRootTransform);
+	mModelTransforms[1].Set(glm::vec3(-5, 1, 0), 1.0f, glm::vec3(-90, 0, 0), &mRootTransform);
 	Transform mCameraTransform;
-	mModelTransforms[0].Set(glm::vec3(0, 5, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
-	mModelTransforms[1].Set(glm::vec3(-5, 8, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
+	Transform mControllerTransforms[2];
+	mControllerTransforms[0].SetParent(&mCameraTransform);
+	mControllerTransforms[1].SetParent(&mCameraTransform);
+	mControllerTransforms[0].SetScale(0);
+	mControllerTransforms[1].SetScale(0);
 
 	while(!gEngine->GetWindow()->ShouldClose()) {
 		ZoneScoped;
@@ -217,6 +237,7 @@ int main() {
 				if(info.mFov.w != 0) {
 					proj = glm::perspective(info.mFov.w - info.mFov.z, info.mFov.y / info.mFov.w, 0.1f, 1000.0f);
 				}
+				proj[1][1] *= -1.0f;
 				meshUniform.mPV[i] = proj * view;
 			}
 #else
@@ -225,7 +246,8 @@ int main() {
 			proj			  = glm::perspectiveFov(
 				 glm::radians(60.0f), (float)gGraphics->GetDesiredSize().mWidth, (float)gGraphics->GetDesiredSize().mHeight, 0.1f, 1000.0f);
 			//view			   = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0), glm::vec3(0, 1, 0));
-			view			   = glm::lookAt(camPos, glm::vec3(0), glm::vec3(0, 1, 0));
+			view = glm::lookAt(camPos, glm::vec3(0), glm::vec3(0, 1, 0));
+			proj[1][1] *= -1.0f;
 			meshUniform.mPV[0] = proj * view;
 			view			   = glm::lookAt(glm::vec3(1.0f, -20.0f, 1.0f), glm::vec3(0), glm::vec3(0, 1, 0));
 			meshUniform.mPV[1] = proj * view;
@@ -255,17 +277,19 @@ int main() {
 				for(int i = 0; i < VRGraphics::Side::COUNT; i++) {
 					VRGraphics::ControllerInfo info;
 					gVrGraphics->GetHandInfo((VRGraphics::Side)i, info);
-					if(info.mActive) {
-						mModelTransforms[i].SetParent(&mCameraTransform);
-						mModelTransforms[i].SetPosition(info.mPose.mPos);
-						mModelTransforms[i].SetRotation(info.mPose.mRot * glm::quat(glm::vec3(std::numbers::pi, 0, 0)));
-						mModelTransforms[i].SetScale(0.1f);
-					}
+					glm::vec3 movement;
 					if(info.mTrigger > 0) {
 						glm::vec3 position = mCameraTransform.GetLocalPosition();
-						position += info.mLinearVelocity * info.mTrigger;
-						mCameraTransform.SetPosition(position);
-						}
+						movement		   = info.mLinearVelocity * info.mTrigger;
+						mCameraTransform.SetPosition(position - movement);
+					}
+					if(info.mActive) {
+						mControllerTransforms[i].SetPosition(info.mPose.mPos + movement);
+						mControllerTransforms[i].SetRotation(info.mPose.mRot * glm::quat(glm::radians(glm::vec3(0, 180, 0))));
+						mControllerTransforms[i].SetScale(0.1f);
+					} else {
+						mControllerTransforms[i].SetScale(0.0f);
+					}
 				}
 			}
 #endif
@@ -282,19 +306,39 @@ int main() {
 		vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
 		//tree 1
 		{
-			//meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(0, 5, 0));
-			//meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
 			meshPC.mWorld = mModelTransforms[0].GetWorldMatrix();
 			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
 			modelTest1.Render(buffer, meshPipeline.GetLayout());
 		}
 		//tree 2
 		{
-			//meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(-5, 8, 0));
-			//meshPC.mWorld = glm::rotate(meshPC.mWorld, glm::radians(90.0f), glm::vec3(1, 0, 0));
 			meshPC.mWorld = mModelTransforms[1].GetWorldMatrix();
 			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
 			modelTest2.Render(buffer, meshPipeline.GetLayout());
+		}
+		//Hand 1
+		{
+			meshPC.mWorld = mControllerTransforms[0].GetWorldMatrix();
+			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+			controllerTest1.Render(buffer, meshPipeline.GetLayout());
+		}
+		//Hand 2
+		{
+			meshPC.mWorld = mControllerTransforms[1].GetWorldMatrix();
+			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+			controllerTest2.Render(buffer, meshPipeline.GetLayout());
+		}
+		//world base reference
+		{
+			meshPC.mWorld = glm::identity<glm::mat4>();
+			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+			worldBase.Render(buffer, meshPipeline.GetLayout());
+		}
+		//world base reference
+		{
+			meshPC.mWorld = glm::translate(meshPC.mWorld, glm::vec3(5, 0, 0));
+			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+			worldBase.Render(buffer, meshPipeline.GetLayout());
 		}
 		meshPipeline.End(buffer);
 		mainRenderPass.End(buffer);

@@ -514,9 +514,8 @@ void VRGraphics::Destroy() {
 }
 
 void VRGraphics::CreateInstance() {
-	XrResult result;
 	uint32_t extensionCount = 0;
-	result					= xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr);
+	VALIDATEXR(xrEnumerateInstanceExtensionProperties(nullptr, 0, &extensionCount, nullptr));
 
 	mXrInstanceExtensions.resize(extensionCount);
 
@@ -536,7 +535,7 @@ void VRGraphics::CreateInstance() {
 #endif
 
 	uint32_t layerCount = 0;
-	result				= xrEnumerateApiLayerProperties(0, &layerCount, nullptr);
+	VALIDATEXR(xrEnumerateApiLayerProperties(0, &layerCount, nullptr));
 
 	mXrLayerProperties.resize(layerCount);
 
@@ -546,6 +545,7 @@ void VRGraphics::CreateInstance() {
 	VALIDATEXR(xrEnumerateApiLayerProperties(layerCount, &layerCount, mXrLayerProperties.data()));
 
 	std::vector<const char*> extensions; // = { XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME };
+	std::vector<const char*> apiLayers; //= {"XR_APILAYER_LUNARG_core_validation"};
 
 	auto optionalXrExtension = [&](const char* aExtension) {
 		for(int i = 0; i < extensionCount; i++) {
@@ -583,6 +583,8 @@ void VRGraphics::CreateInstance() {
 	strcpy(create.applicationInfo.engineName, "Graphics-Playground");
 	create.enabledExtensionCount = extensions.size();
 	create.enabledExtensionNames = extensions.data();
+	create.enabledApiLayerCount	 = apiLayers.size();
+	create.enabledApiLayerNames	 = apiLayers.data();
 
 	XrDebugUtilsMessengerCreateInfoEXT debugCreateInfo = GetMessengerCreateInfo();
 	create.next										   = &debugCreateInfo;

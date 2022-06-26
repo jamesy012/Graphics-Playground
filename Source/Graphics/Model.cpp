@@ -4,7 +4,7 @@
 #include "PlatformDebug.h"
 
 void Model::SetMaterialBase(MaterialBase* aBase) {
-    mMaterialBase = aBase;
+	mMaterialBase = aBase;
 }
 
 void Model::SetNumMaterials(int aCount) {
@@ -33,7 +33,7 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 				vkCmdBindDescriptorSets(
 					aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aLayout, 1, 1, mMaterials[mesh.mMaterialID].mMaterial.GetSet(), 0, nullptr);
 			} else {
-				ASSERT(false);
+				//ASSERT(false);
 			}
 		}
 		mMesh->QuickTempRender(aBuffer, i);
@@ -47,10 +47,10 @@ void Model::UpdateMaterials() {
 	}
 
 	for(int i = 0; i < numMaterial; i++) {
-		if(mMaterials[i].mSet == false) {
+		if(mMaterials[i].mSet == false && mMesh->GetMaterial(i).mImage) {
 			ModelMaterial& material = mMaterials[i];
+			material.mMaterial		= mMaterialBase->MakeMaterials()[0];
 			material.mSet			= true;
-            material.mMaterial = mMaterialBase->MakeMaterials()[0];
 			material.mMaterial.SetImages(*mMesh->GetMaterial(i).mImage, 0, 0);
 		}
 	}

@@ -6,9 +6,11 @@
 #include "test.inc"
 
 layout(location = 0) in vec3 inPos;
-layout(location = 1) in vec2 inUV;
+layout(location = 1) in vec4 inColor;
+layout(location = 2) in vec2 inUV;
 
 layout(location = 0) out struct {
+    vec4 Color;
     vec2 UV;
 } Out;
 
@@ -17,6 +19,7 @@ out gl_PerVertex {
 };
 
 void main() {
+    Out.Color = inColor;
     Out.UV = inUV;
     gl_Position = sceneData.viewProj[gl_ViewIndex] * pc.world  * vec4(inPos,1);
 }

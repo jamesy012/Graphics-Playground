@@ -28,7 +28,7 @@ public:
 
 	void PositionConvert(XrVector3f& aFrom, glm::vec3& aTo) {
 		aTo.x = aFrom.x;
-		aTo.y = -aFrom.y;
+		aTo.y = aFrom.y;
 		aTo.z = aFrom.z;
 		}
 
@@ -43,9 +43,9 @@ public:
 		//const glm::vec3 euler	   = glm::eulerAngles(aTo.mRot);
 		//aTo.mRot   = glm::quat(euler * glm::vec3(-1, 1, -1));
 		aTo.mRot.x = aFrom.orientation.x;
-		aTo.mRot.y = -aFrom.orientation.y;
+		aTo.mRot.y = aFrom.orientation.y;
 		aTo.mRot.z = aFrom.orientation.z;
-		aTo.mRot.w = -aFrom.orientation.w;
+		aTo.mRot.w = aFrom.orientation.w;
 	}
 	void ViewConvert(XrView& aFrom, View& aTo) {
 		PoseConvert(aFrom.pose, aTo);

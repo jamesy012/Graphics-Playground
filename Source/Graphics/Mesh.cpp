@@ -120,7 +120,7 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 
 		for(uint64_t channel = 0; channel < NUM_VERT_COLS; channel++) {
 			if(aMesh->HasVertexColors(channel)) {
-				vertex.mColors[channel] = AssimpToGlm(*aMesh->mColors[i]);
+				vertex.mColors[channel] = AssimpToGlm(aMesh->mColors[channel][i]);
 			} else {
 				vertex.mColors[channel] = glm::vec4(1, 0, 1, 1);
 			}

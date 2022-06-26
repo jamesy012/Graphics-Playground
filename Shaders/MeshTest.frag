@@ -1,6 +1,7 @@
 #version 450 core
 
 layout(location = 0) in struct {
+    vec4 Color;
     vec2 UV;
 } In;
 
@@ -11,7 +12,7 @@ layout(location = 0) out vec4 fColor;
 const float gAlphaClip = 0.5f;
 
 void main() {
-    fColor = texture(sTexture, In.UV.st);
+    fColor = texture(sTexture, In.UV.st) * In.Color;
     if(fColor.a <= gAlphaClip) {
         discard;
     }
