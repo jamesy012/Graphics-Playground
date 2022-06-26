@@ -26,11 +26,14 @@ public:
 		glm::vec4 mFov;
 	};
 
+	void PositionConvert(XrVector3f& aFrom, glm::vec3& aTo) {
+		aTo.x = aFrom.x;
+		aTo.y = -aFrom.y;
+		aTo.z = aFrom.z;
+		}
 
 	void PoseConvert(XrPosef& aFrom, Pose& aTo) {
-		aTo.mPos.x = aFrom.position.x;
-		aTo.mPos.y = -aFrom.position.y;
-		aTo.mPos.z = aFrom.position.z;
+			PositionConvert(aFrom.position, aTo.mPos);
 
 		//Rotation when using euler to change rotation
 		//aTo.mRot.x = aFrom.orientation.x;
@@ -54,7 +57,10 @@ public:
 	}
 
 	struct ControllerInfo {
-		VRGraphics::Pose mHandPose;
+		VRGraphics::Pose mPose;
+		glm::vec3 mLinearVelocity;
+		glm::vec3 mAngularVelocity;
+		float mTrigger;
 		bool mActive;
 	};
 

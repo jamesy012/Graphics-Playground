@@ -174,6 +174,7 @@ int main() {
 
 	Transform mModelTransforms[2];
 	Transform mRootTransform;
+	Transform mCameraTransform;
 	mModelTransforms[0].Set(glm::vec3(0, 5, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
 	mModelTransforms[1].Set(glm::vec3(-5, 8, 0), 1.0f, glm::vec3(90, 0, 0), &mRootTransform);
 
@@ -204,8 +205,7 @@ int main() {
 				glm::mat4 translation;
 				glm::mat4 rotation;
 
-				translation = glm::translate(glm::identity<glm::mat4>(), info.mPos);
-				translation = glm::translate(glm::identity<glm::mat4>(), info.mPos);
+				translation = glm::translate(mCameraTransform.GetWorldMatrix(), info.mPos);
 				rotation	= glm::mat4_cast(info.mRot);
 
 				view = translation * rotation;
@@ -256,10 +256,16 @@ int main() {
 					VRGraphics::ControllerInfo info;
 					gVrGraphics->GetHandInfo((VRGraphics::Side)i, info);
 					if(info.mActive) {
-						mModelTransforms[i].SetWorldPosition(info.mHandPose.mPos);
-						mModelTransforms[i].SetWorldRotation(info.mHandPose.mRot * glm::quat(glm::vec3(std::numbers::pi, 0, 0)));
+						mModelTransforms[i].SetParent(&mCameraTransform);
+						mModelTransforms[i].SetPosition(info.mPose.mPos);
+						mModelTransforms[i].SetRotation(info.mPose.mRot * glm::quat(glm::vec3(std::numbers::pi, 0, 0)));
 						mModelTransforms[i].SetScale(0.1f);
 					}
+					if(info.mTrigger > 0) {
+						glm::vec3 position = mCameraTransform.GetLocalPosition();
+						position += info.mLinearVelocity * info.mTrigger;
+						mCameraTransform.SetPosition(position);
+						}
 				}
 			}
 #endif
