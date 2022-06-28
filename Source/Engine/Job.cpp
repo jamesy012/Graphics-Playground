@@ -43,9 +43,9 @@ Job::WorkState Job::WorkHandle::GetState() const {
 void Job::WorkHandle::Reset() {
 	if(mWorkRef != nullptr) {
 		mWorkRef->mHandle = nullptr;
-		mWorkRef = nullptr;
+		mWorkRef		  = nullptr;
 	}
-	//delete this;
+	delete this;
 }
 
 void Job::Work::DoWork(bool aOnlyFinish /*= false*/) {
@@ -203,6 +203,9 @@ bool Job::WaitForWork(const Job::WorkHandle* aHandle) {
 			//todo revisit Work wait
 			do {
 			} while(!aHandle->mIsDone); //keep checking
+			if(work->mFinishOnMainThread) {
+				ASSERT(false); //todo
+			}
 			return true;
 	}
 	lock.unlock();

@@ -218,7 +218,11 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 }
 
 void Mesh::Destroy() {
-	Job::WaitForWork(mLoadingHandle);
+	if(mLoadingHandle) {
+		Job::WaitForWork(mLoadingHandle);
+		mLoadingHandle->Reset();
+		mLoadingHandle = nullptr;
+	}
 
 	for(int i = 0; i < mMaterials.size(); i++) {
 		if(mMaterials[i].mImage) {

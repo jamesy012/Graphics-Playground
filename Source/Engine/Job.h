@@ -77,8 +77,8 @@ struct Job {
 	static void QueueWork(std::vector<Work>& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
 	static void QueueWork(Work& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
 	//make sure to reset the handle when finished
-	static std::vector<WorkHandle*> QueueWorkHandle(std::vector<Work>& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
-	static WorkHandle* QueueWorkHandle(Work& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
+	[[nodiscard]] static std::vector<WorkHandle*> QueueWorkHandle(std::vector<Work>& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
+	[[nodiscard]] static WorkHandle* QueueWorkHandle(Work& aWork, WorkPriority aWorkPriority = WorkPriority::BOTTOM_OF_QUEUE);
 
 	static bool IsDone(const WorkHandle* aHandle) {
 		if(aHandle == nullptr){

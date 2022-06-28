@@ -7,6 +7,14 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+namespace CONSTANT {
+	namespace IMAGE {
+		Image* gWhite = nullptr;
+		Image* gBlack = nullptr;
+		Image* gChecker = nullptr;
+	};
+}; // namespace CONSTANT
+
 uint32_t ConvertImageSizeToByteSize(ImageSize aSize) {
 	return aSize.mWidth * aSize.mHeight * sizeof(char) * 4;
 }
@@ -102,16 +110,41 @@ void Image::CreateFromData(const void* aData, const VkFormat aFormat, const Imag
 	dataBuffer.Destroy();
 }
 
-void Image::LoadImage(const FileIO::Path aFilePath, const VkFormat aFormat) {
+struct AsyncLoadData {
+	stbi_uc* mData;
 	int width, height, comp;
-	//todo
-	stbi_uc* data = stbi_load(aFilePath.mPath.c_str(), &width, &height, &comp, STBI_rgb_alpha);
-	ASSERT(data != nullptr);
-	ASSERT(comp == 4);
+	Image* ptr;
+};
 
-	CreateFromData(data, aFormat, {width, height}, aFilePath.mPath.c_str());
+void Image::LoadImageSync(const FileIO::Path aFilePath, const VkFormat aFormat) {
+	Job::Work work = GetLoadImageWork(aFilePath, aFormat);
+	work.DoWork();
+}
+void Image::LoadImage(const FileIO::Path aFilePath, const VkFormat aFormat) {
+	Job::Work work = GetLoadImageWork(aFilePath, aFormat);
+	mLoadedHandle = Job::QueueWorkHandle(work);
+}
 
-	stbi_image_free(data);
+Job::Work Image::GetLoadImageWork(const FileIO::Path aFilePath, const VkFormat aFormat) {
+	Job::Work work;
+	AsyncLoadData* imageData = new AsyncLoadData();
+	imageData->ptr			 = this;
+
+	work.mUserData = imageData;
+	work.mWorkPtr  = [aFilePath](void* userData) {
+		 AsyncLoadData* imageData = (AsyncLoadData*)userData;
+		 //todo
+		 imageData->mData = stbi_load(aFilePath.mPath.c_str(), &imageData->width, &imageData->height, &imageData->comp, STBI_rgb_alpha);
+		 ASSERT(imageData->mData != nullptr);
+		 ASSERT(imageData->comp == 4);
+	};
+	work.mFinishOnMainThread = true;
+	work.mFinishPtr			 = [=](void* userData) {
+		 AsyncLoadData* imageData = (AsyncLoadData*)userData;
+		 imageData->ptr->CreateFromData(imageData->mData, aFormat, {imageData->width, imageData->height}, aFilePath.mPath.c_str());
+		 stbi_image_free(imageData->mData);
+	};
+	return work;
 }
 
 void Image::Destroy() {

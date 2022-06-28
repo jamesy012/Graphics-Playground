@@ -13,6 +13,7 @@
 #include "RenderPass.h"
 #include "Swapchain.h"
 #include "Engine/Window.h"
+#include "Image.h"
 
 #if defined(ENABLE_IMGUI)
 #	include "ImGuiGraphics.h"
@@ -77,7 +78,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL VkDebugCallback(VkDebugUtilsMessageSeverit
 	ZoneScopedC(0xFF0000);
 	TracyMessage(pCallbackData->pMessage, strlen(pCallbackData->pMessage));
 
-	bool shouldLog	 = true;
+	bool shouldLog = true;
 
 	auto toggleValue = gVulkanValidationToggle.find(pCallbackData->messageIdNumber);
 	if(toggleValue != gVulkanValidationToggle.end()) {
@@ -191,6 +192,21 @@ bool VulkanGraphics::Initalize() {
 	}
 
 	{
+		CONSTANT::IMAGE::gWhite = new Image();
+		const unsigned char whiteData[]	= {255, 255, 255, 255};
+		CONSTANT::IMAGE::gWhite->CreateFromData(whiteData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(1, 1), "Constant white Image");
+		CONSTANT::IMAGE::gBlack = new Image();
+		const unsigned char blackData[]	= {0, 0, 0, 255};
+		CONSTANT::IMAGE::gBlack->CreateFromData(blackData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(1, 1), "Constant black Image");
+		CONSTANT::IMAGE::gChecker = new Image();
+		// clang-format off
+		const unsigned char checkerData[]  = {255, 255, 255, 255, 0, 0, 0, 255, 
+									 		 0, 0, 0, 255, 255, 255, 255, 255};
+		// clang-format on
+		CONSTANT::IMAGE::gChecker->CreateFromData(checkerData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(2, 2), "Constant checker Image");
+	}
+
+	{
 		std::vector<VkClearValue> clear(1);
 		clear[0].color.float32[0] = 0.0f;
 		mRenderPass.SetClearColors(clear);
@@ -271,7 +287,6 @@ bool VulkanGraphics::Initalize() {
 	//EndGraphicsCommandBuffer(buffer, false);
 #endif
 
-
 	LOGGER::Formated("Starting Display with ({}, {}) resolution\n", GetDesiredSize().mWidth, GetDesiredSize().mHeight);
 	return true;
 }
@@ -310,6 +325,18 @@ bool VulkanGraphics::Destroy() {
 	mFramebuffer[1].Destroy();
 	mFramebuffer[2].Destroy();
 	mRenderPass.Destroy();
+
+	{
+		CONSTANT::IMAGE::gWhite->Destroy();
+		delete CONSTANT::IMAGE::gWhite;
+		CONSTANT::IMAGE::gWhite = nullptr;
+		CONSTANT::IMAGE::gBlack->Destroy();
+		delete CONSTANT::IMAGE::gBlack;
+		CONSTANT::IMAGE::gBlack = nullptr;
+		CONSTANT::IMAGE::gChecker->Destroy();
+		delete CONSTANT::IMAGE::gChecker;
+		CONSTANT::IMAGE::gChecker = nullptr;
+	}
 
 	vmaDestroyAllocator(mAllocator);
 	mAllocator = VK_NULL_HANDLE;
@@ -530,11 +557,10 @@ const VkFormat VulkanGraphics::GetXRSwapchainFormat() const {
 const ImageSize VulkanGraphics::GetDesiredSize() const {
 #if defined(ENABLE_XR)
 	return gVrGraphics->GetDesiredSize();
-	#else
+#else
 	return GetMainSwapchain()->GetSize();
 #endif
-
-		}
+}
 
 bool VulkanGraphics::CreateInstance() {
 	VkResult result;

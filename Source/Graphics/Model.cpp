@@ -3,6 +3,8 @@
 #include "Mesh.h"
 #include "PlatformDebug.h"
 
+#include "Image.h"
+
 void Model::SetMaterialBase(MaterialBase* aBase) {
 	mMaterialBase = aBase;
 }
@@ -29,12 +31,12 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 		const Mesh::SubMesh& mesh = mMesh->GetMesh(i);
 		if(mesh.mMaterialID != -1) {
 			const ModelMaterial& material = mMaterials[mesh.mMaterialID];
-			if(material.mSet) {
-				vkCmdBindDescriptorSets(
-					aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aLayout, 1, 1, mMaterials[mesh.mMaterialID].mMaterial.GetSet(), 0, nullptr);
-			} else {
-				//ASSERT(false);
-			}
+			//if(material.mSet) {
+			vkCmdBindDescriptorSets(
+				aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aLayout, 1, 1, mMaterials[mesh.mMaterialID].mMaterial.GetSet(), 0, nullptr);
+			//} else {
+			//ASSERT(false);
+			//}
 		}
 		mMesh->QuickTempRender(aBuffer, i);
 	}
@@ -47,10 +49,13 @@ void Model::UpdateMaterials() {
 	}
 
 	for(int i = 0; i < numMaterial; i++) {
+		ModelMaterial& material = mMaterials[i];
+		if(material.mMaterial.IsValid() == false) {
+			material.mMaterial = mMaterialBase->MakeMaterials()[0];
+			material.mMaterial.SetImages(*CONSTANT::IMAGE::gWhite, 0, 0);
+		}
 		if(mMaterials[i].mSet == false && mMesh->GetMaterial(i).mImage) {
-			ModelMaterial& material = mMaterials[i];
-			material.mMaterial		= mMaterialBase->MakeMaterials()[0];
-			material.mSet			= true;
+			material.mSet = true;
 			material.mMaterial.SetImages(*mMesh->GetMaterial(i).mImage, 0, 0);
 		}
 	}

@@ -18,6 +18,10 @@ public:
 		return &mSet;
 	}
 
+	const bool IsValid() const {
+		return mBase != nullptr && mSet != VK_NULL_HANDLE;
+	}
+
 private:
 	const MaterialBase* mBase = nullptr;
 	VkDescriptorSet mSet	  = VK_NULL_HANDLE;
