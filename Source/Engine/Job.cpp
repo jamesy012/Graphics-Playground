@@ -288,7 +288,7 @@ int gWorkDone;
 void WorkManager::ProcessMainThreadWork() {
 	ZoneScoped;
 	gWorkDone										  = 0;
-	const double maxLength							  = 0.05f;
+	const double maxLength							  = 0.01f;
 	std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 	gMsTimeTaken									  = 0;
 	while(true) {

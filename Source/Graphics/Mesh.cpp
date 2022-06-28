@@ -21,6 +21,8 @@ Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
 	Job::Work asyncWork;
 	asyncWork.mUserData = new AsyncLoadData();
 	asyncWork.mWorkPtr	= [aFilePath](void* aData) {
+		 ZoneScoped;
+		 ZoneText(aFilePath.mPath.c_str(), aFilePath.mPath.size());
 		 AsyncLoadData* data  = (AsyncLoadData*)aData;
 		 const aiScene* scene = data->importer.ReadFile(aFilePath.mPath.c_str(),
 														aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices |
@@ -36,6 +38,7 @@ Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
 	};
 	asyncWork.mFinishOnMainThread = true;
 	asyncWork.mFinishPtr		  = [this](void* aData) {
+		 ZoneScoped;
 		 AsyncLoadData* data = (AsyncLoadData*)aData;
 		 if(data->mScene) {
 			 mMaterials.resize(data->mScene->mNumMaterials);
@@ -176,12 +179,12 @@ bool Mesh::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 	if(aMesh->mMaterialIndex >= 0) {
 		mesh.mMaterialID		   = aMesh->mMaterialIndex;
 		const aiMaterial* material = aScene->mMaterials[aMesh->mMaterialIndex];
-		for(int i = 0; i < material->mNumProperties; i++) {
-			const aiMaterialProperty* prop = material->mProperties[i];
-			//if(strcmp(prop->mKey.data, _AI_MATKEY_TEXTURE_BASE)){
-			LOGGER::Formated("Material semantic {}, {}\n", prop->mKey.C_Str(), prop->mSemantic);
-			//}
-		}
+		//for(int i = 0; i < material->mNumProperties; i++) {
+		//	const aiMaterialProperty* prop = material->mProperties[i];
+		//	//if(strcmp(prop->mKey.data, _AI_MATKEY_TEXTURE_BASE)){
+		//	//LOGGER::Formated("Material semantic {}, {}\n", prop->mKey.C_Str(), prop->mSemantic);
+		//	//}
+		//}
 		for(unsigned int i = 0; i < material->GetTextureCount(aiTextureType_DIFFUSE); i++) {
 			aiString str;
 			material->GetTexture(aiTextureType_DIFFUSE, i, &str);

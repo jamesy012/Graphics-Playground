@@ -132,6 +132,8 @@ Job::Work Image::GetLoadImageWork(const FileIO::Path aFilePath, const VkFormat a
 
 	work.mUserData = imageData;
 	work.mWorkPtr  = [aFilePath](void* userData) {
+		 ZoneScoped;
+		 ZoneText(aFilePath.mPath.c_str(), aFilePath.mPath.size());
 		 AsyncLoadData* imageData = (AsyncLoadData*)userData;
 		 //todo
 		 imageData->mData = stbi_load(aFilePath.mPath.c_str(), &imageData->width, &imageData->height, &imageData->comp, STBI_rgb_alpha);
@@ -140,6 +142,7 @@ Job::Work Image::GetLoadImageWork(const FileIO::Path aFilePath, const VkFormat a
 	};
 	work.mFinishOnMainThread = true;
 	work.mFinishPtr			 = [=](void* userData) {
+		 ZoneScoped;
 		 AsyncLoadData* imageData = (AsyncLoadData*)userData;
 		 imageData->ptr->CreateFromData(imageData->mData, aFormat, {imageData->width, imageData->height}, aFilePath.mPath.c_str());
 		 stbi_image_free(imageData->mData);

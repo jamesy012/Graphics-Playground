@@ -29,6 +29,12 @@ public:
 	const double GetDeltaTimeUnScaled() const {
 		return mDeltaTimeUnscaled;
 	}
+	const int GetFPS() const {
+		return mFPS[mFrameCount % NUM_FPS_COUNT];
+	}
+	const int GetFPSAverage() const {
+		return mFPSTotal / NUM_FPS_COUNT;
+	}
 
 	Window* GetWindow() const;
 
@@ -41,9 +47,13 @@ private:
 	std::chrono::high_resolution_clock::time_point mLastTime;
 	double mDeltaTime;
 	double mDeltaTimeUnscaled;
-	float mTimeScale			  = 1.0f;
-	double mTimeSinceStart		  = 0.0f;
+	float mTimeScale			   = 1.0f;
+	double mTimeSinceStart		   = 0.0f;
 	double mTimeSinceStartUnScaled = 0.0f;
+	int mFrameCount				   = 0;
+	static const int NUM_FPS_COUNT = 100;
+	int mFPS[NUM_FPS_COUNT]		   = {};
+	int mFPSTotal				   = 0;
 };
 
 extern Engine* gEngine;

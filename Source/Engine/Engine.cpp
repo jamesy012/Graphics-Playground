@@ -44,6 +44,11 @@ bool Engine::GameLoop() {
 		mDeltaTime = mDeltaTimeUnscaled * mTimeScale;
 		mTimeSinceStartUnScaled += mDeltaTimeUnscaled;
 		mTimeSinceStart += mDeltaTime;
+
+		mFrameCount++;
+		mFPSTotal -= mFPS[mFrameCount % NUM_FPS_COUNT];
+		mFPS[mFrameCount % NUM_FPS_COUNT] = 1 / mDeltaTimeUnscaled;
+		mFPSTotal += mFPS[mFrameCount % NUM_FPS_COUNT];
 	}
 
 	GetWindow()->Update();
@@ -69,6 +74,7 @@ Window* Engine::GetWindow() const {
 
 void Engine::ImGuiWindow() {
 	if(ImGui::Begin("Engine")) {
+		ImGui::Text("fps: %i\t(%i)", GetFPSAverage(), GetFPS());
 		ImGui::Text("udt: %f utime: %f", mDeltaTimeUnscaled, mTimeSinceStartUnScaled);
 		ImGui::Text(" dt: %f  time: %f", mDeltaTime, mTimeSinceStart);
 		ImGui::DragFloat("Time Scale", &mTimeScale, 0.1f, 0.1f, 50.0f);
