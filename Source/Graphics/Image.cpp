@@ -9,10 +9,10 @@
 
 namespace CONSTANT {
 	namespace IMAGE {
-		Image* gWhite = nullptr;
-		Image* gBlack = nullptr;
+		Image* gWhite	= nullptr;
+		Image* gBlack	= nullptr;
 		Image* gChecker = nullptr;
-	};
+	}; // namespace IMAGE
 }; // namespace CONSTANT
 
 uint32_t ConvertImageSizeToByteSize(ImageSize aSize) {
@@ -61,28 +61,35 @@ void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const c
 	SetVkName(VK_OBJECT_TYPE_IMAGE, mImage, aName ? aName : "Unnamed Image");
 }
 
-void Image::CreateFromBuffer(const Buffer& aBuffer, const VkFormat aFormat, const ImageSize aSize, const char* aName /* = 0*/) {
+void Image::CreateFromBuffer(Buffer& aBuffer, const bool aDestroyBuffer, const VkFormat aFormat, const ImageSize aSize,
+							 const char* aName /* = 0*/) {
+	ZoneScoped;
 	ASSERT(aBuffer.GetType() == BufferType::STAGING)
 	CreateVkImage(aFormat, aSize, aName);
 
 	OneTimeCommandBuffer cmBuffer = gGraphics->AllocateGraphicsCommandBuffer();
+	{
+		ZoneScopedN("Has Lock");
+		SetImageLayout(
+			cmBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-	SetImageLayout(
-		cmBuffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+		VkBufferImageCopy imageCopy			  = {};
+		imageCopy.imageSubresource.layerCount = mArrayLayers;
+		imageCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		imageCopy.imageExtent				  = mSize;
 
-	VkBufferImageCopy imageCopy			  = {};
-	imageCopy.imageSubresource.layerCount = mArrayLayers;
-	imageCopy.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-	imageCopy.imageExtent				  = mSize;
+		vkCmdCopyBufferToImage(cmBuffer, aBuffer.GetBuffer(), mImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy);
 
-	vkCmdCopyBufferToImage(cmBuffer, aBuffer.GetBuffer(), mImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &imageCopy);
+		SetImageLayout(cmBuffer,
+					   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+					   VK_PIPELINE_STAGE_TRANSFER_BIT,
+					   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
-	SetImageLayout(cmBuffer,
-				   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-				   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-				   VK_PIPELINE_STAGE_TRANSFER_BIT,
-				   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-
+		if(aDestroyBuffer) {
+			cmBuffer.mDataBuffer = aBuffer;
+		}
+	}
 	gGraphics->EndGraphicsCommandBuffer(cmBuffer);
 }
 
@@ -105,9 +112,9 @@ void Image::CreateFromData(const void* aData, const VkFormat aFormat, const Imag
 	Buffer dataBuffer;
 	dataBuffer.CreateFromData(BufferType::STAGING, ConvertImageSizeToByteSize(aSize), aData, aName);
 
-	CreateFromBuffer(dataBuffer, aFormat, aSize, aName);
+	CreateFromBuffer(dataBuffer, true, aFormat, aSize, aName);
 
-	dataBuffer.Destroy();
+	//dataBuffer.Destroy();
 }
 
 struct AsyncLoadData {
@@ -122,7 +129,7 @@ void Image::LoadImageSync(const FileIO::Path aFilePath, const VkFormat aFormat) 
 }
 void Image::LoadImage(const FileIO::Path aFilePath, const VkFormat aFormat) {
 	Job::Work work = GetLoadImageWork(aFilePath, aFormat);
-	mLoadedHandle = Job::QueueWorkHandle(work);
+	mLoadedHandle  = Job::QueueWorkHandle(work);
 }
 
 Job::Work Image::GetLoadImageWork(const FileIO::Path aFilePath, const VkFormat aFormat) {
@@ -140,12 +147,12 @@ Job::Work Image::GetLoadImageWork(const FileIO::Path aFilePath, const VkFormat a
 		 ASSERT(imageData->mData != nullptr);
 		 ASSERT(imageData->comp == 4);
 	};
-	work.mFinishOnMainThread = true;
-	work.mFinishPtr			 = [=](void* userData) {
-		 ZoneScoped;
-		 AsyncLoadData* imageData = (AsyncLoadData*)userData;
-		 imageData->ptr->CreateFromData(imageData->mData, aFormat, {imageData->width, imageData->height}, aFilePath.mPath.c_str());
-		 stbi_image_free(imageData->mData);
+	//work.mFinishOnMainThread = true;
+	work.mFinishPtr = [=](void* userData) {
+		ZoneScoped;
+		AsyncLoadData* imageData = (AsyncLoadData*)userData;
+		imageData->ptr->CreateFromData(imageData->mData, aFormat, {imageData->width, imageData->height}, aFilePath.mPath.c_str());
+		stbi_image_free(imageData->mData);
 	};
 	return work;
 }

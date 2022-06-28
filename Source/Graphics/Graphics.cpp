@@ -192,11 +192,11 @@ bool VulkanGraphics::Initalize() {
 	}
 
 	{
-		CONSTANT::IMAGE::gWhite = new Image();
-		const unsigned char whiteData[]	= {255, 255, 255, 255};
+		CONSTANT::IMAGE::gWhite			= new Image();
+		const unsigned char whiteData[] = {255, 255, 255, 255};
 		CONSTANT::IMAGE::gWhite->CreateFromData(whiteData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(1, 1), "Constant white Image");
-		CONSTANT::IMAGE::gBlack = new Image();
-		const unsigned char blackData[]	= {0, 0, 0, 255};
+		CONSTANT::IMAGE::gBlack			= new Image();
+		const unsigned char blackData[] = {0, 0, 0, 255};
 		CONSTANT::IMAGE::gBlack->CreateFromData(blackData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(1, 1), "Constant black Image");
 		CONSTANT::IMAGE::gChecker = new Image();
 		// clang-format off
@@ -376,7 +376,7 @@ void VulkanGraphics::AddWindow(Window* aWindow) {
 	}
 }
 
-void VulkanGraphics::StartNewFrame() {
+_Acquires_lock_(mCommandPoolMutex) void VulkanGraphics::StartNewFrame() {
 	FrameMark;
 	ZoneScoped;
 
@@ -388,6 +388,7 @@ void VulkanGraphics::StartNewFrame() {
 
 	uint32_t index = mSwapchain->GetNextImage();
 
+	mCommandPoolMutex.lock();
 	VkCommandBuffer graphics	  = mDevicesHandler->GetGraphicsCB(index);
 	VkCommandBufferBeginInfo info = {};
 	info.sType					  = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -419,7 +420,7 @@ void VulkanGraphics::StartNewFrame() {
 						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 }
 
-void VulkanGraphics::EndFrame() {
+_Releases_lock_(mCommandPoolMutex) void VulkanGraphics::EndFrame() {
 	ZoneScoped;
 	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(mSwapchain->GetImageIndex());
 
@@ -435,7 +436,49 @@ void VulkanGraphics::EndFrame() {
 						VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
 	vkEndCommandBuffer(graphics);
 
+	{
+		std::unique_lock<std::mutex> lock(mBuffersToSubmitMutex);
+		const size_t numBuffers = mBuffersToSubmit.size();
+		//std::vector<VkCommandBuffer> commandBuffers(numBuffers);
+		std::vector<VkFence> fences(numBuffers);
+		//VkSubmitInfo submitInfo		  = {};
+		//submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		//submitInfo.pCommandBuffers	  = &aBuffer.mBuffer;
+		//submitInfo.commandBufferCount = 1;
+		//
+		//vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, 1, &submitInfo, aBuffer.mFence);
+		//
+		//vkWaitForFences(GetVkDevice(), 1, &aBuffer.mFence, true, UINT64_MAX);
+		for(int i = 0; i < numBuffers; i++) {
+			VkSubmitInfo submitInfo		  = {};
+			submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			submitInfo.pCommandBuffers	  = &mBuffersToSubmit[i].mBuffer;
+			submitInfo.commandBufferCount = 1;
+
+			vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, 1, &submitInfo, mBuffersToSubmit[i].mFence);
+			fences[i] = mBuffersToSubmit[i].mFence;
+		}
+
+		if(numBuffers != 0) {
+			vkWaitForFences(GetVkDevice(), numBuffers, fences.data(), true, UINT64_MAX);
+		}
+
+		for(int i = 0; i < numBuffers; i++) {
+			vkDestroyFence(GetVkDevice(), mBuffersToSubmit[i].mFence, GetAllocationCallback());
+			vkFreeCommandBuffers(GetVkDevice(), mDevicesHandler->GetGraphicsPool(), 1, &mBuffersToSubmit[i].mBuffer);
+
+			if(mBuffersToSubmit[i].mDataBuffer.GetBuffer() != VK_NULL_HANDLE) {
+				//Buffer* buffer = (Buffer*)mBuffersToSubmit[i].mDataBuffer;
+				mBuffersToSubmit[i].mDataBuffer.Destroy();
+			}
+		}
+		mBuffersToSubmit.clear();
+		lock.unlock();
+	}
+
 	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, {graphics});
+
+	mCommandPoolMutex.unlock();
 
 #if defined(ENABLE_XR)
 	gVrGraphics->FrameEnd();
@@ -458,7 +501,9 @@ const Framebuffer& VulkanGraphics::GetCurrentXrFrameBuffer(uint8_t aEye) const {
 }
 #endif
 
-OneTimeCommandBuffer VulkanGraphics::AllocateGraphicsCommandBuffer(bool aBegin /*= true*/) {
+_Acquires_lock_(mCommandPoolMutex) OneTimeCommandBuffer VulkanGraphics::AllocateGraphicsCommandBuffer(bool aBegin /*= true*/) {
+	mCommandPoolMutex.lock();
+
 	VkCommandBufferAllocateInfo allocateInfo = {};
 	allocateInfo.sType						 = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 	allocateInfo.commandPool				 = mDevicesHandler->GetGraphicsPool();
@@ -484,25 +529,33 @@ OneTimeCommandBuffer VulkanGraphics::AllocateGraphicsCommandBuffer(bool aBegin /
 	SetVkName(VK_OBJECT_TYPE_COMMAND_BUFFER, buffer, "Graphics CommandBuffer");
 	SetVkName(VK_OBJECT_TYPE_FENCE, fence, "Graphics CommandBuffer Fence");
 
-	return {buffer, fence};
+	OneTimeCommandBuffer otcb;
+	otcb.mDataBuffer;
+	otcb.mBuffer = buffer;
+	otcb.mFence	 = fence;
+	return otcb;
 }
 
-void VulkanGraphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer, bool aEnd /*= true*/) {
+_Releases_lock_(mCommandPoolMutex) void VulkanGraphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer, bool aEnd /*= true*/) {
 	if(aEnd) {
 		vkEndCommandBuffer(aBuffer);
 
-		VkSubmitInfo submitInfo		  = {};
-		submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		submitInfo.pCommandBuffers	  = &aBuffer.mBuffer;
-		submitInfo.commandBufferCount = 1;
-
-		vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, 1, &submitInfo, aBuffer.mFence);
-
-		vkWaitForFences(GetVkDevice(), 1, &aBuffer.mFence, true, UINT64_MAX);
+		//VkSubmitInfo submitInfo		  = {};
+		//submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		//submitInfo.pCommandBuffers	  = &aBuffer.mBuffer;
+		//submitInfo.commandBufferCount = 1;
+		//
+		//vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, 1, &submitInfo, aBuffer.mFence);
+		//
+		//vkWaitForFences(GetVkDevice(), 1, &aBuffer.mFence, true, UINT64_MAX);
+		std::unique_lock<std::mutex> lock(mBuffersToSubmitMutex);
+		mBuffersToSubmit.push_back(aBuffer);
+		lock.unlock();
 	}
 
-	vkDestroyFence(GetVkDevice(), aBuffer.mFence, GetAllocationCallback());
-	vkFreeCommandBuffers(GetVkDevice(), mDevicesHandler->GetGraphicsPool(), 1, &aBuffer.mBuffer);
+	//vkDestroyFence(GetVkDevice(), aBuffer.mFence, GetAllocationCallback());
+	//vkFreeCommandBuffers(GetVkDevice(), mDevicesHandler->GetGraphicsPool(), 1, &aBuffer.mBuffer);
+	mCommandPoolMutex.unlock();
 }
 
 const VkInstance VulkanGraphics::GetVkInstance() const {

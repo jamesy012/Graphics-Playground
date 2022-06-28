@@ -36,7 +36,7 @@ Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
 		 }
 		 data->mScene = scene;
 	};
-	asyncWork.mFinishOnMainThread = true;
+	//asyncWork.mFinishOnMainThread = true;
 	asyncWork.mFinishPtr		  = [this](void* aData) {
 		 ZoneScoped;
 		 AsyncLoadData* data = (AsyncLoadData*)aData;

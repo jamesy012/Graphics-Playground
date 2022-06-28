@@ -63,9 +63,9 @@ void ImGuiGraphics::Create(GLFWwindow* aWindow, const RenderPass& aRenderPass) {
 	Buffer fontBuffer;
 	fontBuffer.CreateFromData(BufferType::STAGING, bufferSize, fontData, "ImGui Font Data");
 
-	gImGuiFontImage.CreateFromBuffer(fontBuffer, VK_FORMAT_R8G8B8A8_UNORM, size, "ImGui Font Image");
+	gImGuiFontImage.CreateFromBuffer(fontBuffer, true,  VK_FORMAT_R8G8B8A8_UNORM, size, "ImGui Font Image");
 
-	fontBuffer.Destroy();
+	//fontBuffer.Destroy();
 
 	gImGuiPipeline.AddShader(std::string(WORK_DIR_REL) + "/Shaders/imgui.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 	gImGuiPipeline.AddShader(std::string(WORK_DIR_REL) + "/Shaders/imgui.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);

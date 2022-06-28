@@ -12,6 +12,7 @@
 #include "Framebuffer.h"
 #include "Pipeline.h"
 #include "RenderPass.h"
+#include "Buffer.h"
 
 //this should be in graphics section?
 #include "Engine/AllocationCallbacks.h"
@@ -26,11 +27,16 @@ class VRGraphics;
 
 
 struct OneTimeCommandBuffer {
-	VkCommandBuffer mBuffer;
-	VkFence mFence;
+	Buffer mDataBuffer;
+
 	operator VkCommandBuffer() {
 		return mBuffer;
 	}
+
+protected:
+	friend class VulkanGraphics;
+	VkCommandBuffer mBuffer;
+	VkFence mFence;
 };
 
 void SetVkName(VkObjectType aType, uint64_t aObject, const char* aName);
@@ -162,6 +168,10 @@ private:
 	VkSampler mSampler				 = VK_NULL_HANDLE;
 
 	uint32_t mFrameCounter = 0;
+
+	std::vector<OneTimeCommandBuffer> mBuffersToSubmit = {};
+	std::mutex mBuffersToSubmitMutex;
+	std::mutex mCommandPoolMutex;
 };
 
 extern VulkanGraphics* gGraphics;
