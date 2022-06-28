@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+
 class IGraphicsBase;
 
 class Window;
@@ -12,15 +14,36 @@ class Window;
 class Engine {
 public:
 	void Startup(IGraphicsBase* aGraphics);
-    bool GameLoop();
+	bool GameLoop();
 	void Shutdown();
 
-    float GetTimeSinceStart() const;
-    float GetDeltaTime() const;
+	const double GetTimeSinceStart() const {
+		return mTimeSinceStart;
+	}
+	const double GetTimeSinceStartUnscaled() const {
+		return mTimeSinceStartUnScaled;
+	}
+	const double GetDeltaTime() const {
+		return mDeltaTime;
+	}
+	const double GetDeltaTimeUnScaled() const {
+		return mDeltaTimeUnscaled;
+	}
 
-    Window* GetWindow() const;
+	Window* GetWindow() const;
+
+	void ImGuiWindow();
+
 private:
-    IGraphicsBase* mGraphics;
+	IGraphicsBase* mGraphics;
+
+	//time at the last time we ran a game loop
+	std::chrono::high_resolution_clock::time_point mLastTime;
+	double mDeltaTime;
+	double mDeltaTimeUnscaled;
+	float mTimeScale			  = 1.0f;
+	double mTimeSinceStart		  = 0.0f;
+	double mTimeSinceStartUnScaled = 0.0f;
 };
 
 extern Engine* gEngine;

@@ -1,5 +1,7 @@
 #include "Engine.h"
 
+#include "imgui.h"
+
 #include "IGraphicsBase.h"
 #include "Window.h"
 
@@ -28,6 +30,22 @@ void Engine::Startup(IGraphicsBase* aGraphics) {
 
 bool Engine::GameLoop() {
 	ZoneScoped;
+
+	{
+		std::chrono::high_resolution_clock::time_point current = std::chrono::high_resolution_clock::now();
+		std::chrono::duration<double> time_span				   = std::chrono::duration_cast<std::chrono::duration<double>>(current - mLastTime);
+
+		mLastTime = current;
+
+		mDeltaTimeUnscaled = time_span.count();
+		if(mDeltaTimeUnscaled > 1) {
+			mDeltaTimeUnscaled = 0.01f;
+		}
+		mDeltaTime = mDeltaTimeUnscaled * mTimeScale;
+		mTimeSinceStartUnScaled += mDeltaTimeUnscaled;
+		mTimeSinceStart += mDeltaTime;
+	}
+
 	GetWindow()->Update();
 	WorkManager::ProcessMainThreadWork();
 	return 0;
@@ -47,4 +65,13 @@ void Engine::Shutdown() {
 
 Window* Engine::GetWindow() const {
 	return &window;
+}
+
+void Engine::ImGuiWindow() {
+	if(ImGui::Begin("Engine")) {
+		ImGui::Text("udt: %f utime: %f", mDeltaTimeUnscaled, mTimeSinceStartUnScaled);
+		ImGui::Text(" dt: %f  time: %f", mDeltaTime, mTimeSinceStart);
+		ImGui::DragFloat("Time Scale", &mTimeScale, 0.1f, 0.1f, 50.0f);
+		ImGui::End();
+	}
 }

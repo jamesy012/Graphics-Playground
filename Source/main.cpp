@@ -204,6 +204,8 @@ int main() {
 		gGraphics->StartNewFrame();
 		VkCommandBuffer buffer = gGraphics->GetCurrentGraphicsCommandBuffer();
 
+		gEngine->ImGuiWindow();
+
 #if !defined(ENABLE_XR)
 		static glm::vec3 camPos = glm::vec3(0, 0, 10);
 		if(ImGui::Begin("Camera")) {
@@ -268,9 +270,10 @@ int main() {
 #endif
 				ImGui::End();
 			}
-			const float time = gGraphics->GetFrameCount() / 5.0f;
+			const float time = gEngine->GetTimeSinceStart() * 50;
 			if(updateRoot) {
 				mRootTransform.SetRotation(glm::vec3(0, -time, 0));
+				mModelTransforms[1].SetRotation(glm::vec3(-90, time, 0));
 			}
 #if defined(ENABLE_XR)
 			if(updateControllers) {
