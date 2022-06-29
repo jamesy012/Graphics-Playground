@@ -3,6 +3,16 @@
 #include <assert.h>
 #include <string>
 
+//should probably be MSVC instead of WINDOWS
+#if WINDOWS
+#define AQUIRES_LOCK(x) _Acquires_lock_(x) 
+#define RELEASES_LOCK(x) _Releases_lock_(x) 
+#else
+#define AQUIRES_LOCK(x)
+#define RELEASES_LOCK(x)
+#endif
+
+
 //c++ 20
 #if __cpp_lib_format
 #	include <format>

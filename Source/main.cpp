@@ -4,6 +4,7 @@
 #include <numbers>
 
 #include "Engine/Engine.h"
+#include "Engine/Input.h"
 
 #include "Engine/Window.h"
 #include "Graphics/Graphics.h"
@@ -210,7 +211,23 @@ int main() {
 		static glm::vec3 camPos = glm::vec3(0, 0, 10);
 		if(ImGui::Begin("Camera")) {
 			ImGui::DragFloat3("Pos", glm::value_ptr(camPos), 0.1f, -999, 999);
+			glm::vec2 mousePos = gInput->GetMousePos();
+			ImGui::Text("MousePos (%f,%f)", mousePos.x, mousePos.y);
+			glm::vec2 mouseDelta = gInput->GetMouseDelta();
+			ImGui::Text("mouseDelta (%f,%f)", mouseDelta.x, mouseDelta.y);
 			ImGui::End();
+		}
+		if(gInput->IsKeyDown(GLFW_KEY_RIGHT)) {
+			camPos.x += 5 * gEngine->GetDeltaTime();
+		}
+		if(gInput->IsKeyDown(GLFW_KEY_LEFT)) {
+			camPos.x -= 5 * gEngine->GetDeltaTime();
+		}
+		if(gInput->IsKeyDown(GLFW_KEY_UP)) {
+			camPos.z -= 5 * gEngine->GetDeltaTime();
+		}
+		if(gInput->IsKeyDown(GLFW_KEY_DOWN)) {
+			camPos.z += 5 * gEngine->GetDeltaTime();
 		}
 #endif
 

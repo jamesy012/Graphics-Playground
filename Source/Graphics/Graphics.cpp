@@ -376,7 +376,7 @@ void VulkanGraphics::AddWindow(Window* aWindow) {
 	}
 }
 
-_Acquires_lock_(mCommandPoolMutex) void VulkanGraphics::StartNewFrame() {
+AQUIRES_LOCK(mCommandPoolMutex) void VulkanGraphics::StartNewFrame() {
 	FrameMark;
 	ZoneScoped;
 
@@ -420,7 +420,7 @@ _Acquires_lock_(mCommandPoolMutex) void VulkanGraphics::StartNewFrame() {
 						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 }
 
-_Releases_lock_(mCommandPoolMutex) void VulkanGraphics::EndFrame() {
+RELEASES_LOCK(mCommandPoolMutex) void VulkanGraphics::EndFrame() {
 	ZoneScoped;
 	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(mSwapchain->GetImageIndex());
 
@@ -501,7 +501,7 @@ const Framebuffer& VulkanGraphics::GetCurrentXrFrameBuffer(uint8_t aEye) const {
 }
 #endif
 
-_Acquires_lock_(mCommandPoolMutex) OneTimeCommandBuffer VulkanGraphics::AllocateGraphicsCommandBuffer(bool aBegin /*= true*/) {
+AQUIRES_LOCK(mCommandPoolMutex) OneTimeCommandBuffer VulkanGraphics::AllocateGraphicsCommandBuffer(bool aBegin /*= true*/) {
 	mCommandPoolMutex.lock();
 
 	VkCommandBufferAllocateInfo allocateInfo = {};
@@ -536,7 +536,7 @@ _Acquires_lock_(mCommandPoolMutex) OneTimeCommandBuffer VulkanGraphics::Allocate
 	return otcb;
 }
 
-_Releases_lock_(mCommandPoolMutex) void VulkanGraphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer, bool aEnd /*= true*/) {
+RELEASES_LOCK(mCommandPoolMutex) void VulkanGraphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer, bool aEnd /*= true*/) {
 	if(aEnd) {
 		vkEndCommandBuffer(aBuffer);
 

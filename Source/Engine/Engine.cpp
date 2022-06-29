@@ -4,6 +4,7 @@
 
 #include "IGraphicsBase.h"
 #include "Window.h"
+#include "Input.h"
 
 #include "Job.h"
 #include "PlatformDebug.h"
@@ -24,6 +25,11 @@ void Engine::Startup(IGraphicsBase* aGraphics) {
 	mGraphics->AddWindow(&window);
 	mGraphics->Initalize();
 	LOGGER::Log("Graphics Initalized\n");
+
+	Input* input = new Input();
+	input->StartUp();
+	input->AddWindow(window.GetWindow());
+	LOGGER::Log("Input Initalized\n");
 
 	WorkManager::Startup();
 }
@@ -52,6 +58,7 @@ bool Engine::GameLoop() {
 	}
 
 	GetWindow()->Update();
+	gInput->Update();
 	WorkManager::ProcessMainThreadWork();
 	return 0;
 }
@@ -59,6 +66,10 @@ bool Engine::GameLoop() {
 void Engine::Shutdown() {
 	ASSERT(gEngine != nullptr);
 	WorkManager::Shutdown();
+
+	gInput->Shutdown();
+	delete gInput;
+	gInput = nullptr;
 
 	mGraphics->Destroy();
 	mGraphics = nullptr;
