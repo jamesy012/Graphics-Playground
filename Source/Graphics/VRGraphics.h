@@ -81,10 +81,10 @@ public:
 	const uint8_t GetCurrentImageIndex(uint8_t aEye) const;
 	const Image& GetImage(uint8_t aEye, uint8_t aIndex) const;
 	const Image& GetCurrentImage(uint8_t aEye) const {
-		GetImage(aEye, GetCurrentImageIndex(aEye));
+		return GetImage(aEye, GetCurrentImageIndex(aEye));
 	};
 
-	void GetHeadPoseData(View& aInfo) const;
+	void GetHeadPoseData(Pose& aInfo) const;
 	void GetEyePoseData(uint8_t aEye, View& aInfo) const;
 	void GetHandInfo(Side aSide, ControllerInfo& aInfo) const;
 

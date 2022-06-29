@@ -124,6 +124,9 @@ int main() {
 	Mesh handMesh;
 	handMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/handModel.fbx");
 
+	Mesh sponzaTest;
+	sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/sponza/sponza.obj", std::string(WORK_DIR_REL) + "/Assets/sponza/");
+
 	struct MeshPCTest {
 		glm::mat4 mWorld;
 	} meshPC;
@@ -188,11 +191,17 @@ int main() {
 	worldBase.SetMesh(&handMesh);
 	worldBase.SetMaterialBase(&meshImageTestBase);
 
+	Model sponzaTestModel;
+	sponzaTestModel.SetMesh(&sponzaTest);
+	sponzaTestModel.SetMaterialBase(&meshImageTestBase);
+
 	Transform mModelTransforms[2];
 	Transform mRootTransform;
 	mModelTransforms[0].Set(glm::vec3(0, 0, 0), 1.0f, glm::vec3(-90, 0, 0), &mRootTransform);
 	mModelTransforms[1].Set(glm::vec3(-5, 1, 0), 1.0f, glm::vec3(-90, 0, 0), &mRootTransform);
 	Transform mCameraTransform;
+	mCameraTransform.SetPosition(glm::vec3(0, 0, 10));
+	mCameraTransform.SetRotation(glm::vec3(0, -90, 0));
 	Transform mControllerTransforms[2];
 	mControllerTransforms[0].SetParent(&mCameraTransform);
 	mControllerTransforms[1].SetParent(&mCameraTransform);
@@ -243,6 +252,18 @@ int main() {
 			glm::mat4 world;
 
 #if defined(ENABLE_XR)
+			VRGraphics::Pose head;
+			gVrGraphics->GetHeadPoseData(head);
+			glm::mat4 headMatrix;
+			{
+				glm::mat4 translation;
+				glm::mat4 rotation;
+
+				translation = glm::translate(mCameraTransform.GetWorldMatrix(), head.mPos);
+				rotation	= glm::mat4_cast(head.mRot);
+				headMatrix	= translation * rotation;
+				//headMatrix	= glm::inverse(headMatrix);
+			}
 			VRGraphics::View info;
 			for(int i = 0; i < 2; i++) {
 				gVrGraphics->GetEyePoseData(i, info);
@@ -250,19 +271,23 @@ int main() {
 				glm::mat4 translation;
 				glm::mat4 rotation;
 
-				translation = glm::translate(mCameraTransform.GetWorldMatrix(), info.mPos);
+				translation = glm::translate(glm::identity<glm::mat4>(), info.mPos);
 				rotation	= glm::mat4_cast(info.mRot);
 
-				view = translation * rotation;
+				view = headMatrix * (translation * rotation);
 				view = glm::inverse(view);
 				glm::translate(view, glm::vec3(5.0f, 0.0f, 5.0f));
-				proj = glm::frustumRH_ZO(info.mFov.x, info.mFov.y, info.mFov.z, info.mFov.w, 0.1f, 100.0f);
-				proj = glm::perspectiveFov(
+				glm::mat4 frustum =
+					glm::frustum(tan(info.mFov.x) / 10, tan(info.mFov.y) / 10, tan(info.mFov.z) / 10, tan(info.mFov.w) / 10, 0.1f, 100.0f);
+				glm::mat4 persp = glm::perspectiveFov(
 					glm::radians(60.0f), (float)gGraphics->GetDesiredSize().mWidth, (float)gGraphics->GetDesiredSize().mHeight, 0.1f, 1000.0f);
 				if(info.mFov.w != 0) {
-					proj = glm::perspective(info.mFov.w - info.mFov.z, info.mFov.y / info.mFov.w, 0.1f, 1000.0f);
+					persp = glm::perspective(info.mFov.w - info.mFov.z, info.mFov.y / info.mFov.w, 0.1f, 1000.0f);
 				}
+				proj			   = persp;
+				proj			   = frustum;
 				proj[1][1] *= -1.0f;
+
 				meshUniform.mPV[i] = proj * view;
 			}
 #else
@@ -306,7 +331,7 @@ int main() {
 					glm::vec3 movement;
 					if(info.mTrigger > 0) {
 						glm::vec3 position = mCameraTransform.GetLocalPosition();
-						movement		   = info.mLinearVelocity * info.mTrigger;
+						movement		   = (mCameraTransform.GetLocalRotation() * glm::vec4(info.mLinearVelocity,1)) * info.mTrigger;
 						mCameraTransform.SetPosition(position - movement);
 					}
 					if(info.mActive) {
@@ -359,6 +384,7 @@ int main() {
 			meshPC.mWorld = glm::identity<glm::mat4>();
 			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
 			worldBase.Render(buffer, meshPipeline.GetLayout());
+			sponzaTestModel.Render(buffer, meshPipeline.GetLayout());
 		}
 		//world base reference
 		{
@@ -404,7 +430,9 @@ int main() {
 	meshPipeline.Destroy();
 	meshImageTestBase.Destroy();
 	meshTestBase.Destroy();
+
 	handMesh.Destroy();
+	sponzaTest.Destroy();
 	meshTest.Destroy();
 	meshUniformBuffer.Destroy();
 

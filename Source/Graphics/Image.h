@@ -45,7 +45,13 @@ public:
 	}
 
 	const bool HasLoaded() const {
-		return mImageView != VK_NULL_HANDLE;
+		if (mLoadedHandle == nullptr) {
+			return mImageView != VK_NULL_HANDLE;
+			}
+		if(Job::IsDone(mLoadedHandle)) {
+			return mImageView != VK_NULL_HANDLE;
+		}
+		return false;
 		//if(mLoadedHandle){
 		//	return Job::IsDone(mLoadingHandle);
 		//}

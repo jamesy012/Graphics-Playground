@@ -5,13 +5,12 @@
 
 //should probably be MSVC instead of WINDOWS
 #if WINDOWS
-#define AQUIRES_LOCK(x) _Acquires_lock_(x) 
-#define RELEASES_LOCK(x) _Releases_lock_(x) 
+#	define AQUIRES_LOCK(x)	 _Acquires_lock_(x)
+#	define RELEASES_LOCK(x) _Releases_lock_(x)
 #else
-#define AQUIRES_LOCK(x)
-#define RELEASES_LOCK(x)
+#	define AQUIRES_LOCK(x)
+#	define RELEASES_LOCK(x)
 #endif
-
 
 //c++ 20
 #if __cpp_lib_format
@@ -25,7 +24,14 @@
 
 #include <tracy/Tracy.hpp>
 
+//#if __has_builtin(__debugbreak)
+//#	define ASSERT(x)       \
+//		if(!(x)) {          \
+//			__debugbreak(); \
+//		}
+//#else
 #define ASSERT(x) assert(x);
+//#endif
 
 namespace LOGGER {
 	//does the actual log to terminal & Visual studio console
@@ -39,7 +45,8 @@ namespace LOGGER {
 #if __cpp_lib_format == false
 	//could problably actually make my own replacement
 	//doesnt seem overally hard to hack about, given how this function works
-	template<typename... Args> void QuickNonFormatLog(Args&&... args) {
+	template<typename... Args>
+	void QuickNonFormatLog(Args&&... args) {
 		int counter = 0;
 		//change this to LOGOUTPUT?
 		((std::cout << "\t{" << counter++ << "} " << std::forward<Args>(args) << "\n"), ...);
@@ -57,7 +64,8 @@ namespace LOGGER {
 	//uses c++20 std::format to output to logs
 	//("Position {},{},{}" ,x,y,z)
 	//("Path {0},{1},{0}{1}" ,"c:/", "Folder")
-	template<typename... Args> void Formated(const std::string aMessage, Args&&... args) {
+	template<typename... Args>
+	void Formated(const std::string aMessage, Args&&... args) {
 		ZoneScoped;
 #if __cpp_lib_format
 		std::string output = std::vformat(aMessage, std::make_format_args(args...));
@@ -71,7 +79,8 @@ namespace LOGGER {
 #endif //__cpp_lib_format
 	};
 
-	template<typename... Args> void Formated(const char* aMessage, Args&&... args) {
+	template<typename... Args>
+	void Formated(const char* aMessage, Args&&... args) {
 		Formated(std::string(aMessage), args...);
 	};
 } // namespace LOGGER

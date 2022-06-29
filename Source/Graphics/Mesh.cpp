@@ -30,23 +30,24 @@ Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
 															aiProcess_OptimizeGraph | aiProcess_GenBoundingBoxes);
 
 		 if(scene == nullptr) {
-			 ASSERT(false);
+			 LOGGER::Formated("Failed to load Model {}\n", aFilePath.mPath);
+			 //ASSERT(false);
 			 //return false;
 			 return;
 		 }
 		 data->mScene = scene;
 	};
 	//asyncWork.mFinishOnMainThread = true;
-	asyncWork.mFinishPtr		  = [this](void* aData) {
-		 ZoneScoped;
-		 AsyncLoadData* data = (AsyncLoadData*)aData;
-		 if(data->mScene) {
-			 mMaterials.resize(data->mScene->mNumMaterials);
-			 ProcessNode(data->mScene, data->mScene->mRootNode);
-			 data->importer.FreeScene();
-		 }
-		 //we create this for the work, lets delete it now
-		 delete data;
+	asyncWork.mFinishPtr = [this](void* aData) {
+		ZoneScoped;
+		AsyncLoadData* data = (AsyncLoadData*)aData;
+		if(data->mScene) {
+			mMaterials.resize(data->mScene->mNumMaterials);
+			ProcessNode(data->mScene, data->mScene->mRootNode);
+			data->importer.FreeScene();
+		}
+		//we create this for the work, lets delete it now
+		delete data;
 	};
 	return asyncWork;
 }

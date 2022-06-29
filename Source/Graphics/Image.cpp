@@ -117,7 +117,7 @@ void Image::CreateFromData(const void* aData, const VkFormat aFormat, const Imag
 	//dataBuffer.Destroy();
 }
 
-struct AsyncLoadData {
+struct AsyncLoadDataImage {
 	stbi_uc* mData;
 	int width, height, comp;
 	Image* ptr;
@@ -134,23 +134,26 @@ void Image::LoadImage(const FileIO::Path aFilePath, const VkFormat aFormat) {
 
 Job::Work Image::GetLoadImageWork(const FileIO::Path aFilePath, const VkFormat aFormat) {
 	Job::Work work;
-	AsyncLoadData* imageData = new AsyncLoadData();
+	AsyncLoadDataImage* imageData = new AsyncLoadDataImage();
 	imageData->ptr			 = this;
 
 	work.mUserData = imageData;
 	work.mWorkPtr  = [aFilePath](void* userData) {
 		 ZoneScoped;
 		 ZoneText(aFilePath.mPath.c_str(), aFilePath.mPath.size());
-		 AsyncLoadData* imageData = (AsyncLoadData*)userData;
+		 AsyncLoadDataImage* imageData = (AsyncLoadDataImage*)userData;
 		 //todo
 		 imageData->mData = stbi_load(aFilePath.mPath.c_str(), &imageData->width, &imageData->height, &imageData->comp, STBI_rgb_alpha);
 		 ASSERT(imageData->mData != nullptr);
-		 ASSERT(imageData->comp == 4);
+		 //ASSERT(imageData->comp == 4);
+		 ZoneValue(imageData->width);
+		 ZoneValue(imageData->height);
+
 	};
 	//work.mFinishOnMainThread = true;
 	work.mFinishPtr = [=](void* userData) {
 		ZoneScoped;
-		AsyncLoadData* imageData = (AsyncLoadData*)userData;
+		AsyncLoadDataImage* imageData = (AsyncLoadDataImage*)userData;
 		imageData->ptr->CreateFromData(imageData->mData, aFormat, {imageData->width, imageData->height}, aFilePath.mPath.c_str());
 		stbi_image_free(imageData->mData);
 	};

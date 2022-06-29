@@ -48,6 +48,8 @@ struct SpaceInfo {
 	XrView mViews[NUM_VIEWS];
 	VRGraphics::View mInfos[NUM_VIEWS];
 } gSpaces[NUM_SPACES];
+VRGraphics::Pose gHeadPose;
+XrSpaceLocation gHeadLocation = {XR_TYPE_SPACE_LOCATION};
 
 //hands
 XrPath handSubactionPath[VRGraphics::Side::COUNT]	  = {};
@@ -150,7 +152,7 @@ void VRGraphics::Startup() {
 
 	CreateInstance();
 
-	//CreateDebugUtils();
+	CreateDebugUtils();
 
 	SessionSetup();
 }
@@ -168,9 +170,10 @@ void VRGraphics::Initalize() {
 
 void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 	ZoneScoped;
-	XrResult result = XR_SUCCESS;
-	XrEventDataBuffer eventData;
-	result = xrPollEvent(gXrInstance, &eventData);
+	XrResult result				= XR_SUCCESS;
+	XrEventDataBuffer eventData = {};
+	eventData.type				= XR_TYPE_EVENT_DATA_BUFFER;
+	result						= xrPollEvent(gXrInstance, &eventData);
 	ASSERT(result == XR_SUCCESS || result == XR_EVENT_UNAVAILABLE);
 
 	while(result == XR_SUCCESS) {
@@ -218,7 +221,9 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 			default:
 				ASSERT(false);
 		}
-		result = xrPollEvent(gXrInstance, &eventData);
+		eventData	   = XrEventDataBuffer();
+		eventData.type = XR_TYPE_EVENT_DATA_BUFFER;
+		result		   = xrPollEvent(gXrInstance, &eventData);
 		ASSERT(result == XR_SUCCESS || result == XR_EVENT_UNAVAILABLE);
 	}
 
@@ -245,11 +250,11 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 
 	gFrameActive = true;
 
-	XrSpaceLocation location = {XR_TYPE_SPACE_LOCATION};
-	result					 = xrLocateSpace(gSpaces[XR_REFERENCE_SPACE_TYPE_VIEW - 1].mSpace,
-							 gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mSpace,
-							 gFrameState.predictedDisplayTime,
-							 &location);
+	result = xrLocateSpace(gSpaces[XR_REFERENCE_SPACE_TYPE_VIEW - 1].mSpace,
+						   gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mSpace,
+						   gFrameState.predictedDisplayTime,
+						   &gHeadLocation);
+	PoseConvert(gHeadLocation.pose, gHeadPose);
 
 	for(int i = 0; i < NUM_VIEWS; i++) {
 		Swapchain& swapchain = gXrSwapchains[i];
@@ -277,6 +282,10 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 		locateInfo.space				 = spaceInfo.mSpace;
 		locateInfo.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 		locateInfo.displayTime			 = gFrameState.predictedDisplayTime;
+
+		for(int q = 0; q < NUM_VIEWS; q++) {
+			spaceInfo.mViews[q].type = XR_TYPE_VIEW;
+		}
 
 		VALIDATEXR(xrLocateViews(gXrSession, &locateInfo, &viewState, viewCapacityInput, &viewCountOutput, spaceInfo.mViews));
 
@@ -328,7 +337,8 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 		//		result						   = xrApplyHapticFeedback(gXrSession, &hapticActionInfo, (XrHapticBaseHeader*)&vibration);
 		//	}
 		//}
-		VALIDATEXR(xrLocateSpace(handSpace[i], gSpaces[1].mSpace, gFrameState.predictedDisplayTime, &handLocation[i]));
+		VALIDATEXR(
+			xrLocateSpace(handSpace[i], gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mSpace, gFrameState.predictedDisplayTime, &handLocation[i]));
 
 		//update hand info
 		ControllerInfo& handInfo = gHandInfo[i];
@@ -347,11 +357,11 @@ const Image& VRGraphics::GetImage(uint8_t aEye, uint8_t aIndex) const {
 	return gXrSwapchains[aEye].mImages[aIndex];
 }
 
-void VRGraphics::GetHeadPoseData(View& aInfo) const {
-	aInfo = gSpaces[1].mInfos[0];
+void VRGraphics::GetHeadPoseData(Pose& aInfo) const {
+	aInfo = gHeadPose;
 }
 void VRGraphics::GetEyePoseData(uint8_t aEye, View& aInfo) const {
-	aInfo = gSpaces[1].mInfos[aEye];
+	aInfo = gSpaces[XR_REFERENCE_SPACE_TYPE_VIEW - 1].mInfos[aEye];
 }
 
 void VRGraphics::GetHandInfo(Side aSide, ControllerInfo& aInfo) const {
@@ -375,14 +385,9 @@ void VRGraphics::FrameEnd() {
 
 	XrCompositionLayerProjectionView projectionViews[NUM_VIEWS] = {};
 	for(int i = 0; i < NUM_VIEWS; i++) {
-		projectionViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
-		//projectionViews[i].fov.angleLeft			= -0.7f;
-		//projectionViews[i].fov.angleRight			= 0.7f;
-		//projectionViews[i].fov.angleDown			= -0.7f;
-		//projectionViews[i].fov.angleUp				= 0.7f;
-		//projectionViews[i].pose.orientation.w		= 1.0f;
-		projectionViews[i].fov						= gSpaces[1].mViews->fov;
-		projectionViews[i].pose						= gSpaces[1].mViews->pose;
+		projectionViews[i].type						= XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+		projectionViews[i].fov						= gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mViews->fov;
+		projectionViews[i].pose						= gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mViews->pose;
 		projectionViews[i].subImage.swapchain		= gXrSwapchains[i].mSwapchain;
 		projectionViews[i].subImage.imageArrayIndex = 0;
 		projectionViews[i].subImage.imageRect		= {
@@ -392,7 +397,7 @@ void VRGraphics::FrameEnd() {
 	XrCompositionLayerProjection projectionLayer			  = {};
 	const XrCompositionLayerBaseHeader* projectionLayerHeader = (XrCompositionLayerBaseHeader*)&projectionLayer;
 	projectionLayer.type									  = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
-	projectionLayer.space									  = gSpaces[1].mSpace;
+	projectionLayer.space									  = gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mSpace;
 	projectionLayer.viewCount								  = NUM_VIEWS;
 	projectionLayer.views									  = projectionViews;
 	projectionLayer.layerFlags								  = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
@@ -649,6 +654,9 @@ bool VRGraphics::SessionSetup() {
 	result					 = xrEnumerateViewConfigurationViews(gXrInstance, gXrSystemId, viewType, 0, &viewConfigCount, nullptr);
 
 	gViewConfigs.resize(viewConfigCount);
+	for(int i = 0; i < viewConfigCount; i++) {
+		gViewConfigs[i].type = XR_TYPE_VIEW_CONFIGURATION_VIEW;
+	}
 	VALIDATEXR(xrEnumerateViewConfigurationViews(gXrInstance, gXrSystemId, viewType, viewConfigCount, &viewConfigCount, gViewConfigs.data()));
 
 	mDesiredSize = {gViewConfigs[0].recommendedImageRectWidth, gViewConfigs[0].recommendedImageRectHeight};
@@ -931,9 +939,9 @@ void VRGraphics::PrepareSwapchainData() {
 			//images start undefined, lets put them in their expected states
 			image.SetImageLayout(buffer,
 								 VK_IMAGE_LAYOUT_UNDEFINED,
-								 VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+								 VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
 								 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-								 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+								 VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT);
 		}
 	}
 

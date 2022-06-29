@@ -434,6 +434,20 @@ RELEASES_LOCK(mCommandPoolMutex) void VulkanGraphics::EndFrame() {
 						VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
 						VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 						VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+#if defined(ENABLE_XR)
+	//gVrGraphics->GetCurrentImage(0)
+	//	.SetImageLayout(graphics,
+	//					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	//					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+	//					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+	//					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+	//gVrGraphics->GetCurrentImage(1)
+	//	.SetImageLayout(graphics,
+	//					VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+	//					VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+	//					VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+	//					VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT);
+#endif
 	vkEndCommandBuffer(graphics);
 
 	{
