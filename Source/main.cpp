@@ -229,6 +229,12 @@ int main() {
 		if(gInput->IsKeyDown(GLFW_KEY_DOWN)) {
 			camPos.z += 5 * gEngine->GetDeltaTime();
 		}
+		if(gInput->IsKeyDown(GLFW_KEY_RIGHT_SHIFT)) {
+			camPos.y += 5 * gEngine->GetDeltaTime();
+		}
+		if(gInput->IsKeyDown(GLFW_KEY_RIGHT_ALT)) {
+			camPos.y -= 5 * gEngine->GetDeltaTime();
+		}
 #endif
 
 		{

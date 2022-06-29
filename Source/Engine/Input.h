@@ -13,6 +13,9 @@ public:
 	void Update();
 	void Shutdown();
 
+	void ResetKeys();
+	void ResetMouseButtons();
+
 	void SetKeyState(int aKey, bool aState) {
 		mKeyStates[aKey] = aState;
 	}
@@ -20,45 +23,45 @@ public:
 		mMouseStates[aButton] = aState;
 	}
 	void SetMousePos(glm::vec2 aNewPos) {
-		mMouseDelta = aNewPos - mMousePos;
+		mMousePosOld = mMousePos;
 		mMousePos	= aNewPos;
 	}
 
-	constexpr bool IsKeyDown(int aKey) {
+	constexpr bool IsKeyDown(int aKey) const {
 		return mKeyStates[aKey];
 	}
-	constexpr bool IsKeyUp(int aKey) {
+	constexpr bool IsKeyUp(int aKey) const {
 		return !mKeyStates[aKey];
 	}
-	constexpr bool WasKeyPressed(int aKey) {
+	constexpr bool WasKeyPressed(int aKey) const {
 		return mKeyStates[aKey] && !mKeyStatesOld[aKey];
 	}
-	constexpr bool WasKeyReleased(int aKey) {
+	constexpr bool WasKeyReleased(int aKey) const {
 		return !mKeyStates[aKey] && mKeyStatesOld[aKey];
 	}
-	constexpr bool IsMouseButtonDown(int aButton) {
+	constexpr bool IsMouseButtonDown(int aButton) const {
 		return mMouseStates[aButton];
 	}
-	constexpr bool IsMouseButtonUp(int aButton) {
+	constexpr bool IsMouseButtonUp(int aButton) const {
 		return !mMouseStates[aButton];
 	}
-	constexpr bool WasMouseButtonPressed(int aButton) {
+	constexpr bool WasMouseButtonPressed(int aButton) const {
 		return mMouseStates[aButton] && !mMouseStatesOld[aButton];
 	}
-	constexpr bool WasMouseButtonReleased(int aButton) {
+	constexpr bool WasMouseButtonReleased(int aButton) const {
 		return !mMouseStates[aButton] && mMouseStatesOld[aButton];
 	}
 
-	constexpr glm::vec2 GetMousePos(){
+	constexpr glm::vec2 GetMousePos() const {
 		return mMousePos;
 	}
-	constexpr void GetMousePos(glm::vec2& aMousePos){
+	constexpr void GetMousePos(glm::vec2& aMousePos) const {
 		aMousePos = mMousePos;
 	}
-	constexpr glm::vec2 GetMouseDelta(){
+	constexpr glm::vec2 GetMouseDelta() const {
 		return mMouseDelta;
 	}
-	constexpr void GetMouseDelta(glm::vec2& aMouseDelta){
+	constexpr void GetMouseDelta(glm::vec2& aMouseDelta) const {
 		aMouseDelta = mMouseDelta;
 	}
 
@@ -68,6 +71,7 @@ private:
 	bool mMouseStates[8];
 	bool mMouseStatesOld[8];
 	glm::vec2 mMousePos;
+	glm::vec2 mMousePosOld;
 	glm::vec2 mMouseDelta;
 };
 extern Input* gInput;
