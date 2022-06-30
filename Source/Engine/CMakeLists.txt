@@ -1,4 +1,5 @@
 set(ENGINE_FILES
+    "IGraphicsBase.h"
     "FileIO.cpp"
     "FileIO.h"
     "AABB.h"
@@ -12,7 +13,8 @@ set(ENGINE_FILES
     "Job.cpp"
     "Input.h"
     "Input.cpp"
-    "IGraphicsBase.h"
+    "FlyCamera.h"
+    "FlyCamera.cpp"
     )
 
 target_sources(GraphicsPlayground PRIVATE ${ENGINE_FILES})

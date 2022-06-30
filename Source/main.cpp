@@ -24,6 +24,8 @@
 #include "Graphics/Conversions.h"
 #include "Engine/Transform.h"
 
+#include "Engine/FlyCamera.h"
+
 #if defined(ENABLE_XR)
 #	include "Graphics/VRGraphics.h"
 #endif
@@ -199,12 +201,11 @@ int main() {
 	Transform mRootTransform;
 	mModelTransforms[0].Set(glm::vec3(0, 0, 0), 1.0f, glm::vec3(-90, 0, 0), &mRootTransform);
 	mModelTransforms[1].Set(glm::vec3(-5, 1, 0), 1.0f, glm::vec3(-90, 0, 0), &mRootTransform);
-	Transform mCameraTransform;
-	mCameraTransform.SetPosition(glm::vec3(0, 0, 10));
-	mCameraTransform.SetRotation(glm::vec3(0, -90, 0));
+	FlyCamera camera;
+	camera.mTransform.SetPosition(glm::vec3(0, 4, 12));
 	Transform mControllerTransforms[2];
-	mControllerTransforms[0].SetParent(&mCameraTransform);
-	mControllerTransforms[1].SetParent(&mCameraTransform);
+	mControllerTransforms[0].SetParent(&camera.mTransform);
+	mControllerTransforms[1].SetParent(&camera.mTransform);
 	mControllerTransforms[0].SetScale(0);
 	mControllerTransforms[1].SetScale(0);
 
@@ -217,32 +218,20 @@ int main() {
 		gEngine->ImGuiWindow();
 
 #if !defined(ENABLE_XR)
-		static glm::vec3 camPos = glm::vec3(0, 0, 10);
 		if(ImGui::Begin("Camera")) {
-			ImGui::DragFloat3("Pos", glm::value_ptr(camPos), 0.1f, -999, 999);
+			glm::vec3 camPos = camera.mTransform.GetLocalPosition();
+			if(ImGui::DragFloat3("Pos", glm::value_ptr(camPos), 0.1f, -999, 999)) {
+				camera.mTransform.SetPosition(camPos);
+			}
+			glm::vec3 camRot = camera.mTransform.GetLocalRotationEuler();
+			if(ImGui::DragFloat3("Rot", glm::value_ptr(camRot), 0.1f, -999, 999)) {
+				camera.mTransform.SetRotation(camRot);
+			}
 			glm::vec2 mousePos = gInput->GetMousePos();
 			ImGui::Text("MousePos (%f,%f)", mousePos.x, mousePos.y);
 			glm::vec2 mouseDelta = gInput->GetMouseDelta();
 			ImGui::Text("mouseDelta (%f,%f)", mouseDelta.x, mouseDelta.y);
 			ImGui::End();
-		}
-		if(gInput->IsKeyDown(GLFW_KEY_RIGHT)) {
-			camPos.x += 5 * gEngine->GetDeltaTime();
-		}
-		if(gInput->IsKeyDown(GLFW_KEY_LEFT)) {
-			camPos.x -= 5 * gEngine->GetDeltaTime();
-		}
-		if(gInput->IsKeyDown(GLFW_KEY_UP)) {
-			camPos.z -= 5 * gEngine->GetDeltaTime();
-		}
-		if(gInput->IsKeyDown(GLFW_KEY_DOWN)) {
-			camPos.z += 5 * gEngine->GetDeltaTime();
-		}
-		if(gInput->IsKeyDown(GLFW_KEY_RIGHT_SHIFT)) {
-			camPos.y += 5 * gEngine->GetDeltaTime();
-		}
-		if(gInput->IsKeyDown(GLFW_KEY_RIGHT_ALT)) {
-			camPos.y -= 5 * gEngine->GetDeltaTime();
 		}
 #endif
 
@@ -284,8 +273,8 @@ int main() {
 				if(info.mFov.w != 0) {
 					persp = glm::perspective(info.mFov.w - info.mFov.z, info.mFov.y / info.mFov.w, 0.1f, 1000.0f);
 				}
-				proj			   = persp;
-				proj			   = frustum;
+				proj = persp;
+				proj = frustum;
 				proj[1][1] *= -1.0f;
 
 				meshUniform.mPV[i] = proj * view;
@@ -295,12 +284,14 @@ int main() {
 			const float scale = 10.0f;
 			proj			  = glm::perspectiveFov(
 				 glm::radians(60.0f), (float)gGraphics->GetDesiredSize().mWidth, (float)gGraphics->GetDesiredSize().mHeight, 0.1f, 1000.0f);
-			//view			   = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0), glm::vec3(0, 1, 0));
-			view = glm::lookAt(camPos, glm::vec3(0), glm::vec3(0, 1, 0));
+			//view			   = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0)//glm::vec3(0, 1, 0));
+			view = glm::lookAt(camera.mTransform.GetLocalPosition(), glm::vec3(0), glm::vec3(0, 1, 0));
 			proj[1][1] *= -1.0f;
-			meshUniform.mPV[0] = proj * view;
-			view			   = glm::lookAt(glm::vec3(1.0f, -20.0f, 1.0f), glm::vec3(0), glm::vec3(0, 1, 0));
 			meshUniform.mPV[1] = proj * view;
+			//view			   = glm::lookAt(glm::vec3(1.0f, -20.0f, 1.0f), glm::vec3(0), glm::vec3(0, 1, 0));
+			//meshUniform.mPV[1] = proj * view;
+			camera.SetFov(60.0f, (float)gGraphics->GetDesiredSize().mWidth / (float)gGraphics->GetDesiredSize().mHeight);
+			meshUniform.mPV[0] = camera.GetViewProjMatrix();
 #endif
 
 			meshUniformBuffer.UpdateData(0, VK_WHOLE_SIZE, &meshUniform);
@@ -331,7 +322,7 @@ int main() {
 					glm::vec3 movement;
 					if(info.mTrigger > 0) {
 						glm::vec3 position = mCameraTransform.GetLocalPosition();
-						movement		   = (mCameraTransform.GetLocalRotation() * glm::vec4(info.mLinearVelocity,1)) * info.mTrigger;
+						movement		   = (mCameraTransform.GetLocalRotation() * glm::vec4(info.mLinearVelocity, 1)) * info.mTrigger;
 						mCameraTransform.SetPosition(position - movement);
 					}
 					if(info.mActive) {

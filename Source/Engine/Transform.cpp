@@ -123,8 +123,13 @@ void Transform::UpdateMatrix() {
 	} else {
 		mWorldMatrix = mLocalMatrix;
 	}
-
+	
 	mDirty = false;
+
+	if(mUpdateCallback) {
+		mUpdateCallback(this);
+	}
+
 }
 
 void Transform::AddChild(Transform* aChild) {

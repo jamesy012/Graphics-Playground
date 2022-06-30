@@ -544,7 +544,6 @@ AQUIRES_LOCK(mCommandPoolMutex) OneTimeCommandBuffer VulkanGraphics::AllocateGra
 	SetVkName(VK_OBJECT_TYPE_FENCE, fence, "Graphics CommandBuffer Fence");
 
 	OneTimeCommandBuffer otcb;
-	otcb.mDataBuffer;
 	otcb.mBuffer = buffer;
 	otcb.mFence	 = fence;
 	return otcb;

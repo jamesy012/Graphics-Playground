@@ -1,11 +1,15 @@
 #pragma once
 
 #include <vector>
+#include <functional>
 
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 
+#include "PlatformDebug.h"
+
 class Transform {
+	typedef std::function<void(Transform*)> TransformUpdatecallback;
 public:
 	Transform(Transform* mParent = nullptr) {
 		SetParent(mParent);
@@ -80,7 +84,7 @@ public:
 	void SetWorldScale(glm::vec3 aScale);
 	void SetWorldRotation(glm::quat aRotation);
 	//degrees
-	void SetWorldRotation(glm::vec3 aRotation){
+	void SetWorldRotation(glm::vec3 aRotation) {
 		SetWorldRotation(glm::quat(glm::radians(aRotation)));
 	}
 
@@ -147,13 +151,11 @@ public:
 
 	void SetDirty();
 
-private:
-	bool IsDirty() const {
-		return mDirty;
+	//calls the callback after global matrix is set
+	void SetUpdateCallback(TransformUpdatecallback aCallback){
+		ASSERT(mUpdateCallback == nullptr);
+		mUpdateCallback = aCallback;
 	}
-
-	//updates world and local matrix and sets dirty flag to false
-	void UpdateMatrix();
 
 	//updates our world and local matrix if we are dirty
 	void CheckUpdate() {
@@ -161,6 +163,14 @@ private:
 			UpdateMatrix();
 		}
 	}
+
+private:
+	bool IsDirty() const {
+		return mDirty;
+	}
+
+	//updates world and local matrix and sets dirty flag to false
+	void UpdateMatrix();
 
 	void AddChild(Transform* aChild);
 	void RemoveChild(Transform* aChild);
@@ -174,6 +184,9 @@ private:
 
 	Transform* mParent = nullptr;
 	std::vector<Transform*> mChildren;
+
+	//callback for when the matrix's are updated, so another system can respond to it
+	TransformUpdatecallback mUpdateCallback = nullptr;
 
 	bool mDirty = false;
 };
