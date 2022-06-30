@@ -16,9 +16,6 @@
 [submodule "Source/Libraries/glm"]
 	path = Source/Libraries/glm
 	url = https://github.com/g-truc/glm.git
-[submodule "Source/Libraries/assimp"]
-	path = Source/Libraries/assimp
-	url = https://github.com/assimp/assimp.git
 [submodule "Source/Libraries/bullet3"]
 	path = Source/Libraries/bullet3
 	url = https://github.com/bulletphysics/bullet3.git
@@ -37,3 +34,12 @@
 [submodule "Source/Libraries/OpenXR-SDK-Source"]
 	path = Source/Libraries/OpenXR-SDK-Source
 	url = https://github.com/KhronosGroup/OpenXR-SDK-Source.git
+[submodule "Source/Libraries/Mesh/tinygltf"]
+	path = Source/Libraries/Mesh/tinygltf
+	url = https://github.com/syoyo/tinygltf.git
+[submodule "Source/Libraries/Mesh/assimp"]
+	path = Source/Libraries/Mesh/assimp
+	url = https://github.com/assimp/assimp.git
+[submodule "Assets/Cauldron-Media"]
+	path = Assets/Cauldron-Media
+	url = https://github.com/GPUOpen-LibrariesAndSDKs/Cauldron-Media
