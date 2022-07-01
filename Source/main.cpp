@@ -127,7 +127,7 @@ int main() {
 	handMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/handModel.fbx");
 
 	Mesh sponzaTest;
-	sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/sponza/sponza.obj", std::string(WORK_DIR_REL) + "/Assets/sponza/");
+	sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/Sponza/glTF/Sponza.gltf", std::string(WORK_DIR_REL) + "/Assets/Sponza/glTF/");
 
 	struct MeshPCTest {
 		glm::mat4 mWorld;
@@ -375,13 +375,17 @@ int main() {
 			meshPC.mWorld = glm::identity<glm::mat4>();
 			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
 			worldBase.Render(buffer, meshPipeline.GetLayout());
-			sponzaTestModel.Render(buffer, meshPipeline.GetLayout());
 		}
 		//world base reference
 		{
-			meshPC.mWorld = glm::translate(meshPC.mWorld, glm::vec3(5, 0, 0));
+			meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(5, 0, 0));
 			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
 			worldBase.Render(buffer, meshPipeline.GetLayout());
+		}
+		{
+			meshPC.mWorld = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.05f));
+			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+			sponzaTestModel.Render(buffer, meshPipeline.GetLayout());
 		}
 		meshPipeline.End(buffer);
 		mainRenderPass.End(buffer);

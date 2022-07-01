@@ -33,8 +33,6 @@ set(ASSIMP_BUILD_ASSIMP_TOOLS OFF)
 set(ASSIMP_BUILD_GLTF_IMPORTER OFF)
 set(ASSIMP_BUILD_GLTF_EXPORTER OFF)
 add_subdirectory(Mesh/assimp EXCLUDE_FROM_ALL)
-message("\tAdding tinygltf")
-add_subdirectory(Mesh/tinygltf EXCLUDE_FROM_ALL)
 message("Adding GLFW")
 add_subdirectory(glfw EXCLUDE_FROM_ALL)
 message("Adding GLM")
@@ -116,6 +114,19 @@ target_sources(GraphicsPlayground PRIVATE ${STB_SOURCES})
 target_include_directories(GraphicsPlayground PRIVATE "stb")
 
 # ~~~
+# Tinygltf
+
+message("Adding Tinygltf")
+set(TINYGLTF_SOURCES "tinygltf/tiny_gltf.h")
+target_sources(GraphicsPlayground PRIVATE ${TINYGLTF_SOURCES})
+#target_include_directories(GraphicsPlayground PRIVATE "stb")
+
+# ~~~
+#
+
+target_include_directories(GraphicsPlayground PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+
+# ~~~
 # Target links
 message("Linking Targets")
 
@@ -130,7 +141,6 @@ target_link_libraries(
   BulletDynamics
   LinearMath
   assimp
-  tinygltf
   glfw
   glm
   VulkanMemoryAllocator

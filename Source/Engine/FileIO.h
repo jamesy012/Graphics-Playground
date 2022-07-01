@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include <filesystem>
 
 namespace FileIO {
 	struct Path {
@@ -11,7 +11,16 @@ namespace FileIO {
 			return mPath;
 		}
 
-		const std::string mPath;
+		std::string String() const {
+			return mPath.generic_string();
+		}
+
+		std::string Extension() const {
+			return mPath.extension().generic_string();
+		}
+
+	private:
+		const std::filesystem::path mPath;
 	};
 
 	struct File {

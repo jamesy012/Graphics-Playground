@@ -11,12 +11,11 @@
 #include "Buffer.h"
 #include "Engine/Job.h"
 
-
-struct aiScene;
-struct aiNode;
-struct aiMesh;
-
 class Image;
+class Model;
+class LoaderBase;
+class AssimpLoader;
+class TinygltfLoader;
 
 static constexpr char NUM_UVS		= 1;
 static constexpr char NUM_VERT_COLS = 1;
@@ -35,10 +34,12 @@ typedef uint32_t MeshIndex;
 
 class Mesh {
 public:
-friend class Model;
+	friend Model;
+	friend AssimpLoader;
+	friend TinygltfLoader;
 	bool LoadMeshSync(FileIO::Path aFilePath);
 	bool LoadMesh(FileIO::Path aFilePath, FileIO::Path aImagePath = "");
-    void Destroy();
+	void Destroy();
 
 	struct MeshMaterialData {
 		std::string mFileName;
@@ -50,12 +51,11 @@ friend class Model;
 		std::vector<MeshIndex> mIndices;
 		AABB mAABB;
 
-        Buffer mVertexBuffer;
-        Buffer mIndexBuffer;
+		Buffer mVertexBuffer;
+		Buffer mIndexBuffer;
 
 		int mMaterialID;
 	};
-
 
 	uint32_t GetNumMesh() const {
 		return mMesh.size();
@@ -77,8 +77,6 @@ protected:
     void QuickTempRender(VkCommandBuffer aBuffer, int aMeshIndex) const;
 
 private:
-	bool ProcessNode(const aiScene* aScene, const aiNode* aNode);
-	bool ProcessMesh(const aiScene* aScene, const aiMesh* aMesh);
 
 	Job::Work GetWork(FileIO::Path aFilePath);
 
@@ -87,6 +85,7 @@ private:
 	std::vector<MeshMaterialData> mMaterials;
 
 	Job::WorkHandle* mLoadingHandle;
+	LoaderBase* mLoadingBase;
 
 	std::string mImagePath;
 };

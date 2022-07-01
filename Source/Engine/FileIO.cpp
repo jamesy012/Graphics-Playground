@@ -2,7 +2,6 @@
 
 #include <fstream>
 #include <sstream>
-#include <filesystem>
 
 #include "PlatformDebug.h"
 
@@ -10,8 +9,8 @@ namespace FileIO {
 
 	File LoadFile(Path aPath) {
 		ZoneScoped;
-		LOGGER::Formated("Current Filepath: ({})/{}\n", std::filesystem::current_path().string(), aPath.mPath);
-		LOGGER::Formated("loading: {}\n", std::filesystem::absolute(aPath.mPath.c_str()).string());
+		LOGGER::Formated("Current Filepath: ({})/{}\n", std::filesystem::current_path().string(), aPath.String());
+		LOGGER::Formated("loading: {}\n", std::filesystem::absolute(aPath.String()).string());
 
 		File file;
 		std::ifstream fileStream(aPath, std::ios::binary | std::ios::in | std::ios::ate);

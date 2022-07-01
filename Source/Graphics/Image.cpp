@@ -140,10 +140,10 @@ Job::Work Image::GetLoadImageWork(const FileIO::Path aFilePath, const VkFormat a
 	work.mUserData = imageData;
 	work.mWorkPtr  = [aFilePath](void* userData) {
 		 ZoneScoped;
-		 ZoneText(aFilePath.mPath.c_str(), aFilePath.mPath.size());
+		 ZoneText(aFilePath.String().c_str(), aFilePath.String().size());
 		 AsyncLoadDataImage* imageData = (AsyncLoadDataImage*)userData;
 		 //todo
-		 imageData->mData = stbi_load(aFilePath.mPath.c_str(), &imageData->width, &imageData->height, &imageData->comp, STBI_rgb_alpha);
+		 imageData->mData = stbi_load(aFilePath.String().c_str(), &imageData->width, &imageData->height, &imageData->comp, STBI_rgb_alpha);
 		 ASSERT(imageData->mData != nullptr);
 		 //ASSERT(imageData->comp == 4);
 		 ZoneValue(imageData->width);
@@ -154,7 +154,7 @@ Job::Work Image::GetLoadImageWork(const FileIO::Path aFilePath, const VkFormat a
 	work.mFinishPtr = [=](void* userData) {
 		ZoneScoped;
 		AsyncLoadDataImage* imageData = (AsyncLoadDataImage*)userData;
-		imageData->ptr->CreateFromData(imageData->mData, aFormat, {imageData->width, imageData->height}, aFilePath.mPath.c_str());
+		imageData->ptr->CreateFromData(imageData->mData, aFormat, {imageData->width, imageData->height}, aFilePath.String().c_str());
 		stbi_image_free(imageData->mData);
 	};
 	return work;

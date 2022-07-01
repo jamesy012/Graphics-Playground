@@ -42,6 +42,10 @@ set(GRAPHICS_SOURCE
     "Model.h"
     "Model.cpp"
     "Conversions.h"
+    "Loaders/LoaderBase.h"
+    "Loaders/Loader.cpp"
+    "Loaders/AssimpLoader.h"
+    "Loaders/TinygltfLoader.h"
     ${IMGUI_GRAPHICS_SOURCES}
     ${VR_GRAPHICS_SOURCES})
 
