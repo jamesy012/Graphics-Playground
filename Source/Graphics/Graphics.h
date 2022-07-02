@@ -156,7 +156,7 @@ private:
 	bool HasInstanceLayer(const char* aLayer) const;
 
 	std::vector<VkLayerProperties> mInstanceLayers		   = {};
-	std::vector<VkExtensionProperties> mInstanceExtensions = {};
+	std::vector<std::vector<VkExtensionProperties>> mLayerExtensions = {};
 
 	std::vector<Window*> mSurfaces = {};
 

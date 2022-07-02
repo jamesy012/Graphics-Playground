@@ -4,6 +4,12 @@
 #include "PlatformDebug.h"
 
 #include "Image.h"
+#include "Graphics/Helpers.h"
+#include "Engine/Transform.h"
+
+void Model::Destroy() {
+	mLocation.Clear();
+}
 
 void Model::SetMaterialBase(MaterialBase* aBase) {
 	mMaterialBase = aBase;
@@ -15,12 +21,13 @@ void Model::SetNumMaterials(int aCount) {
 void Model::SetMaterial(int aIndex, Material aMaterial) {
 	assert(aIndex < mMaterials.size());
 	ModelMaterial& material = mMaterials[aIndex];
-	material.mMaterial		= aMaterial;
-	material.mOverride		= true;
-	material.mSet			= true;
+	material.mMaterial = aMaterial;
+	material.mOverride = true;
+	material.mSet = true;
 }
 
 void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
+	ZoneScoped;
 	if(!mMesh->HasLoaded()) {
 		return;
 	}
@@ -38,6 +45,9 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 			//ASSERT(false);
 			//}
 		}
+		MeshPCTest modelPC;
+		modelPC.mWorld = mLocation.GetWorldMatrix() * mesh.mMatrix;
+		vkCmdPushConstants(aBuffer, aLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &modelPC);
 		mMesh->QuickTempRender(aBuffer, i);
 	}
 }

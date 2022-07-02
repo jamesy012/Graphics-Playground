@@ -1,6 +1,7 @@
 #include "Screenspace.h"
 
 #include "Graphics.h"
+#include "Graphics/Helpers.h"
 
 void Screenspace::Create(const FileIO::Path& aFragmentPath, const char* aName /* = 0*/) {
 	mPipeline.AddShader(std::string(WORK_DIR_REL) + "/Shaders/Screenspace/Screenspace.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);

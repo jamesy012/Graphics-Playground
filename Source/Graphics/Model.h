@@ -10,6 +10,8 @@ class Mesh;
 
 class Model {
 public:
+	void Destroy();
+
 	void SetMesh(const Mesh* aMesh) {
 		mMesh = aMesh;
 	}

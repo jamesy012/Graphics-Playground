@@ -2,6 +2,15 @@
 
 #include <vulkan/vulkan.h>
 
+#include <glm/glm.hpp>
+
+struct MeshPCTest {
+	glm::mat4 mWorld;
+};
+struct MeshUniformTest {
+	glm::mat4 mPV[2];
+};
+
 struct ImageSize {
 	ImageSize() : mWidth(0), mHeight(0) {};
 	ImageSize(const VkExtent2D aSize) : mWidth(aSize.width), mHeight(aSize.height) {};

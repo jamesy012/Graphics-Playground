@@ -71,11 +71,11 @@ int main() {
 
 	{
 		std::vector<VkClearValue> mainPassClear(2);
-		mainPassClear[0].color.float32[0]	  = 0.0f;
-		mainPassClear[0].color.float32[1]	  = 0.0f;
-		mainPassClear[0].color.float32[2]	  = 0.0f;
-		mainPassClear[0].color.float32[3]	  = 1.0f;
-		mainPassClear[1].depthStencil.depth	  = 1.0f;
+		mainPassClear[0].color.float32[0] = 0.0f;
+		mainPassClear[0].color.float32[1] = 0.0f;
+		mainPassClear[0].color.float32[2] = 0.0f;
+		mainPassClear[0].color.float32[3] = 1.0f;
+		mainPassClear[1].depthStencil.depth = 1.0f;
 		mainPassClear[1].depthStencil.stencil = 0;
 		mainRenderPass.SetClearColors(mainPassClear);
 	}
@@ -127,14 +127,10 @@ int main() {
 	handMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/handModel.fbx");
 
 	Mesh sponzaTest;
-	sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/Sponza.gltf", std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/");
+	sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/Sponza.gltf",
+						std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/");
 
-	struct MeshPCTest {
-		glm::mat4 mWorld;
-	} meshPC;
-	struct MeshUniformTest {
-		glm::mat4 mPV[2];
-	} meshUniform;
+	MeshUniformTest meshUniform;
 
 	Buffer meshUniformBuffer;
 	meshUniformBuffer.Create(BufferType::UNIFORM, sizeof(MeshUniformTest), "Mesh Uniform");
@@ -144,23 +140,23 @@ int main() {
 	meshPipeline.AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	VkPushConstantRange meshPCRange {};
-	meshPCRange.size	   = sizeof(MeshPCTest);
+	meshPCRange.size = sizeof(MeshPCTest);
 	meshPCRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 	meshPipeline.AddPushConstant(meshPCRange);
 	{
 		meshPipeline.vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		meshPipeline.vertexBinding.stride	 = sizeof(MeshVert);
+		meshPipeline.vertexBinding.stride = sizeof(MeshVert);
 		MeshVert temp;
-		meshPipeline.vertexAttribute			 = std::vector<VkVertexInputAttributeDescription>(3);
+		meshPipeline.vertexAttribute = std::vector<VkVertexInputAttributeDescription>(3);
 		meshPipeline.vertexAttribute[0].location = 0;
-		meshPipeline.vertexAttribute[0].format	 = VK_FORMAT_R32G32B32_SFLOAT;
-		meshPipeline.vertexAttribute[0].offset	 = offsetof(MeshVert, mPos);
+		meshPipeline.vertexAttribute[0].format = VK_FORMAT_R32G32B32_SFLOAT;
+		meshPipeline.vertexAttribute[0].offset = offsetof(MeshVert, mPos);
 		meshPipeline.vertexAttribute[1].location = 1;
-		meshPipeline.vertexAttribute[1].format	 = VK_FORMAT_R32G32B32A32_SFLOAT;
-		meshPipeline.vertexAttribute[1].offset	 = offsetof(MeshVert, mColors[0]);
+		meshPipeline.vertexAttribute[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
+		meshPipeline.vertexAttribute[1].offset = offsetof(MeshVert, mColors[0]);
 		meshPipeline.vertexAttribute[2].location = 2;
-		meshPipeline.vertexAttribute[2].format	 = VK_FORMAT_R32G32_SFLOAT;
-		meshPipeline.vertexAttribute[2].offset	 = offsetof(MeshVert, mUVs[0]);
+		meshPipeline.vertexAttribute[2].format = VK_FORMAT_R32G32_SFLOAT;
+		meshPipeline.vertexAttribute[2].offset = offsetof(MeshVert, mUVs[0]);
 	}
 
 	MaterialBase meshTestBase;
@@ -197,17 +193,15 @@ int main() {
 	sponzaTestModel.SetMesh(&sponzaTest);
 	sponzaTestModel.SetMaterialBase(&meshImageTestBase);
 
-	Transform mModelTransforms[2];
 	Transform mRootTransform;
-	mModelTransforms[0].Set(glm::vec3(0, 0, 0), 1.0f, glm::vec3(-90, 0, 0), &mRootTransform);
-	mModelTransforms[1].Set(glm::vec3(-5, 1, 0), 1.0f, glm::vec3(-90, 0, 0), &mRootTransform);
+	modelTest1.mLocation.Set(glm::vec3(0, 0, 0), 1.0f, &mRootTransform);
+	modelTest2.mLocation.Set(glm::vec3(-5, 1, 0), 1.0f, &mRootTransform);
 	FlyCamera camera;
-	camera.mTransform.SetPosition(glm::vec3(0, 4, 12));
-	Transform mControllerTransforms[2];
-	mControllerTransforms[0].SetParent(&camera.mTransform);
-	mControllerTransforms[1].SetParent(&camera.mTransform);
-	mControllerTransforms[0].SetScale(0);
-	mControllerTransforms[1].SetScale(0);
+	camera.mTransform.SetPosition(glm::vec3(8.0f, 0.2f, 0.0f));
+	controllerTest1.mLocation.SetParent(&camera.mTransform);
+	controllerTest2.mLocation.SetParent(&camera.mTransform);
+	controllerTest1.mLocation.SetScale(0);
+	controllerTest2.mLocation.SetScale(0);
 
 	while(!gEngine->GetWindow()->ShouldClose()) {
 		ZoneScoped;
@@ -216,8 +210,8 @@ int main() {
 		VkCommandBuffer buffer = gGraphics->GetCurrentGraphicsCommandBuffer();
 
 		gEngine->ImGuiWindow();
+		WorkManager::ImGuiTesting();
 
-#if !defined(ENABLE_XR)
 		if(ImGui::Begin("Camera")) {
 			glm::vec3 camPos = camera.mTransform.GetLocalPosition();
 			if(ImGui::DragFloat3("Pos", glm::value_ptr(camPos), 0.1f, -999, 999)) {
@@ -233,7 +227,6 @@ int main() {
 			ImGui::Text("mouseDelta (%f,%f)", mouseDelta.x, mouseDelta.y);
 			ImGui::End();
 		}
-#endif
 
 		{
 			glm::mat4 proj;
@@ -248,9 +241,9 @@ int main() {
 				glm::mat4 translation;
 				glm::mat4 rotation;
 
-				translation = glm::translate(mCameraTransform.GetWorldMatrix(), head.mPos);
-				rotation	= glm::mat4_cast(head.mRot);
-				headMatrix	= translation * rotation;
+				translation = glm::translate(camera.mTransform.GetWorldMatrix(), head.mPos);
+				rotation = glm::mat4_cast(head.mRot);
+				headMatrix = translation * rotation;
 				//headMatrix	= glm::inverse(headMatrix);
 			}
 			VRGraphics::View info;
@@ -261,7 +254,7 @@ int main() {
 				glm::mat4 rotation;
 
 				translation = glm::translate(glm::identity<glm::mat4>(), info.mPos);
-				rotation	= glm::mat4_cast(info.mRot);
+				rotation = glm::mat4_cast(info.mRot);
 
 				view = headMatrix * (translation * rotation);
 				view = glm::inverse(view);
@@ -280,10 +273,10 @@ int main() {
 				meshUniform.mPV[i] = proj * view;
 			}
 #else
-			const float time  = 0; //gGraphics->GetFrameCount() / 360.0f;
+			const float time = 0; //gGraphics->GetFrameCount() / 360.0f;
 			const float scale = 10.0f;
-			proj			  = glm::perspectiveFov(
-				 glm::radians(60.0f), (float)gGraphics->GetDesiredSize().mWidth, (float)gGraphics->GetDesiredSize().mHeight, 0.1f, 1000.0f);
+			proj = glm::perspectiveFov(
+				glm::radians(60.0f), (float)gGraphics->GetDesiredSize().mWidth, (float)gGraphics->GetDesiredSize().mHeight, 0.1f, 1000.0f);
 			//view			   = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0)//glm::vec3(0, 1, 0));
 			view = glm::lookAt(camera.mTransform.GetLocalPosition(), glm::vec3(0), glm::vec3(0, 1, 0));
 			proj[1][1] *= -1.0f;
@@ -312,32 +305,33 @@ int main() {
 			const float time = gEngine->GetTimeSinceStart() * 50;
 			if(updateRoot) {
 				mRootTransform.SetRotation(glm::vec3(0, -time, 0));
-				mModelTransforms[1].SetRotation(glm::vec3(-90, time, 0));
+
+				modelTest2.mLocation.SetRotation(glm::vec3(0, time, 0));
 			}
 #if defined(ENABLE_XR)
 			if(updateControllers) {
+				Transform* controllerTransforms[2] = {&controllerTest1.mLocation, &controllerTest2.mLocation};
 				for(int i = 0; i < VRGraphics::Side::COUNT; i++) {
 					VRGraphics::ControllerInfo info;
 					gVrGraphics->GetHandInfo((VRGraphics::Side)i, info);
 					glm::vec3 movement;
 					if(info.mTrigger > 0) {
-						glm::vec3 position = mCameraTransform.GetLocalPosition();
-						movement		   = (mCameraTransform.GetLocalRotation() * glm::vec4(info.mLinearVelocity, 1)) * info.mTrigger;
-						mCameraTransform.SetPosition(position - movement);
+						glm::vec3 position = camera.mTransform.GetLocalPosition();
+						movement = (camera.mTransform.GetLocalRotation() * glm::vec4(info.mLinearVelocity, 1)) * info.mTrigger;
+						camera.mTransform.SetPosition(position - movement);
 					}
 					if(info.mActive) {
-						mControllerTransforms[i].SetPosition(info.mPose.mPos + movement);
-						mControllerTransforms[i].SetRotation(info.mPose.mRot * glm::quat(glm::radians(glm::vec3(0, 180, 0))));
-						mControllerTransforms[i].SetScale(0.1f);
+						controllerTransforms[i]->SetPosition(info.mPose.mPos + movement);
+						controllerTransforms[i]->SetRotation(info.mPose.mRot);
+						controllerTransforms[i]->SetScale(0.1f);
 					} else {
-						mControllerTransforms[i].SetScale(0.0f);
+						controllerTransforms[i]->SetScale(0.0f);
 					}
 				}
 			}
 #endif
 		}
 
-		WorkManager::ImGuiTesting();
 		{
 			ZoneScopedN("Render logic");
 
@@ -349,46 +343,16 @@ int main() {
 			//bind camera data
 			vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
 			//tree 1
-			{
-				meshPC.mWorld = mModelTransforms[0].GetWorldMatrix();
-				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-				modelTest1.Render(buffer, meshPipeline.GetLayout());
-			}
+			modelTest1.Render(buffer, meshPipeline.GetLayout());
 			//tree 2
-			{
-				meshPC.mWorld = mModelTransforms[1].GetWorldMatrix();
-				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-				modelTest2.Render(buffer, meshPipeline.GetLayout());
-			}
+			modelTest2.Render(buffer, meshPipeline.GetLayout());
 			//Hand 1
-			{
-				meshPC.mWorld = mControllerTransforms[0].GetWorldMatrix();
-				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-				controllerTest1.Render(buffer, meshPipeline.GetLayout());
-			}
+			controllerTest1.Render(buffer, meshPipeline.GetLayout());
 			//Hand 2
-			{
-				meshPC.mWorld = mControllerTransforms[1].GetWorldMatrix();
-				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-				controllerTest2.Render(buffer, meshPipeline.GetLayout());
-			}
+			controllerTest2.Render(buffer, meshPipeline.GetLayout());
 			//world base reference
-			{
-				meshPC.mWorld = glm::identity<glm::mat4>();
-				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-				worldBase.Render(buffer, meshPipeline.GetLayout());
-			}
-			//world base reference
-			{
-				meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(5, 0, 0));
-				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-				worldBase.Render(buffer, meshPipeline.GetLayout());
-			}
-			{
-				meshPC.mWorld = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.05f));
-				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-				sponzaTestModel.Render(buffer, meshPipeline.GetLayout());
-			}
+			worldBase.Render(buffer, meshPipeline.GetLayout());
+			sponzaTestModel.Render(buffer, meshPipeline.GetLayout());
 			meshPipeline.End(buffer);
 			mainRenderPass.End(buffer);
 
@@ -400,6 +364,9 @@ int main() {
 
 #if defined(ENABLE_XR)
 			//copy fbImage to computer view (using two eye version)
+			Screenspace::PushConstant pc;
+			pc.mEyeIndex = 0;
+			vkCmdPushConstants(buffer, ssTest.GetPipeline().GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Screenspace::PushConstant), &pc);
 			vrMirrorPass.Render(buffer, gGraphics->GetCurrentFrameBuffer());
 			//copy to headset views
 			for(int i = 0; i < gGraphics->GetNumActiveViews(); i++) {
@@ -423,6 +390,12 @@ int main() {
 	}
 
 	mRootTransform.Clear();
+
+	modelTest1.Destroy();
+	modelTest2.Destroy();
+	controllerTest2.Destroy();
+	controllerTest1.Destroy();
+	worldBase.Destroy();
 
 	meshPipeline.Destroy();
 	meshImageTestBase.Destroy();

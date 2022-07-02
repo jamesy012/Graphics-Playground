@@ -7,6 +7,7 @@
 #include "LoaderBase.h"
 #include "Graphics/Mesh.h"
 #include "PlatformDebug.h"
+#include "Engine/Transform.h"
 
 class TinygltfLoader : public LoaderBase {
 private:
@@ -70,7 +71,7 @@ void TinygltfLoader::ProcessMaterials(tinygltf::Model& aModel) {
 		if(mat.values.contains("baseColorTexture")) {
 			tinygltf::Texture& baseTexture = aModel.textures[mat.values["baseColorTexture"].TextureIndex()];
 			tinygltf::Image& baseImage = aModel.images[baseTexture.source];
-			LOGGER::Formated("Loading Texture {}", baseImage.uri);
+			LOGGER::Formated("Loading Texture {}\n", baseImage.uri);
 			Image* image = new Image();
 			image->LoadImage(mMesh->mImagePath + baseImage.uri, VK_FORMAT_UNDEFINED);
 			materialData.mFileName = baseImage.uri;
@@ -94,8 +95,26 @@ void TinygltfLoader::ProcessScene(tinygltf::Model& aModel, tinygltf::Scene& aSce
 	}
 }
 void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode) {
+	const int numMeshBefore = mMesh->mMesh.size();
 	ProcessMesh(aModel, aModel.meshes[aNode.mesh]);
 	//also contains position information here
+	Transform nodeTransform;
+	ASSERT(aNode.translation.size() == 3 || aNode.translation.size() == 0);
+	ASSERT(aNode.scale.size() == 3 || aNode.scale.size() == 0);
+	ASSERT(aNode.rotation.size() == 3 || aNode.rotation.size() == 0);
+	if(aNode.translation.size() == 3) {
+		nodeTransform.SetPosition(glm::vec3(aNode.translation[0], aNode.translation[1], aNode.translation[2]));
+	}
+	if(aNode.scale.size() == 3) {
+		nodeTransform.SetScale(glm::vec3(aNode.scale[0], aNode.scale[1], aNode.scale[2]));
+	}
+	if(aNode.rotation.size() == 3) {
+		nodeTransform.SetRotation(glm::vec3(aNode.rotation[0], aNode.rotation[1], aNode.rotation[2]));
+	}
+	const int numMeshs = mMesh->mMesh.size();
+	for(size_t i = numMeshBefore; i < numMeshs; i++) {
+		mMesh->mMesh[i].mMatrix = nodeTransform.GetWorldMatrix();
+	}
 }
 void TinygltfLoader::ProcessMesh(tinygltf::Model& aModel, tinygltf::Mesh& aMesh) {
 	const int numPrimitives = aMesh.primitives.size();
@@ -139,6 +158,11 @@ void TinygltfLoader::ProcessPrimitive(tinygltf::Model& aModel, tinygltf::Primiti
 
 		ASSERT(accessor.type == TINYGLTF_TYPE_VEC3 && accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
 		SetOrValidateVertCount(count);
+
+		if(accessor.minValues.size() == 3 && accessor.maxValues.size() == 3) {
+			mesh.mAABB.mMin = glm::vec3(accessor.minValues[0], accessor.minValues[1], accessor.minValues[2]);
+			mesh.mAABB.mMax = glm::vec3(accessor.maxValues[0], accessor.maxValues[1], accessor.maxValues[2]);
+		}
 
 		for(int i = 0; i < count; i++) {
 			glm::vec3 data = glm::vec3(0);

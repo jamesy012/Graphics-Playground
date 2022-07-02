@@ -7,10 +7,11 @@
 #include "LoaderBase.h"
 #include "Graphics/Mesh.h"
 
-#include "Graphics/Image.h"
-
 #include "PlatformDebug.h"
 #include "Graphics/Conversions.h"
+
+#include "Graphics/Image.h"
+#include "Engine/Transform.h"
 
 static_assert(NUM_UVS <= AI_MAX_NUMBER_OF_TEXTURECOORDS);
 static_assert(NUM_VERT_COLS <= AI_MAX_NUMBER_OF_COLOR_SETS);
@@ -33,22 +34,22 @@ private:
 Job::Work AssimpLoader::GetWork(FileIO::Path aPath) {
 	Job::Work asyncWork;
 	asyncWork.mUserData = new AsyncLoadData();
-	asyncWork.mWorkPtr	= [aPath](void* aData) {
-		 ZoneScoped;
-		 ZoneText(aPath.String().c_str(), aPath.String().size());
-		 AsyncLoadData* data  = (AsyncLoadData*)aData;
-		 const aiScene* scene = data->importer.ReadFile(aPath.String().c_str(),
-														aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices |
-															aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_OptimizeMeshes |
-															aiProcess_OptimizeGraph | aiProcess_GenBoundingBoxes);
+	asyncWork.mWorkPtr = [aPath](void* aData) {
+		ZoneScoped;
+		ZoneText(aPath.String().c_str(), aPath.String().size());
+		AsyncLoadData* data = (AsyncLoadData*)aData;
+		const aiScene* scene = data->importer.ReadFile(aPath.String().c_str(),
+													   aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices |
+														   aiProcess_GenSmoothNormals | aiProcess_FlipUVs | aiProcess_OptimizeMeshes |
+														   aiProcess_OptimizeGraph | aiProcess_GenBoundingBoxes);
 
-		 if(scene == nullptr) {
-			 LOGGER::Formated("Failed to load Model {}\n", aPath.String());
-			 //ASSERT(false);
-			 //return false;
-			 return;
-		 }
-		 data->mScene = scene;
+		if(scene == nullptr) {
+			LOGGER::Formated("Failed to load Model {}\n", aPath.String());
+			//ASSERT(false);
+			//return false;
+			return;
+		}
+		data->mScene = scene;
 	};
 	//asyncWork.mFinishOnMainThread = true;
 	asyncWork.mFinishPtr = [this](void* aData) {
@@ -67,10 +68,22 @@ Job::Work AssimpLoader::GetWork(FileIO::Path aPath) {
 
 bool AssimpLoader::ProcessNode(const aiScene* aScene, const aiNode* aNode) {
 	ZoneScoped;
+
+	Transform transform;
+	aiVector3D position;
+	aiQuaternion rotation;
+	aiVector3D scale;
+	aNode->mTransformation.Decompose(scale, rotation, position);
+	transform.SetPosition(glm::vec3(position.x, position.y, position.z));
+	transform.SetRotation(glm::quat(rotation.w, rotation.x, rotation.y, rotation.z));
+	transform.SetScale(glm::vec3(scale.x, scale.y, scale.z) / 100.0f);
+
 	for(uint16_t i = 0; i < aNode->mNumMeshes; i++) {
 		int meshId = aNode->mMeshes[aNode->mMeshes[i]];
 		//meshes_.push_back(this->processMesh(aScene, mesh));
 		this->ProcessMesh(aScene, aScene->mMeshes[meshId]);
+
+		mMesh->mMesh.back().mMatrix = transform.GetWorldMatrix();
 	}
 	for(uint16_t i = 0; i < aNode->mNumChildren; i++) {
 		this->ProcessNode(aScene, aNode->mChildren[i]);
@@ -81,7 +94,7 @@ bool AssimpLoader::ProcessNode(const aiScene* aScene, const aiNode* aNode) {
 bool AssimpLoader::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 	ZoneScoped;
 	mMesh->mMesh.push_back(Mesh::SubMesh());
-	Mesh::SubMesh& mesh				= mMesh->mMesh.back();
+	Mesh::SubMesh& mesh = mMesh->mMesh.back();
 	std::vector<MeshVert>& vertices = mesh.mVertices;
 	std::vector<MeshIndex>& indices = mesh.mIndices;
 
@@ -100,7 +113,7 @@ bool AssimpLoader::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 		}
 
 		if(aMesh->HasTangentsAndBitangents()) {
-			vertex.mTangent	  = AssimpToGlm(aMesh->mTangents[i]);
+			vertex.mTangent = AssimpToGlm(aMesh->mTangents[i]);
 			vertex.mBiTangent = AssimpToGlm(aMesh->mBitangents[i]);
 		}
 
@@ -165,7 +178,7 @@ bool AssimpLoader::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 
 	//Material
 	if(aMesh->mMaterialIndex >= 0) {
-		mesh.mMaterialID		   = aMesh->mMaterialIndex;
+		mesh.mMaterialID = aMesh->mMaterialIndex;
 		const aiMaterial* material = aScene->mMaterials[aMesh->mMaterialIndex];
 		//for(int i = 0; i < material->mNumProperties; i++) {
 		//	const aiMaterialProperty* prop = material->mProperties[i];
@@ -192,7 +205,7 @@ bool AssimpLoader::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 				Image* image = new Image();
 				image->LoadImage(mMesh->mImagePath + fileName, VK_FORMAT_UNDEFINED);
 				materialData.mFileName = fileName;
-				materialData.mImage	   = image;
+				materialData.mImage = image;
 			}
 		}
 

@@ -144,12 +144,26 @@ bool VulkanGraphics::Startup() {
 		mInstanceLayers.resize(layerCount);
 		result = vkEnumerateInstanceLayerProperties(&layerCount, mInstanceLayers.data());
 		CheckVkResult(result);
-		// extensions
-		result = vkEnumerateInstanceExtensionProperties(nullptr, &layerCount, nullptr);
-		CheckVkResult(result);
-		mInstanceExtensions.resize(layerCount);
-		result = vkEnumerateInstanceExtensionProperties(nullptr, &layerCount, mInstanceExtensions.data());
-		CheckVkResult(result);
+		{
+			VkLayerProperties nullLayer;
+			memset(nullLayer.description, 0, sizeof(char));
+			memset(nullLayer.layerName, 0, sizeof(char));
+			nullLayer.implementationVersion = -1;
+			nullLayer.implementationVersion = -1;
+			mInstanceLayers.insert(mInstanceLayers.begin(), nullLayer);
+		}
+		mLayerExtensions.resize(mInstanceLayers.size());
+		for(int i = 0; i < mInstanceLayers.size(); i++) {
+			VkLayerProperties& layer = mInstanceLayers[i];
+			std::vector<VkExtensionProperties>& extensions = mLayerExtensions[i];
+			// extensions
+			uint32_t extensionCount = 0;
+			result = vkEnumerateInstanceExtensionProperties(layer.layerName, &extensionCount, nullptr);
+			CheckVkResult(result);
+			extensions.resize(extensionCount);
+			result = vkEnumerateInstanceExtensionProperties(layer.layerName, &extensionCount, extensions.data());
+			CheckVkResult(result);
+		}
 	}
 
 	CreateInstance();
@@ -476,6 +490,7 @@ RELEASES_LOCK(mCommandPoolMutex) void VulkanGraphics::EndFrame() {
 		}
 
 		if(numBuffers != 0) {
+			ZoneScopedN("Waiting for fences");
 			vkWaitForFences(GetVkDevice(), numBuffers, fences.data(), true, UINT64_MAX);
 		}
 
@@ -721,9 +736,11 @@ bool VulkanGraphics::CreateInstance() {
 }
 
 bool VulkanGraphics::HasInstanceExtension(const char* aExtension) const {
-	for(int i = 0; i < mInstanceExtensions.size(); i++) {
-		if(strcmp(aExtension, mInstanceExtensions[i].extensionName) == 0) {
-			return true;
+	for(auto layerExtnsions: mLayerExtensions) {
+		for(auto extensions: layerExtnsions) {
+			if(strcmp(aExtension, extensions.extensionName) == 0) {
+				return true;
+			}
 		}
 	}
 	return false;

@@ -51,10 +51,12 @@ public:
 		std::vector<MeshIndex> mIndices;
 		AABB mAABB;
 
+		glm::mat4 mMatrix = glm::mat4(1);
+
 		Buffer mVertexBuffer;
 		Buffer mIndexBuffer;
 
-		int mMaterialID;
+		int mMaterialID = -1;
 	};
 
 	uint32_t GetNumMesh() const {

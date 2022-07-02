@@ -119,6 +119,7 @@ const bool Mesh::HasLoaded() const {
 
 //temp
 void Mesh::QuickTempRender(VkCommandBuffer aBuffer, int aMeshIndex) const {
+	ZoneScoped;
 	if(false == HasLoaded()) {
 		return;
 	}
