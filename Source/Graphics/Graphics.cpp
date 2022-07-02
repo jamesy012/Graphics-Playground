@@ -9,7 +9,6 @@
 #include "Devices.h"
 #include "Helpers.h"
 #include "Pipeline.h"
-#include "PlatformDebug.h"
 #include "RenderPass.h"
 #include "Swapchain.h"
 #include "Engine/Window.h"
@@ -386,10 +385,12 @@ AQUIRES_LOCK(mCommandPoolMutex) void VulkanGraphics::StartNewFrame() {
 	gImGuiGraphics->StartNewFrame();
 #endif
 
+	{
+		ZoneScopedN("Locking Command pool lock");
+		mCommandPoolMutex.lock();
+	}
 	uint32_t index = mSwapchain->GetNextImage();
-
-	mCommandPoolMutex.lock();
-	VkCommandBuffer graphics	  = mDevicesHandler->GetGraphicsCB(index);
+	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(index);
 	VkCommandBufferBeginInfo info = {};
 	info.sType					  = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	vkBeginCommandBuffer(graphics, &info);
@@ -451,7 +452,8 @@ RELEASES_LOCK(mCommandPoolMutex) void VulkanGraphics::EndFrame() {
 	vkEndCommandBuffer(graphics);
 
 	{
-		std::unique_lock<std::mutex> lock(mBuffersToSubmitMutex);
+		//std::unique_lock<std::mutex> lock(mBuffersToSubmitMutex);
+		std::unique_lock<LockableBase(std::mutex)> lock(mBuffersToSubmitMutex);
 		const size_t numBuffers = mBuffersToSubmit.size();
 		//std::vector<VkCommandBuffer> commandBuffers(numBuffers);
 		std::vector<VkFence> fences(numBuffers);
@@ -492,8 +494,10 @@ RELEASES_LOCK(mCommandPoolMutex) void VulkanGraphics::EndFrame() {
 
 	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, {graphics});
 
-	mCommandPoolMutex.unlock();
-
+	{ 
+		ZoneScopedN("Unlocking Command pool lock");
+		mCommandPoolMutex.unlock();
+	}
 #if defined(ENABLE_XR)
 	gVrGraphics->FrameEnd();
 #endif
@@ -516,6 +520,7 @@ const Framebuffer& VulkanGraphics::GetCurrentXrFrameBuffer(uint8_t aEye) const {
 #endif
 
 AQUIRES_LOCK(mCommandPoolMutex) OneTimeCommandBuffer VulkanGraphics::AllocateGraphicsCommandBuffer(bool aBegin /*= true*/) {
+	ZoneScopedN("Allocating graphics CB");
 	mCommandPoolMutex.lock();
 
 	VkCommandBufferAllocateInfo allocateInfo = {};
@@ -550,6 +555,7 @@ AQUIRES_LOCK(mCommandPoolMutex) OneTimeCommandBuffer VulkanGraphics::AllocateGra
 }
 
 RELEASES_LOCK(mCommandPoolMutex) void VulkanGraphics::EndGraphicsCommandBuffer(OneTimeCommandBuffer aBuffer, bool aEnd /*= true*/) {
+	ZoneScopedN("Ending graphics CB");
 	if(aEnd) {
 		vkEndCommandBuffer(aBuffer);
 
@@ -561,7 +567,8 @@ RELEASES_LOCK(mCommandPoolMutex) void VulkanGraphics::EndGraphicsCommandBuffer(O
 		//vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, 1, &submitInfo, aBuffer.mFence);
 		//
 		//vkWaitForFences(GetVkDevice(), 1, &aBuffer.mFence, true, UINT64_MAX);
-		std::unique_lock<std::mutex> lock(mBuffersToSubmitMutex);
+		//std::unique_lock<std::mutex> lock(mBuffersToSubmitMutex);
+		std::unique_lock<LockableBase(std::mutex)> lock(mBuffersToSubmitMutex);
 		mBuffersToSubmit.push_back(aBuffer);
 		lock.unlock();
 	}

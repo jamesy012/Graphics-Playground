@@ -9,6 +9,7 @@
 
 #include "Engine/IGraphicsBase.h"
 
+#include "PlatformDebug.h"
 #include "Framebuffer.h"
 #include "Pipeline.h"
 #include "RenderPass.h"
@@ -170,8 +171,10 @@ private:
 	uint32_t mFrameCounter = 0;
 
 	std::vector<OneTimeCommandBuffer> mBuffersToSubmit = {};
-	std::mutex mBuffersToSubmitMutex;
-	std::mutex mCommandPoolMutex;
+	TracyLockable(std::mutex, mBuffersToSubmitMutex);
+	TracyLockable(std::mutex, mCommandPoolMutex);
+	//std::mutex mBuffersToSubmitMutex;
+	//std::mutex mCommandPoolMutex;
 };
 
 extern VulkanGraphics* gGraphics;

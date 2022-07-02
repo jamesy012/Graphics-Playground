@@ -35,7 +35,7 @@ Job::Work AssimpLoader::GetWork(FileIO::Path aPath) {
 	asyncWork.mUserData = new AsyncLoadData();
 	asyncWork.mWorkPtr	= [aPath](void* aData) {
 		 ZoneScoped;
-		 ZoneText(aPath.mPath.c_str(), aFilePath.mPath.size());
+		 ZoneText(aPath.String().c_str(), aPath.String().size());
 		 AsyncLoadData* data  = (AsyncLoadData*)aData;
 		 const aiScene* scene = data->importer.ReadFile(aPath.String().c_str(),
 														aiProcess_CalcTangentSpace | aiProcess_Triangulate | aiProcess_JoinIdenticalVertices |
@@ -201,7 +201,7 @@ bool AssimpLoader::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 
 	//temp
 	mesh.mVertexBuffer.CreateFromData(BufferType::VERTEX, sizeof(MeshVert) * vertices.size(), vertices.data(), "Mesh Vertex Data");
-	mesh.mIndexBuffer.CreateFromData(BufferType::INDEX, sizeof(MeshIndex) * indices.size(), indices.data(), "Mesh Vertex Data");
+	mesh.mIndexBuffer.CreateFromData(BufferType::INDEX, sizeof(MeshIndex) * indices.size(), indices.data(), "Mesh Index Data");
 	mesh.mVertexBuffer.Flush();
 	mesh.mIndexBuffer.Flush();
 

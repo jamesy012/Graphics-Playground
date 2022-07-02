@@ -117,7 +117,7 @@ target_include_directories(GraphicsPlayground PRIVATE "stb")
 # Tinygltf
 
 message("Adding Tinygltf")
-set(TINYGLTF_SOURCES "tinygltf/tiny_gltf.h")
+set(TINYGLTF_SOURCES "mesh/tinygltf/tiny_gltf.h")
 target_sources(GraphicsPlayground PRIVATE ${TINYGLTF_SOURCES})
 #target_include_directories(GraphicsPlayground PRIVATE "stb")
 

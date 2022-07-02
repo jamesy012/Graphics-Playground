@@ -4,7 +4,7 @@
 #include <string>
 
 //should probably be MSVC instead of WINDOWS
-#if WINDOWS
+#if _MSC_VER >= 1000
 #	define AQUIRES_LOCK(x)	 _Acquires_lock_(x)
 #	define RELEASES_LOCK(x) _Releases_lock_(x)
 #else

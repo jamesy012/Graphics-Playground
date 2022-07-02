@@ -8,7 +8,7 @@ namespace FileIO {
 		Path(std::string aPath) : mPath(aPath) {}
 		Path(const char* aPath) : mPath(aPath) {}
 		operator std::string() {
-			return mPath;
+			return mPath.generic_string();
 		}
 
 		std::string String() const {

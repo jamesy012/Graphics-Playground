@@ -127,7 +127,7 @@ int main() {
 	handMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/handModel.fbx");
 
 	Mesh sponzaTest;
-	sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/Sponza/glTF/Sponza.gltf", std::string(WORK_DIR_REL) + "/Assets/Sponza/glTF/");
+	sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/Sponza.gltf", std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/");
 
 	struct MeshPCTest {
 		glm::mat4 mWorld;
@@ -338,85 +338,87 @@ int main() {
 		}
 
 		WorkManager::ImGuiTesting();
+		{
+			ZoneScopedN("Render logic");
 
-		const Framebuffer& framebuffer = fb;
+			const Framebuffer& framebuffer = fb;
 
-		//mesh render test
-		mainRenderPass.Begin(buffer, framebuffer);
-		meshPipeline.Begin(buffer);
-		//bind camera data
-		vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
-		//tree 1
-		{
-			meshPC.mWorld = mModelTransforms[0].GetWorldMatrix();
-			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-			modelTest1.Render(buffer, meshPipeline.GetLayout());
-		}
-		//tree 2
-		{
-			meshPC.mWorld = mModelTransforms[1].GetWorldMatrix();
-			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-			modelTest2.Render(buffer, meshPipeline.GetLayout());
-		}
-		//Hand 1
-		{
-			meshPC.mWorld = mControllerTransforms[0].GetWorldMatrix();
-			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-			controllerTest1.Render(buffer, meshPipeline.GetLayout());
-		}
-		//Hand 2
-		{
-			meshPC.mWorld = mControllerTransforms[1].GetWorldMatrix();
-			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-			controllerTest2.Render(buffer, meshPipeline.GetLayout());
-		}
-		//world base reference
-		{
-			meshPC.mWorld = glm::identity<glm::mat4>();
-			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-			worldBase.Render(buffer, meshPipeline.GetLayout());
-		}
-		//world base reference
-		{
-			meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(5, 0, 0));
-			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-			worldBase.Render(buffer, meshPipeline.GetLayout());
-		}
-		{
-			meshPC.mWorld = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.05f));
-			vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
-			sponzaTestModel.Render(buffer, meshPipeline.GetLayout());
-		}
-		meshPipeline.End(buffer);
-		mainRenderPass.End(buffer);
+			//mesh render test
+			mainRenderPass.Begin(buffer, framebuffer);
+			meshPipeline.Begin(buffer);
+			//bind camera data
+			vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
+			//tree 1
+			{
+				meshPC.mWorld = mModelTransforms[0].GetWorldMatrix();
+				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+				modelTest1.Render(buffer, meshPipeline.GetLayout());
+			}
+			//tree 2
+			{
+				meshPC.mWorld = mModelTransforms[1].GetWorldMatrix();
+				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+				modelTest2.Render(buffer, meshPipeline.GetLayout());
+			}
+			//Hand 1
+			{
+				meshPC.mWorld = mControllerTransforms[0].GetWorldMatrix();
+				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+				controllerTest1.Render(buffer, meshPipeline.GetLayout());
+			}
+			//Hand 2
+			{
+				meshPC.mWorld = mControllerTransforms[1].GetWorldMatrix();
+				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+				controllerTest2.Render(buffer, meshPipeline.GetLayout());
+			}
+			//world base reference
+			{
+				meshPC.mWorld = glm::identity<glm::mat4>();
+				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+				worldBase.Render(buffer, meshPipeline.GetLayout());
+			}
+			//world base reference
+			{
+				meshPC.mWorld = glm::translate(glm::identity<glm::mat4>(), glm::vec3(5, 0, 0));
+				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+				worldBase.Render(buffer, meshPipeline.GetLayout());
+			}
+			{
+				meshPC.mWorld = glm::scale(glm::identity<glm::mat4>(), glm::vec3(0.05f));
+				vkCmdPushConstants(buffer, meshPipeline.GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &meshPC);
+				sponzaTestModel.Render(buffer, meshPipeline.GetLayout());
+			}
+			meshPipeline.End(buffer);
+			mainRenderPass.End(buffer);
 
-		fbImage.SetImageLayout(buffer,
-							   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-							   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-							   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-							   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+			fbImage.SetImageLayout(buffer,
+								   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+								   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+								   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+								   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 #if defined(ENABLE_XR)
-		//copy fbImage to computer view (using two eye version)
-		vrMirrorPass.Render(buffer, gGraphics->GetCurrentFrameBuffer());
-		//copy to headset views
-		for(int i = 0; i < gGraphics->GetNumActiveViews(); i++) {
-			Screenspace::PushConstant pc;
-			pc.mEyeIndex = i;
-			vkCmdPushConstants(buffer, ssTest.GetPipeline().GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Screenspace::PushConstant), &pc);
-			//copies fbImage to framebuffer
-			ssTest.Render(buffer, gGraphics->GetCurrentXrFrameBuffer(i));
-		}
+			//copy fbImage to computer view (using two eye version)
+			vrMirrorPass.Render(buffer, gGraphics->GetCurrentFrameBuffer());
+			//copy to headset views
+			for(int i = 0; i < gGraphics->GetNumActiveViews(); i++) {
+				Screenspace::PushConstant pc;
+				pc.mEyeIndex = i;
+				vkCmdPushConstants(buffer, ssTest.GetPipeline().GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Screenspace::PushConstant), &pc);
+				//copies fbImage to framebuffer
+				ssTest.Render(buffer, gGraphics->GetCurrentXrFrameBuffer(i));
+			}
 #else
-		ssTest.Render(buffer, gGraphics->GetCurrentFrameBuffer());
+			ssTest.Render(buffer, gGraphics->GetCurrentFrameBuffer());
 #endif
 
-		fbImage.SetImageLayout(buffer,
-							   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-							   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-							   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-							   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
-
+			fbImage.SetImageLayout(buffer,
+								   VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+								   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+								   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+								   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+		}
 		gGraphics->EndFrame();
 	}
 
