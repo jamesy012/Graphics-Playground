@@ -124,7 +124,10 @@ int main() {
 					  std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/");
 
 	Mesh handMesh;
-	handMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/handModel.fbx");
+	handMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/handModel2.fbx");	
+	
+	Mesh referenceMesh;
+	referenceMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/5m reference.fbx");
 
 	Mesh sponzaTest;
 	sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/Sponza.gltf",
@@ -186,7 +189,7 @@ int main() {
 	controllerTest2.SetMesh(&handMesh);
 	controllerTest2.SetMaterialBase(&meshImageTestBase);
 	Model worldBase;
-	worldBase.SetMesh(&handMesh);
+	worldBase.SetMesh(&referenceMesh);
 	worldBase.SetMaterialBase(&meshImageTestBase);
 
 	Model sponzaTestModel;
@@ -256,17 +259,17 @@ int main() {
 				translation = glm::translate(glm::identity<glm::mat4>(), info.mPos);
 				rotation = glm::mat4_cast(info.mRot);
 
-				view = headMatrix * (translation * rotation);
+				//view = headMatrix * (translation * rotation);
+				view = camera.mTransform.GetWorldMatrix() * (translation * rotation);
 				view = glm::inverse(view);
-				glm::translate(view, glm::vec3(5.0f, 0.0f, 5.0f));
 				glm::mat4 frustum =
-					glm::frustum(tan(info.mFov.x) / 10, tan(info.mFov.y) / 10, tan(info.mFov.z) / 10, tan(info.mFov.w) / 10, 0.1f, 100.0f);
-				glm::mat4 persp = glm::perspectiveFov(
-					glm::radians(60.0f), (float)gGraphics->GetDesiredSize().mWidth, (float)gGraphics->GetDesiredSize().mHeight, 0.1f, 1000.0f);
-				if(info.mFov.w != 0) {
-					persp = glm::perspective(info.mFov.w - info.mFov.z, info.mFov.y / info.mFov.w, 0.1f, 1000.0f);
-				}
-				proj = persp;
+					glm::frustum(tan(info.mFov.x) / 10, tan(info.mFov.y) / 10, tan(info.mFov.z) / 10, tan(info.mFov.w) / 10, 0.1f, 1000.0f);
+				//glm::mat4 persp = glm::perspectiveFov(
+				//	glm::radians(60.0f), (float)gGraphics->GetDesiredSize().mWidth, (float)gGraphics->GetDesiredSize().mHeight, 0.1f, 1000.0f);
+				//if(info.mFov.w != 0) {
+				//	persp = glm::perspective(info.mFov.w - info.mFov.z, info.mFov.y / info.mFov.w, 0.1f, 10000.0f);
+				//}
+				//proj = persp;
 				proj = frustum;
 				proj[1][1] *= -1.0f;
 
@@ -323,7 +326,7 @@ int main() {
 					if(info.mActive) {
 						controllerTransforms[i]->SetPosition(info.mPose.mPos + movement);
 						controllerTransforms[i]->SetRotation(info.mPose.mRot);
-						controllerTransforms[i]->SetScale(0.1f);
+						controllerTransforms[i]->SetScale(1.0f);
 					} else {
 						controllerTransforms[i]->SetScale(0.0f);
 					}
@@ -401,6 +404,7 @@ int main() {
 	meshImageTestBase.Destroy();
 	meshTestBase.Destroy();
 
+	referenceMesh.Destroy();
 	handMesh.Destroy();
 	sponzaTest.Destroy();
 	meshTest.Destroy();

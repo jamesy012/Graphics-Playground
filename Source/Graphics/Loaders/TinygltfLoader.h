@@ -95,13 +95,16 @@ void TinygltfLoader::ProcessScene(tinygltf::Model& aModel, tinygltf::Scene& aSce
 	}
 }
 void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode) {
+	if(aNode.mesh == -1) {
+		return;
+	}
 	const int numMeshBefore = mMesh->mMesh.size();
 	ProcessMesh(aModel, aModel.meshes[aNode.mesh]);
 	//also contains position information here
 	Transform nodeTransform;
 	ASSERT(aNode.translation.size() == 3 || aNode.translation.size() == 0);
 	ASSERT(aNode.scale.size() == 3 || aNode.scale.size() == 0);
-	ASSERT(aNode.rotation.size() == 3 || aNode.rotation.size() == 0);
+	ASSERT(aNode.rotation.size() == 3 || aNode.rotation.size() == 4 || aNode.rotation.size() == 0);
 	if(aNode.translation.size() == 3) {
 		nodeTransform.SetPosition(glm::vec3(aNode.translation[0], aNode.translation[1], aNode.translation[2]));
 	}
@@ -110,6 +113,9 @@ void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode)
 	}
 	if(aNode.rotation.size() == 3) {
 		nodeTransform.SetRotation(glm::vec3(aNode.rotation[0], aNode.rotation[1], aNode.rotation[2]));
+	}	
+	if(aNode.rotation.size() == 4) {
+		nodeTransform.SetRotation(glm::quat(aNode.rotation[3], aNode.rotation[0], aNode.rotation[1], aNode.rotation[2]));
 	}
 	const int numMeshs = mMesh->mMesh.size();
 	for(size_t i = numMeshBefore; i < numMeshs; i++) {

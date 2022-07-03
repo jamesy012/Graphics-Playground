@@ -250,7 +250,7 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 
 	gFrameActive = true;
 
-	result = xrLocateSpace(gSpaces[XR_REFERENCE_SPACE_TYPE_VIEW - 1].mSpace,
+	result = xrLocateSpace(gSpaces[XR_REFERENCE_SPACE_TYPE_LOCAL - 1].mSpace,
 						   gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mSpace,
 						   gFrameState.predictedDisplayTime,
 						   &gHeadLocation);
@@ -361,7 +361,7 @@ void VRGraphics::GetHeadPoseData(Pose& aInfo) const {
 	aInfo = gHeadPose;
 }
 void VRGraphics::GetEyePoseData(uint8_t aEye, View& aInfo) const {
-	aInfo = gSpaces[XR_REFERENCE_SPACE_TYPE_VIEW - 1].mInfos[aEye];
+	aInfo = gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mInfos[aEye];
 }
 
 void VRGraphics::GetHandInfo(Side aSide, ControllerInfo& aInfo) const {
