@@ -43,6 +43,8 @@ public:
 		mMainCamera = aCamera;
 	}
 
+	bool IsMouseLocked() const;
+
 private:
 	//imgui for engine class
 	void ImGuiWindow();

@@ -8,8 +8,16 @@
 
 #include "PlatformDebug.h"
 
+namespace CONSTANTS {
+	const glm::vec3 RIGHT = glm::vec3(1, 0, 0);
+	const glm::vec3 UP = glm::vec3(0, 1, 0);
+	//forward goes towards screen
+	const glm::vec3 FORWARD = glm::vec3(0, 0, 1);
+} // namespace CONSTANTS
+
 class Transform {
 	typedef std::function<void(Transform*)> TransformUpdatecallback;
+
 public:
 	Transform(Transform* mParent = nullptr) {
 		SetParent(mParent);
@@ -131,6 +139,20 @@ public:
 		return mWorldMatrix;
 	}
 
+	glm::vec3 GetRight() const {
+		return mRot * CONSTANTS::RIGHT;
+	}
+	glm::vec3 GetUp() const {
+		return mRot * CONSTANTS::UP;
+	}
+	glm::vec3 GetForward() const {
+		return mRot * CONSTANTS::FORWARD;
+	}
+
+	bool IsUp() const {
+		return glm::dot(GetUp(), CONSTANTS::UP) > 0;
+	}
+
 	//todo give option to keep world position
 	void SetParent(Transform* aParent) {
 		if(aParent == mParent) {
@@ -158,7 +180,7 @@ public:
 	void SetDirty();
 
 	//calls the callback after global matrix is set
-	void SetUpdateCallback(TransformUpdatecallback aCallback){
+	void SetUpdateCallback(TransformUpdatecallback aCallback) {
 		ASSERT(mUpdateCallback == nullptr);
 		mUpdateCallback = aCallback;
 	}
@@ -181,9 +203,9 @@ private:
 	void AddChild(Transform* aChild);
 	void RemoveChild(Transform* aChild);
 
-	glm::vec3 mPos	 = glm::vec3(0.0f);
+	glm::vec3 mPos = glm::vec3(0.0f);
 	glm::vec3 mScale = glm::vec3(1.0f);
-	glm::quat mRot	 = glm::identity<glm::quat>();
+	glm::quat mRot = glm::identity<glm::quat>();
 
 	glm::mat4 mLocalMatrix = glm::identity<glm::mat4>();
 	glm::mat4 mWorldMatrix = glm::identity<glm::mat4>();

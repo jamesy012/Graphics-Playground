@@ -12,6 +12,8 @@ void FlyCamera::Update() {
 	const float speed = 5 * dt;
 	const float rotationSpeed = 100 * dt;
 	const float mouseRotationSpeed = 50 * dt;
+	//reverses movement of 
+	const int yawMovementMulti = mTransform.IsUp() ? 1 : -1;
 
 	movement.x -= gInput->IsKeyDown(GLFW_KEY_A);
 	movement.x += gInput->IsKeyDown(GLFW_KEY_D);
@@ -22,8 +24,8 @@ void FlyCamera::Update() {
 
 	mTransform.TranslateLocal(movement * speed);
 
-	rotation.y += gInput->IsKeyDown(GLFW_KEY_LEFT);
-	rotation.y -= gInput->IsKeyDown(GLFW_KEY_RIGHT);
+	rotation.y += gInput->IsKeyDown(GLFW_KEY_LEFT) * yawMovementMulti;
+	rotation.y -= gInput->IsKeyDown(GLFW_KEY_RIGHT) * yawMovementMulti;
 	rotation.x += gInput->IsKeyDown(GLFW_KEY_UP);
 	rotation.x -= gInput->IsKeyDown(GLFW_KEY_DOWN);
 	//rotation.z += gInput->IsKeyDown(GLFW_KEY_LEFT_BRACKET);
@@ -43,7 +45,7 @@ void FlyCamera::Update() {
 
 	if(gEngine->GetWindow()->IsLocked()) {
 		glm::vec2 delta = -gInput->GetMouseDelta() * mouseRotationSpeed;
-		delta = glm::vec2(delta.y, delta.x);//mouse is swapped
+		delta = glm::vec2(delta.y, delta.x * yawMovementMulti);//mouse is swapped
 		//glm::quat yaw = glm::angleAxis(delta.x)
 		//mTransform.Rotate(glm::vec3(0.0f, delta.x, 0));
 		//mTransform.Rotate(glm::vec3(delta.y, 0, 0));

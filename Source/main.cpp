@@ -225,6 +225,7 @@ int main() {
 			ImGui::Text("MousePos (%f,%f)", mousePos.x, mousePos.y);
 			glm::vec2 mouseDelta = gInput->GetMouseDelta();
 			ImGui::Text("mouseDelta (%f,%f)", mouseDelta.x, mouseDelta.y);
+			ImGui::Text("Is Up? %i", camera.mTransform.IsUp());
 			ImGui::End();
 		}
 

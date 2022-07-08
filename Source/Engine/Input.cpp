@@ -1,11 +1,12 @@
 #include "Input.h"
 
-#include "PlatformDebug.h"
-
 #if defined(ENABLE_IMGUI)
 #	include "imgui.h"
 #	include "imgui_impl_glfw.h"
 #endif
+
+#include "Engine/Engine.h"
+#include "PlatformDebug.h"
 
 Input* gInput = nullptr;
 
@@ -25,7 +26,13 @@ void GLFWmousebuttonCallback(GLFWwindow* window, int button, int action, int mod
 
 void GLFWcursorposCallback(GLFWwindow* window, double xpos, double ypos) {
 #if defined(ENABLE_IMGUI)
-	ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+	//when we are mouse locked we dont want to send the position to imgui
+	//other inputs are fine since they will mostly be disregarded
+	if(gEngine->IsMouseLocked()) {
+		ImGui::GetIO().MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+	} else {
+		ImGui_ImplGlfw_CursorPosCallback(window, xpos, ypos);
+	}
 #endif
 	glm::vec2 mousePos(xpos, ypos);
 	gInput->SetMousePos(mousePos);

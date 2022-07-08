@@ -64,7 +64,6 @@ bool Engine::GameLoop() {
 		gInput->Update();
 		WorkManager::ProcessMainThreadWork();
 		mGraphics->StartNewFrame();
-
 		if(mMainCamera) {
 			mMainCamera->Update();
 		}
@@ -100,9 +99,13 @@ Window* Engine::GetWindow() const {
 	return &window;
 }
 
+bool Engine::IsMouseLocked() const {
+	return window.IsLocked();
+}
+
 void Engine::ImGuiWindow() {
 	if(ImGui::Begin("Engine")) {
-		ImGui::Text("fps: %i\t(%i)", GetFPSAverage(), GetFPS());
+		ImGui::Text("fps: %i\t(%i)\t(%f)", GetFPSAverage(), GetFPS(), ImGui::GetIO().Framerate);
 		ImGui::Text("udt: %f utime: %f", mDeltaTimeUnscaled, mTimeSinceStartUnScaled);
 		ImGui::Text(" dt: %f  time: %f", mDeltaTime, mTimeSinceStart);
 		ImGui::DragFloat("Time Scale", &mTimeScale, 0.1f, 0.1f, 50.0f);
