@@ -59,25 +59,9 @@ void Window::Update() {
 	ZoneScoped;
 	glfwPollEvents();
 
-	if(mLocked) {
-		//if(HasFocus()) {
-		//	int width, height;
-		//	GetSize(&width, &height);
-		//	glfwSetCursorPos(mWindow, width / 2, height / 2);
-		//}
+	if(!mLocked && HasFocus()) {
 		if(gInput->WasKeyPressed(GLFW_KEY_ESCAPE)) {
-			mLocked = false;
-			glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-		}
-	} else {
-		if(HasFocus()) {
-			if(gInput->WasMouseButtonPressed(GLFW_MOUSE_BUTTON_1)) {
-				mLocked = true;
-				glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-			}
-			if(gInput->WasKeyPressed(GLFW_KEY_ESCAPE)) {
-				glfwSetWindowShouldClose(mWindow, true);
-			}
+			glfwSetWindowShouldClose(mWindow, true);
 		}
 	}
 }
@@ -92,4 +76,13 @@ void Window::GetSize(int* aWidth, int* aHeight) const {
 
 bool Window::HasFocus() const {
 	return glfwGetWindowAttrib(mWindow, GLFW_FOCUSED) != 0;
+}
+
+void Window::SetLock(const bool aShouldLock) {
+	mLocked = aShouldLock;
+	if(mLocked) {
+		glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+	} else {
+		glfwSetInputMode(mWindow, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+	}
 }

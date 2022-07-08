@@ -12,7 +12,8 @@ void FlyCamera::Update() {
 	const float speed = 5 * dt;
 	const float rotationSpeed = 100 * dt;
 	const float mouseRotationSpeed = 50 * dt;
-	//reverses movement of 
+	const float mouseMovementSpeed = 5 * dt;
+	//reverses movement of
 	const int yawMovementMulti = mTransform.IsUp() ? 1 : -1;
 
 	movement.x -= gInput->IsKeyDown(GLFW_KEY_A);
@@ -31,28 +32,51 @@ void FlyCamera::Update() {
 	//rotation.z += gInput->IsKeyDown(GLFW_KEY_LEFT_BRACKET);
 	//rotation.z -= gInput->IsKeyDown(GLFW_KEY_RIGHT_BRACKET);
 
-	{
-		//mTransform.Rotate(rotation * rotationSpeed);
-		//glm::quat pitch = glm::angleAxis(glm::radians(rotation.x), glm::vec3(1, 0, 0));
-		//glm::quat yaw = glm::angleAxis(glm::radians(rotation.y), glm::vec3(0, 1, 0));
-		//mTransform.Rotate(pitch*yaw);
-		//glm::quat rot = mTransform.GetLocalRotation();
-		//rot = rot * glm::angleAxis(glm::radians(rotation.x), glm::vec3(1, 0, 0));
-		//rot = glm::angleAxis(glm::radians(rotation.y), glm::vec3(0, 1, 0)) * rot;
-		//mTransform.SetRotation(rot);
-		mTransform.RotateAxis(rotation * rotationSpeed);
+	mTransform.RotateAxis(rotation * rotationSpeed);
+
+	gEngine->GetWindow()->SetLock(mStartedDoubleClickFly || mStartedLeftClickFly || mStartedRightClickFly);
+
+	if(mStartedDoubleClickFly) {
+		glm::vec2 delta = gInput->GetMouseDelta() * mouseMovementSpeed;
+		mTransform.TranslateLocal(glm::vec3(delta.x, -delta.y, 0));
+
+		if(gInput->IsMouseButtonUp(GLFW_MOUSE_BUTTON_1) || gInput->IsMouseButtonUp(GLFW_MOUSE_BUTTON_2)) {
+			mStartedDoubleClickFly = false;
+		}
+		return;
+	} else {
+		if(gInput->IsMouseButtonDown(GLFW_MOUSE_BUTTON_1) && gInput->IsMouseButtonDown(GLFW_MOUSE_BUTTON_2)) {
+			mStartedDoubleClickFly = true;
+		}
 	}
 
-	if(gEngine->GetWindow()->IsLocked()) {
+	if(mStartedRightClickFly) {
 		glm::vec2 delta = -gInput->GetMouseDelta() * mouseRotationSpeed;
-		delta = glm::vec2(delta.y, delta.x * yawMovementMulti);//mouse is swapped
-		//glm::quat yaw = glm::angleAxis(delta.x)
-		//mTransform.Rotate(glm::vec3(0.0f, delta.x, 0));
-		//mTransform.Rotate(glm::vec3(delta.y, 0, 0));
-		//glm::quat rot = mTransform.GetLocalRotation();
-		//rot = rot * glm::angleAxis(glm::radians(delta.x), glm::vec3(1, 0, 0));
-		//rot = glm::angleAxis(glm::radians(delta.y), glm::vec3(0, 1, 0)) * rot;
-		//mTransform.SetRotation(rot);
+		delta = glm::vec2(delta.y, delta.x * yawMovementMulti); //mouse is swapped
 		mTransform.RotateAxis(delta);
+
+		if(gInput->IsMouseButtonUp(GLFW_MOUSE_BUTTON_2)) {
+			mStartedRightClickFly = false;
+		}
+		return;
+	} else {
+		if(gInput->IsMouseButtonDown(GLFW_MOUSE_BUTTON_2)) {
+			mStartedRightClickFly = true;
+		}
+	}
+
+	if(mStartedLeftClickFly) {
+		glm::vec2 delta = gInput->GetMouseDelta();
+		mTransform.TranslateLocal(glm::vec3(0, 0, delta.y) * mouseMovementSpeed);
+		mTransform.RotateAxis(glm::vec3(0, -delta.x * yawMovementMulti, 0) * mouseRotationSpeed);
+
+		if(gInput->IsMouseButtonUp(GLFW_MOUSE_BUTTON_1)) {
+			mStartedLeftClickFly = false;
+		}
+		return;
+	} else {
+		if(gInput->IsMouseButtonDown(GLFW_MOUSE_BUTTON_1)) {
+			mStartedLeftClickFly = true;
+		}
 	}
 }

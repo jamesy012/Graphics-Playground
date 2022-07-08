@@ -60,8 +60,8 @@ bool Engine::GameLoop() {
 
 	//while(!gEngine->GetWindow()->ShouldClose())
 	{
-		GetWindow()->Update();
 		gInput->Update();
+		GetWindow()->Update();
 		WorkManager::ProcessMainThreadWork();
 		mGraphics->StartNewFrame();
 		if(mMainCamera) {

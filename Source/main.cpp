@@ -352,15 +352,14 @@ int main() {
 								   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 								   VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
-#if defined(ENABLE_XR)
-			//copy fbImage to computer view (using two eye version)
 			Screenspace::PushConstant pc;
 			pc.mEyeIndex = 0;
 			vkCmdPushConstants(buffer, ssTest.GetPipeline().GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Screenspace::PushConstant), &pc);
+#if defined(ENABLE_XR)
+			//copy fbImage to computer view (using two eye version)
 			vrMirrorPass.Render(buffer, gGraphics->GetCurrentFrameBuffer());
 			//copy to headset views
 			for(int i = 0; i < gGraphics->GetNumActiveViews(); i++) {
-				Screenspace::PushConstant pc;
 				pc.mEyeIndex = i;
 				vkCmdPushConstants(buffer, ssTest.GetPipeline().GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Screenspace::PushConstant), &pc);
 				//copies fbImage to framebuffer

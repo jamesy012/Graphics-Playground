@@ -6,6 +6,7 @@
 #include <tracy/TracyVulkan.hpp>
 
 #include <vector>
+#include <mutex>
 
 #include "Engine/IGraphicsBase.h"
 

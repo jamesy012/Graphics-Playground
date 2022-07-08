@@ -7,11 +7,6 @@ set(BUILD_SHARED_LIBS OFF)
 # OpenXR
 if(${GraphicsPlayground_Enable_VR})
   message("Adding OpenXR")
-  if(PLATFORM_WINDOWS)
-    add_definitions(-DXR_OS_WINDOWS)
-  elseif(PLATFORM_APPLE)
-    add_definitions(-DXR_OS_APPLE)
-  endif()
   set(BUILD_TESTS OFF)
   set("OpenXR-Link" openxr_loader XrApiLayer_api_dump XrApiLayer_core_validation)
   target_compile_definitions(GraphicsPlayground PUBLIC ENABLE_XR)
@@ -23,6 +18,12 @@ if(${GraphicsPlayground_Enable_VR})
   add_subdirectory(OpenXR-SDK-Source)
   target_include_directories(
     GraphicsPlayground PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/OpenXR-SDK/include")
+endif()
+#Some global defines to stop a full rebuild when swapping between vr and normal
+if(PLATFORM_WINDOWS)
+   add_definitions(-DXR_OS_WINDOWS)
+elseif(PLATFORM_APPLE)
+   add_definitions(-DXR_OS_APPLE)
 endif()
 
 # ~~~
@@ -96,7 +97,7 @@ target_include_directories(GraphicsPlayground PRIVATE "bullet3/src")
 # Tracy Profiling
 message("Adding Tracy profiling")
 set("GraphicsPlayground_Enable_Profiling"
-    ON
+    OFF
     CACHE BOOL "Enables Tracy profiling")
 if(NOT GraphicsPlayground_Enable_Profiling)
    set( TRACY_ENABLE OFF )

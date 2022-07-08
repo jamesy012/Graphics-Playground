@@ -28,6 +28,7 @@ public:
 	void GetSize(int* aWidth, int* aHeight) const;
 
 	bool HasFocus() const;
+	void SetLock(const bool aShouldLock);
 	bool IsLocked() const {
 		return mLocked;
 	}
