@@ -79,7 +79,6 @@ public:
 		SetDirty();
 	}
 
-	//todo
 	void SetWorldPosition(glm::vec3 aPos);
 	void SetWorldScale(glm::vec3 aScale);
 	void SetWorldRotation(glm::quat aRotation);
@@ -87,6 +86,13 @@ public:
 	void SetWorldRotation(glm::vec3 aRotation) {
 		SetWorldRotation(glm::quat(glm::radians(aRotation)));
 	}
+
+	void TranslateLocal(glm::vec3 aTranslation);
+	void Rotate(glm::quat aRotation);
+	//rotates transform on vec2 X then Y
+	void RotateAxis(glm::vec2 aEulerAxisRotation);
+	//rotates transform on vec3 X then Y then Z
+	void RotateAxis(glm::vec3 aEulerAxisRotation);
 
 	glm::vec3 GetLocalPosition() const {
 		return mPos;

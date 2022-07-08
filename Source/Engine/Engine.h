@@ -5,6 +5,7 @@
 class IGraphicsBase;
 
 class Window;
+class Camera;
 
 //controls the opening of the game
 //game loop
@@ -38,22 +39,30 @@ public:
 
 	Window* GetWindow() const;
 
-	void ImGuiWindow();
+	void SetMainCamera(Camera* aCamera) {
+		mMainCamera = aCamera;
+	}
 
 private:
+	//imgui for engine class
+	void ImGuiWindow();
+
+
 	IGraphicsBase* mGraphics;
 
 	//time at the last time we ran a game loop
 	std::chrono::high_resolution_clock::time_point mLastTime;
 	double mDeltaTime;
 	double mDeltaTimeUnscaled;
-	float mTimeScale			   = 1.0f;
-	double mTimeSinceStart		   = 0.0f;
+	float mTimeScale = 1.0f;
+	double mTimeSinceStart = 0.0f;
 	double mTimeSinceStartUnScaled = 0.0f;
-	int mFrameCount				   = 0;
-	static const int NUM_FPS_COUNT = 100;
-	int mFPS[NUM_FPS_COUNT]		   = {};
-	int mFPSTotal				   = 0;
+	int mFrameCount = 0;
+	static const int NUM_FPS_COUNT = 128;
+	int mFPS[NUM_FPS_COUNT] = {};
+	int mFPSTotal = 0;
+
+	Camera* mMainCamera = nullptr;
 };
 
 extern Engine* gEngine;

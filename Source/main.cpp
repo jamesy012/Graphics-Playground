@@ -24,7 +24,7 @@
 #include "Graphics/Conversions.h"
 #include "Engine/Transform.h"
 
-#include "Engine/FlyCamera.h"
+#include "Engine/Camera/FlyCamera.h"
 
 #if defined(ENABLE_XR)
 #	include "Graphics/VRGraphics.h"
@@ -200,6 +200,7 @@ int main() {
 	modelTest1.mLocation.Set(glm::vec3(0, 0, 0), 1.0f, &mRootTransform);
 	modelTest2.mLocation.Set(glm::vec3(-5, 1, 0), 1.0f, &mRootTransform);
 	FlyCamera camera;
+	gEngine->SetMainCamera(&camera);
 	camera.mTransform.SetPosition(glm::vec3(8.0f, 0.2f, 0.0f));
 	controllerTest1.mLocation.SetParent(&camera.mTransform);
 	controllerTest2.mLocation.SetParent(&camera.mTransform);
@@ -209,11 +210,7 @@ int main() {
 	while(!gEngine->GetWindow()->ShouldClose()) {
 		ZoneScoped;
 		gEngine->GameLoop();
-		gGraphics->StartNewFrame();
 		VkCommandBuffer buffer = gGraphics->GetCurrentGraphicsCommandBuffer();
-
-		gEngine->ImGuiWindow();
-		WorkManager::ImGuiTesting();
 
 		if(ImGui::Begin("Camera")) {
 			glm::vec3 camPos = camera.mTransform.GetLocalPosition();
@@ -276,17 +273,6 @@ int main() {
 				meshUniform.mPV[i] = proj * view;
 			}
 #else
-			const float time = 0; //gGraphics->GetFrameCount() / 360.0f;
-			const float scale = 10.0f;
-			proj = glm::perspectiveFov(
-				glm::radians(60.0f), (float)gGraphics->GetDesiredSize().mWidth, (float)gGraphics->GetDesiredSize().mHeight, 0.1f, 1000.0f);
-			//view			   = glm::lookAt(glm::vec3(sin(time) * scale, 0.0f, cos(time) * scale), glm::vec3(0)//glm::vec3(0, 1, 0));
-			view = glm::lookAt(camera.mTransform.GetLocalPosition(), glm::vec3(0), glm::vec3(0, 1, 0));
-			proj[1][1] *= -1.0f;
-			meshUniform.mPV[1] = proj * view;
-			//view			   = glm::lookAt(glm::vec3(1.0f, -20.0f, 1.0f), glm::vec3(0), glm::vec3(0, 1, 0));
-			//meshUniform.mPV[1] = proj * view;
-			camera.SetFov(60.0f, (float)gGraphics->GetDesiredSize().mWidth / (float)gGraphics->GetDesiredSize().mHeight);
 			meshUniform.mPV[0] = camera.GetViewProjMatrix();
 #endif
 

@@ -2,12 +2,13 @@
 
 #include "imgui.h"
 
+#include "PlatformDebug.h"
+
 #include "IGraphicsBase.h"
+#include "Job.h"
 #include "Window.h"
 #include "Input.h"
-
-#include "Job.h"
-#include "PlatformDebug.h"
+#include "Camera/Camera.h"
 
 Window window;
 Engine* gEngine = nullptr;
@@ -39,7 +40,7 @@ bool Engine::GameLoop() {
 
 	{
 		std::chrono::high_resolution_clock::time_point current = std::chrono::high_resolution_clock::now();
-		std::chrono::duration<double> time_span				   = std::chrono::duration_cast<std::chrono::duration<double>>(current - mLastTime);
+		std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(current - mLastTime);
 
 		mLastTime = current;
 
@@ -57,9 +58,25 @@ bool Engine::GameLoop() {
 		mFPSTotal += mFPS[mFrameCount % NUM_FPS_COUNT];
 	}
 
-	GetWindow()->Update();
-	gInput->Update();
-	WorkManager::ProcessMainThreadWork();
+	//while(!gEngine->GetWindow()->ShouldClose())
+	{
+		GetWindow()->Update();
+		gInput->Update();
+		WorkManager::ProcessMainThreadWork();
+		mGraphics->StartNewFrame();
+
+		if(mMainCamera) {
+			mMainCamera->Update();
+		}
+
+		gEngine->ImGuiWindow();
+		WorkManager::ImGuiTesting();
+
+		//state update
+		//state render
+		//graphics swap
+	}
+
 	return 0;
 }
 

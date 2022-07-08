@@ -102,6 +102,7 @@ void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode)
 	ProcessMesh(aModel, aModel.meshes[aNode.mesh]);
 	//also contains position information here
 	Transform nodeTransform;
+	ASSERT(aNode.matrix.size() == 0);
 	ASSERT(aNode.translation.size() == 3 || aNode.translation.size() == 0);
 	ASSERT(aNode.scale.size() == 3 || aNode.scale.size() == 0);
 	ASSERT(aNode.rotation.size() == 3 || aNode.rotation.size() == 4 || aNode.rotation.size() == 0);
@@ -113,8 +114,7 @@ void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode)
 	}
 	if(aNode.rotation.size() == 3) {
 		nodeTransform.SetRotation(glm::vec3(aNode.rotation[0], aNode.rotation[1], aNode.rotation[2]));
-	}	
-	if(aNode.rotation.size() == 4) {
+	} else if(aNode.rotation.size() == 4) {
 		nodeTransform.SetRotation(glm::quat(aNode.rotation[3], aNode.rotation[0], aNode.rotation[1], aNode.rotation[2]));
 	}
 	const int numMeshs = mMesh->mMesh.size();

@@ -56,6 +56,35 @@ void Transform::SetWorldRotation(glm::quat aRot) {
 	}
 }
 
+void Transform::TranslateLocal(glm::vec3 aTranslation) {
+	mPos += mRot * aTranslation;
+	SetDirty();
+}
+
+void Transform::RotateAxis(glm::vec2 aEulerAxisRotation) {
+	const glm::vec2 axisRotation = glm::radians(aEulerAxisRotation);
+
+	mRot = mRot * glm::angleAxis(axisRotation.x, glm::vec3(1, 0, 0));
+	mRot = glm::angleAxis(axisRotation.y, glm::vec3(0, 1, 0)) * mRot;
+
+	SetDirty();
+}
+
+void Transform::RotateAxis(glm::vec3 aEulerAxisRotation) {
+	const glm::vec3 axisRotation = glm::radians(aEulerAxisRotation);
+
+	mRot = mRot * glm::angleAxis(axisRotation.x, glm::vec3(1, 0, 0));
+	mRot = glm::angleAxis(axisRotation.y, glm::vec3(0, 1, 0)) * mRot;
+	mRot = mRot * glm::angleAxis(axisRotation.z, glm::vec3(0, 0, 1));
+
+	SetDirty();
+}
+
+void Transform::Rotate(glm::quat aRotation) {
+	mRot *= aRotation;
+	SetDirty();
+}
+
 glm::vec3 Transform::GetWorldPosition() {
 	CheckUpdate();
 	return glm::vec3(mWorldMatrix[3]);
@@ -103,6 +132,7 @@ bool Transform::IsChild(Transform* aChild) const {
 }
 
 void Transform::SetDirty() {
+	//parfor loop for setting dirty? with mutex for reading dirty if loop is active?
 	const int childCount = mChildren.size();
 	for(int i = 0; i < childCount; ++i) {
 		mChildren[i]->SetDirty();
@@ -123,13 +153,12 @@ void Transform::UpdateMatrix() {
 	} else {
 		mWorldMatrix = mLocalMatrix;
 	}
-	
+
 	mDirty = false;
 
 	if(mUpdateCallback) {
 		mUpdateCallback(this);
 	}
-
 }
 
 void Transform::AddChild(Transform* aChild) {

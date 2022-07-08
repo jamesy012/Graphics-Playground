@@ -13,8 +13,10 @@ set(ENGINE_FILES
     "Job.cpp"
     "Input.h"
     "Input.cpp"
-    "FlyCamera.h"
-    "FlyCamera.cpp"
+    "Camera/Camera.h"
+    "Camera/Camera.cpp"
+    "Camera/FlyCamera.h"
+    "Camera/FlyCamera.cpp"
     )
 
 target_sources(GraphicsPlayground PRIVATE ${ENGINE_FILES})

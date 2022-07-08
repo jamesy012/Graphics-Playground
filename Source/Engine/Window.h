@@ -27,8 +27,14 @@ public:
 
 	void GetSize(int* aWidth, int* aHeight) const;
 
+	bool HasFocus() const;
+	bool IsLocked() const {
+		return mLocked;
+	}
 private:
 	GLFWwindow* mWindow = nullptr;
 	//VkSurfaceKHR
 	void* mSurface = nullptr;
+
+	bool mLocked = false;
 };
