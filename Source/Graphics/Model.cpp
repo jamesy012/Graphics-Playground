@@ -1,5 +1,7 @@
 #include "Model.h"
 
+#include "Graphics.h" //bindless textures
+
 #include "Mesh.h"
 #include "PlatformDebug.h"
 
@@ -31,23 +33,31 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 	if(!mMesh->HasLoaded()) {
 		return;
 	}
-	UpdateMaterials();
+	//UpdateMaterials();
 	const int numMesh = mMesh->GetNumMesh();
 
 	for(int i = 0; i < numMesh; i++) {
 		const Mesh::SubMesh& mesh = mMesh->GetMesh(i);
+		MeshPCTest modelPC;
 		if(mesh.mMaterialID != -1) {
-			const ModelMaterial& material = mMaterials[mesh.mMaterialID];
+			//const ModelMaterial& material = mMaterials[mesh.mMaterialID];
 			//if(material.mSet) {
-			vkCmdBindDescriptorSets(
-				aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aLayout, 1, 1, mMaterials[mesh.mMaterialID].mMaterial.GetSet(), 0, nullptr);
+			//vkCmdBindDescriptorSets(
+			//	aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aLayout, 1, 1, mMaterials[mesh.mMaterialID].mMaterial.GetSet(), 0, nullptr);
 			//} else {
 			//ASSERT(false);
 			//}
+			//Graphics::GlobalTexturePC texturePC;
+			Image* image = mMesh->GetMaterial(mesh.mMaterialID).mImage;
+			if(image) {
+				modelPC.mAlbedoTexture = image->GetGlobalIndex();
+			} else {
+				modelPC.mAlbedoTexture = CONSTANT::IMAGE::gWhite->GetGlobalIndex();
+			}
+			//vkCmdPushConstants(aBuffer, aLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Graphics::GlobalTexturePC), &texturePC);
 		}
-		MeshPCTest modelPC;
 		modelPC.mWorld = mLocation.GetWorldMatrix() * mesh.mMatrix;
-		vkCmdPushConstants(aBuffer, aLayout, VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(MeshPCTest), &modelPC);
+		vkCmdPushConstants(aBuffer, aLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(MeshPCTest), &modelPC);
 		mMesh->QuickTempRender(aBuffer, i);
 	}
 }

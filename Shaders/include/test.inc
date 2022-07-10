@@ -1,8 +1,9 @@
 //move to another uniform?
 layout(push_constant) uniform uPushConstant {
-    mat4 world;
+   mat4 world;
+   int uAlbedo;
 } pc;
 
-layout(set = 0, binding = 0) uniform SceneBuffer{   
+layout(set = 0, binding = 0) uniform SceneBuffer {   
 	mat4 viewProj[2]; 
 } sceneData;

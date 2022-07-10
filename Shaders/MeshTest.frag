@@ -1,18 +1,21 @@
 #version 450 core
+#extension GL_GOOGLE_include_directive : enable
+#extension GL_EXT_nonuniform_qualifier : enable
+#include "test.inc"
 
 layout(location = 0) in struct {
     vec4 Color;
     vec2 UV;
 } In;
 
-layout(set = 1, binding = 0) uniform sampler2D sTexture;
+layout(set = 1, binding = 0) uniform sampler2D sTextures[];
 
 layout(location = 0) out vec4 fColor;
 
 const float gAlphaClip = 0.5f;
 
 void main() {
-    fColor = texture(sTexture, In.UV.st) * In.Color;
+    fColor = texture(sTextures[pc.uAlbedo], In.UV.st) * In.Color;
     if(fColor.a <= gAlphaClip) {
         discard;
     }

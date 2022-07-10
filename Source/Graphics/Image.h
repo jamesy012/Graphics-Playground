@@ -45,9 +45,9 @@ public:
 	}
 
 	const bool HasLoaded() const {
-		if (mLoadedHandle == nullptr) {
+		if(mLoadedHandle == nullptr) {
 			return mImageView != VK_NULL_HANDLE;
-			}
+		}
 		if(Job::IsDone(mLoadedHandle)) {
 			return mImageView != VK_NULL_HANDLE;
 		}
@@ -58,20 +58,26 @@ public:
 		//return mLoadedHandle == nullptr;
 	}
 
+	const int GetGlobalIndex() const {
+		return mGlobalTextureIndex;
+	}
+
 private:
 	void CreateVkImageView(const VkFormat aFormat, const char* aName = 0);
 
 	Job::Work GetLoadImageWork(const FileIO::Path aFilePath, const VkFormat aFormat);
 
-	VkImage mImage		   = VK_NULL_HANDLE;
+	VkImage mImage = VK_NULL_HANDLE;
 	VkImageView mImageView = VK_NULL_HANDLE;
+
+	int mGlobalTextureIndex = -1;
 
 	ImageSize mSize = {};
 	VkFormat mFormat;
 
 	uint8_t mArrayLayers = 1;
 
-	VmaAllocation mAllocation		  = VK_NULL_HANDLE;
+	VmaAllocation mAllocation = VK_NULL_HANDLE;
 	VmaAllocationInfo mAllocationInfo = {};
 
 	Job::WorkHandle* mLoadedHandle = nullptr;
@@ -82,5 +88,5 @@ namespace CONSTANT {
 		extern Image* gWhite;
 		extern Image* gBlack;
 		extern Image* gChecker;
-	};
+	}; // namespace IMAGE
 }; // namespace CONSTANT

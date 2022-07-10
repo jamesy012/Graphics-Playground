@@ -1,9 +1,10 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-
 #include <vector>
 
+#include <vulkan/vulkan.h>
+
+#include "PlatformDebug.h"
 #include "Engine/FileIO.h"
 
 class MaterialBase;
@@ -20,6 +21,11 @@ public:
 
 	void AddPushConstant(const VkPushConstantRange& aPush) {
 		mPushConstants.push_back(aPush);
+	}
+	//pretends to add a material base and push constant
+	void AddBindlessTexture() {
+		ASSERT(mBindlessTextures == false);
+		mBindlessTextures = true;
 	}
 
 	//create/Destroy
@@ -42,15 +48,17 @@ public:
 	std::vector<Material> MakeMaterials(uint8_t aBinding) const;
 
 	//Temp
-	VkVertexInputBindingDescription vertexBinding				   = {};
+	VkVertexInputBindingDescription vertexBinding = {};
 	std::vector<VkVertexInputAttributeDescription> vertexAttribute = {};
 
 private:
 	std::vector<VkPipelineShaderStageCreateInfo> mShaders = {};
-	std::vector<VkPushConstantRange> mPushConstants		  = {};
-	std::vector<MaterialBase*> mMaterials				  = {};
+	std::vector<VkPushConstantRange> mPushConstants = {};
+	std::vector<MaterialBase*> mMaterials = {};
 
 	VkPipelineLayout mPipelineLayout = VK_NULL_HANDLE;
-	VkPipelineCache mPipelineCache	 = VK_NULL_HANDLE;
-	VkPipeline mPipeline			 = VK_NULL_HANDLE;
+	VkPipelineCache mPipelineCache = VK_NULL_HANDLE;
+	VkPipeline mPipeline = VK_NULL_HANDLE;
+
+	bool mBindlessTextures = false;
 };

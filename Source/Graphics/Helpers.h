@@ -6,6 +6,11 @@
 
 struct MeshPCTest {
 	glm::mat4 mWorld;
+	//todo revisit texture indexes
+	//remove from needing to be part of vertex stage
+	//possibly make it material index, which holds other info about the material
+	//which could make more sense being part of the vertex stage
+	unsigned int mAlbedoTexture;
 };
 struct MeshUniformTest {
 	glm::mat4 mPV[2];

@@ -127,10 +127,15 @@ bool Devices::Setup() {
 
 		//extra info
 		{
-			device.mDeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 			AddRecusiveTopNext(&device.mDeviceFeatures, &device.mDeviceMultiViewFeatures);
-			device.mDeviceMultiViewFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
+			device.mDeviceMultiViewFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;	
+			
+			AddRecusiveTopNext(&device.mDeviceFeatures, &device.mDeviceDescriptorIndexingFeatures);
+			device.mDeviceDescriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+
+			device.mDeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 			vkGetPhysicalDeviceFeatures2(device.mPhysicalDevice, &device.mDeviceFeatures);
+
 			device.mDeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 			vkGetPhysicalDeviceProperties2(device.mPhysicalDevice, &device.mDeviceProperties);
 		}
@@ -213,6 +218,17 @@ bool Devices::Setup() {
 		multiView.sType								= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
 		multiView.multiview							= VK_TRUE;
 		AddRecusiveTopNext(&deviceFeatures, &multiView);
+	} else {
+		ASSERT(false);
+	}
+	if(selectedDevice.mDeviceDescriptorIndexingFeatures.descriptorBindingPartiallyBound && selectedDevice.mDeviceDescriptorIndexingFeatures.runtimeDescriptorArray) {
+		VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptorIndexing = {};
+		descriptorIndexing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+		descriptorIndexing.descriptorBindingPartiallyBound = VK_TRUE;
+		descriptorIndexing.runtimeDescriptorArray = VK_TRUE;
+		descriptorIndexing.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+		descriptorIndexing.descriptorBindingVariableDescriptorCount = VK_TRUE;
+		AddRecusiveTopNext(&deviceFeatures, &descriptorIndexing);
 	} else {
 		ASSERT(false);
 	}

@@ -27,7 +27,6 @@ class VRGraphics;
 
 #pragma region Vulkan Helpers
 
-
 struct OneTimeCommandBuffer {
 	Buffer mDataBuffer;
 
@@ -67,7 +66,6 @@ static void AddRecusiveTopNext(void* dst, void* pNext) {
 void VulkanValidationMessage(int32_t aMessageId, bool aEnabled);
 
 #pragma endregion
-
 
 //Controls Vulkan startup/Shutdown
 //swapchains
@@ -143,31 +141,42 @@ public:
 
 	const ImageSize GetDesiredSize() const;
 
+	//bindless test
+	//struct GlobalTexturePC {
+	//	unsigned int albedoTexture;
+	//};
+	static const uint32_t gMaxNumTextures = 10000;
+	const Image* mGlobalImages[gMaxNumTextures] = {nullptr};
+	VkDescriptorSetLayout mTextureSetLayout;
+	VkDescriptorSet mTextureSet;
+	int mGlobalImageIndex = 0;
+	const int AddGlobalTexture(const VkImageView aImage);
+
 private:
 	bool CreateInstance();
 
-	RenderPass mRenderPass		= {};
+	RenderPass mRenderPass = {};
 	Framebuffer mFramebuffer[3] = {};
 #if defined(ENABLE_XR)
-	RenderPass mXrRenderPass			 = {};
+	RenderPass mXrRenderPass = {};
 	Framebuffer mXrFramebuffer[2][3] = {};
 #endif
 
 	bool HasInstanceExtension(const char* aExtension) const;
 	bool HasInstanceLayer(const char* aLayer) const;
 
-	std::vector<VkLayerProperties> mInstanceLayers		   = {};
+	std::vector<VkLayerProperties> mInstanceLayers = {};
 	std::vector<std::vector<VkExtensionProperties>> mLayerExtensions = {};
 
 	std::vector<Window*> mSurfaces = {};
 
 	Devices* mDevicesHandler = nullptr;
-	Swapchain* mSwapchain	 = nullptr;
+	Swapchain* mSwapchain = nullptr;
 
 	VmaAllocator mAllocator = VK_NULL_HANDLE;
 
 	VkDescriptorPool mDescriptorPool = VK_NULL_HANDLE;
-	VkSampler mSampler				 = VK_NULL_HANDLE;
+	VkSampler mSampler = VK_NULL_HANDLE;
 
 	uint32_t mFrameCounter = 0;
 

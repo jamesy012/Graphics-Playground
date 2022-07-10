@@ -7,8 +7,7 @@ struct DeviceData {
 	VkPhysicalDevice mPhysicalDevice;
 	VkDevice mDevice;
 	struct Queue {
-		enum class QueueTypes
-		{
+		enum class QueueTypes {
 			GRAPHICS,
 			COMPUTE,
 			TRANSFER,
@@ -31,7 +30,7 @@ struct DeviceData {
 		std::vector<QueueFamilys> mQueueFamilies;
 		struct QueueIndex {
 			int8_t mQueueFamily = -1;
-			VkQueue mQueue		= VK_NULL_HANDLE;
+			VkQueue mQueue = VK_NULL_HANDLE;
 		};
 		//union {
 		//struct {
@@ -54,8 +53,9 @@ struct DeviceData {
 	std::vector<VkLayerProperties> mLayers;
 
 	VkPhysicalDeviceMultiviewFeatures mDeviceMultiViewFeatures = {};
-	VkPhysicalDeviceFeatures2 mDeviceFeatures				   = {};
-	VkPhysicalDeviceProperties2 mDeviceProperties			   = {};
+	VkPhysicalDeviceDescriptorIndexingFeatures mDeviceDescriptorIndexingFeatures = {};
+	VkPhysicalDeviceFeatures2 mDeviceFeatures = {};
+	VkPhysicalDeviceProperties2 mDeviceProperties = {};
 
 	VkSurfaceKHR mSurfaceUsed = VK_NULL_HANDLE;
 };
@@ -86,10 +86,10 @@ private:
 
 	//should be in DeviceData? / Combine below
 	VkCommandPool mCommandPoolGraphics = VK_NULL_HANDLE;
-	VkCommandPool mCommandPoolCompute  = VK_NULL_HANDLE;
+	VkCommandPool mCommandPoolCompute = VK_NULL_HANDLE;
 	VkCommandPool mCommandPoolTransfer = VK_NULL_HANDLE;
 
 	std::vector<VkCommandBuffer> mGraphicsCommandBuffers = {};
-	std::vector<VkCommandBuffer> mComputeCommandBuffers	 = {};
+	std::vector<VkCommandBuffer> mComputeCommandBuffers = {};
 	std::vector<VkCommandBuffer> mTransferCommandBuffers = {};
 };

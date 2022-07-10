@@ -144,7 +144,7 @@ int main() {
 
 	VkPushConstantRange meshPCRange {};
 	meshPCRange.size = sizeof(MeshPCTest);
-	meshPCRange.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+	meshPCRange.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
 	meshPipeline.AddPushConstant(meshPCRange);
 	{
 		meshPipeline.vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
@@ -167,10 +167,11 @@ int main() {
 	//meshTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 	meshTestBase.Create();
 	meshPipeline.AddMaterialBase(&meshTestBase);
-	MaterialBase meshImageTestBase;
-	meshImageTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-	meshImageTestBase.Create();
-	meshPipeline.AddMaterialBase(&meshImageTestBase);
+	//MaterialBase meshImageTestBase;
+	//meshImageTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+	//meshImageTestBase.Create();
+	//meshPipeline.AddMaterialBase(&meshImageTestBase);
+	meshPipeline.AddBindlessTexture();
 	meshPipeline.Create(mainRenderPass.GetRenderPass(), "Mesh");
 
 	Material meshMaterial = meshTestBase.MakeMaterials()[0];
@@ -178,23 +179,23 @@ int main() {
 
 	Model modelTest1;
 	modelTest1.SetMesh(&meshTest);
-	modelTest1.SetMaterialBase(&meshImageTestBase);
+	//modelTest1.SetMaterialBase(&meshImageTestBase);
 	Model modelTest2;
 	modelTest2.SetMesh(&meshTest);
-	modelTest2.SetMaterialBase(&meshImageTestBase);
+	//modelTest2.SetMaterialBase(&meshImageTestBase);
 	Model controllerTest1;
 	controllerTest1.SetMesh(&handMesh);
-	controllerTest1.SetMaterialBase(&meshImageTestBase);
+	//controllerTest1.SetMaterialBase(&meshImageTestBase);
 	Model controllerTest2;
 	controllerTest2.SetMesh(&handMesh);
-	controllerTest2.SetMaterialBase(&meshImageTestBase);
+	//controllerTest2.SetMaterialBase(&meshImageTestBase);
 	Model worldBase;
 	worldBase.SetMesh(&referenceMesh);
-	worldBase.SetMaterialBase(&meshImageTestBase);
+	//worldBase.SetMaterialBase(&meshImageTestBase);
 
 	Model sponzaTestModel;
 	sponzaTestModel.SetMesh(&sponzaTest);
-	sponzaTestModel.SetMaterialBase(&meshImageTestBase);
+	//sponzaTestModel.SetMaterialBase(&meshImageTestBase);
 
 	Transform mRootTransform;
 	modelTest1.mLocation.Set(glm::vec3(0, 0, 0), 1.0f, &mRootTransform);
@@ -332,6 +333,7 @@ int main() {
 			meshPipeline.Begin(buffer);
 			//bind camera data
 			vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
+			vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 1, 1, &gGraphics->mTextureSet, 0, nullptr);
 			//tree 1
 			modelTest1.Render(buffer, meshPipeline.GetLayout());
 			//tree 2
@@ -387,7 +389,6 @@ int main() {
 	worldBase.Destroy();
 
 	meshPipeline.Destroy();
-	meshImageTestBase.Destroy();
 	meshTestBase.Destroy();
 
 	referenceMesh.Destroy();

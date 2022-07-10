@@ -33,7 +33,7 @@
 
 VulkanGraphics* gGraphics = nullptr;
 
-const bool gEnableValidation	= true;
+const bool gEnableValidation = true;
 bool gInstanceValidationEnabled = false;
 
 const char* VK_LAYER_KHRONOS_validation = "VK_LAYER_KHRONOS_validation";
@@ -50,7 +50,7 @@ PFN_vkCmdInsertDebugUtilsLabelEXT gfDebugMarkerInsert;
 
 bool getVkInstanceProcAddr(void* aFunc, const char* aName) {
 	PFN_vkVoidFunction* func = (PFN_vkVoidFunction*)aFunc;
-	*func					 = vkGetInstanceProcAddr(gVkInstance, aName);
+	*func = vkGetInstanceProcAddr(gVkInstance, aName);
 	ASSERT(*func != nullptr);
 	return *func != nullptr;
 };
@@ -104,10 +104,10 @@ void VulkanValidationMessage(int32_t aMessageId, bool aEnabled) {
 void SetVkName(VkObjectType aType, uint64_t aObject, const char* aName) {
 	if(gfDebugMarkerSetObjectName && gGraphics && gGraphics->GetVkDevice()) {
 		VkDebugUtilsObjectNameInfoEXT info = {};
-		info.sType						   = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
-		info.objectType					   = aType;
-		info.objectHandle				   = aObject;
-		info.pObjectName				   = aName;
+		info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT;
+		info.objectType = aType;
+		info.objectHandle = aObject;
+		info.pObjectName = aName;
 		// vkSetDebugUtilsObjectNameEXT(gGraphics->GetVkDevice(), &info);
 		gfDebugMarkerSetObjectName(gGraphics->GetVkDevice(), &info);
 	}
@@ -123,7 +123,7 @@ bool VulkanGraphics::Startup() {
 	{
 		LOGGER::Log("Loading Vulkan: \n");
 		uint32_t sdkVersion = VK_HEADER_VERSION_COMPLETE;
-		uint32_t version	= VULKAN_VERSION;
+		uint32_t version = VULKAN_VERSION;
 		LOGGER::Formated("\tSDK: {0}.{1}.{2}\n", VK_VERSION_MAJOR(sdkVersion), VK_VERSION_MINOR(sdkVersion), VK_VERSION_PATCH(sdkVersion));
 		LOGGER::Formated("\tVersion: {0}.{1}.{2}\n", VK_VERSION_MAJOR(version), VK_VERSION_MINOR(version), VK_VERSION_PATCH(version));
 	}
@@ -139,7 +139,7 @@ bool VulkanGraphics::Startup() {
 	{
 		// layer
 		uint32_t layerCount = 0;
-		result				= vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+		result = vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 		CheckVkResult(result);
 		mInstanceLayers.resize(layerCount);
 		result = vkEnumerateInstanceLayerProperties(&layerCount, mInstanceLayers.data());
@@ -195,28 +195,13 @@ bool VulkanGraphics::Initalize() {
 	// vma
 	{
 		VmaAllocatorCreateInfo createInfo {};
-		createInfo.vulkanApiVersion		= VULKAN_VERSION;
-		createInfo.device				= GetVkDevice();
-		createInfo.instance				= gVkInstance;
-		createInfo.physicalDevice		= GetVkPhysicalDevice();
+		createInfo.vulkanApiVersion = VULKAN_VERSION;
+		createInfo.device = GetVkDevice();
+		createInfo.instance = gVkInstance;
+		createInfo.physicalDevice = GetVkPhysicalDevice();
 		createInfo.pAllocationCallbacks = GetAllocationCallback();
 
 		vmaCreateAllocator(&createInfo, &mAllocator);
-	}
-
-	{
-		CONSTANT::IMAGE::gWhite			= new Image();
-		const unsigned char whiteData[] = {255, 255, 255, 255};
-		CONSTANT::IMAGE::gWhite->CreateFromData(whiteData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(1, 1), "Constant white Image");
-		CONSTANT::IMAGE::gBlack			= new Image();
-		const unsigned char blackData[] = {0, 0, 0, 255};
-		CONSTANT::IMAGE::gBlack->CreateFromData(blackData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(1, 1), "Constant black Image");
-		CONSTANT::IMAGE::gChecker = new Image();
-		// clang-format off
-		const unsigned char checkerData[]  = {255, 255, 255, 255, 0, 0, 0, 255, 
-									 		 0, 0, 0, 255, 255, 255, 255, 255};
-		// clang-format on
-		CONSTANT::IMAGE::gChecker->CreateFromData(checkerData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(2, 2), "Constant checker Image");
 	}
 
 	{
@@ -250,40 +235,110 @@ bool VulkanGraphics::Initalize() {
 #endif
 	}
 
+	//global descriptor pool
+	//todo look into a better solution?
 	{
+		static const uint32_t resourceSizes = 16536;
 		VkDescriptorPoolSize pools[] = {
-			{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 50},
-			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 50},
+			{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, resourceSizes},
+			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, resourceSizes},
 		};
 		VkDescriptorPoolCreateInfo descriptorPoolInfo = {};
-		descriptorPoolInfo.sType					  = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		descriptorPoolInfo.maxSets					  = 50;
-		descriptorPoolInfo.pPoolSizes				  = pools;
-		descriptorPoolInfo.poolSizeCount			  = sizeof(pools) / sizeof(VkDescriptorPoolSize);
+		descriptorPoolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		descriptorPoolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT_EXT;
+		descriptorPoolInfo.pPoolSizes = pools;
+		descriptorPoolInfo.poolSizeCount = sizeof(pools) / sizeof(VkDescriptorPoolSize);
+		descriptorPoolInfo.maxSets = resourceSizes * descriptorPoolInfo.poolSizeCount;
 		vkCreateDescriptorPool(GetVkDevice(), &descriptorPoolInfo, GetAllocationCallback(), &mDescriptorPool);
 		SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_POOL, mDescriptorPool, "Default Descriptor Pool");
 	}
 
+	//bindless textures
+	{ //if device supports bindless?
+		VkDescriptorSetLayoutBinding binding = {};
+		binding.binding = 0;
+		binding.descriptorCount = gMaxNumTextures;
+		binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		VkDescriptorSetLayoutCreateInfo createInfo = {};
+		createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		createInfo.bindingCount = 1;
+		createInfo.pBindings = &binding;
+		createInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+
+		VkDescriptorSetLayoutBindingFlagsCreateInfoEXT layoutBindingFlags = {};
+
+		layoutBindingFlags.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO_EXT;
+		VkDescriptorBindingFlags bindlessFlags = VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT_EXT |
+			VK_DESCRIPTOR_BINDING_VARIABLE_DESCRIPTOR_COUNT_BIT_EXT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT_EXT;
+		layoutBindingFlags.bindingCount = 1;
+		layoutBindingFlags.pBindingFlags = &bindlessFlags;
+
+		AddRecusiveTopNext(&createInfo, &layoutBindingFlags);
+
+		vkCreateDescriptorSetLayout(gGraphics->GetVkDevice(), &createInfo, GetAllocationCallback(), &mTextureSetLayout);
+		SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, mTextureSetLayout, "Global Texture Descriptor Set Layout");
+
+		VkDescriptorSetAllocateInfo allocInfo = {};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = gGraphics->GetDesciptorPool();
+		allocInfo.descriptorSetCount = 1;
+		allocInfo.pSetLayouts = &mTextureSetLayout;
+
+		VkDescriptorSetVariableDescriptorCountAllocateInfoEXT allocCountInfo = {};
+		allocCountInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT;
+		allocCountInfo.descriptorSetCount = 1;
+		// This number is the max allocatable count
+		uint32_t descirptorCount = gMaxNumTextures - 1;
+		allocCountInfo.pDescriptorCounts = &descirptorCount;
+
+		AddRecusiveTopNext(&allocInfo, &allocCountInfo);
+
+		VkResult err = vkAllocateDescriptorSets(gGraphics->GetVkDevice(), &allocInfo, &mTextureSet);
+		if(err == VK_ERROR_OUT_OF_POOL_MEMORY) {
+			LOGGER::Formated("Failed to allocate Global texture set, not enough pool memory");
+			ASSERT(false);
+			return false;
+		}
+		SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_SET, mTextureSet, "Global texture set");
+	}
+
 	{
-		VkSamplerCreateInfo samplerInfo		= {};
-		samplerInfo.sType					= VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-		samplerInfo.magFilter				= VK_FILTER_LINEAR;
-		samplerInfo.minFilter				= VK_FILTER_LINEAR;
-		samplerInfo.addressModeU			= VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.addressModeV			= VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.addressModeW			= VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.anisotropyEnable		= VK_TRUE;
-		samplerInfo.maxAnisotropy			= GetMainDevice()->GetPrimaryDeviceData().mDeviceProperties.properties.limits.maxSamplerAnisotropy;
-		samplerInfo.borderColor				= VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		VkSamplerCreateInfo samplerInfo = {};
+		samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		samplerInfo.magFilter = VK_FILTER_LINEAR;
+		samplerInfo.minFilter = VK_FILTER_LINEAR;
+		samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		samplerInfo.anisotropyEnable = VK_TRUE;
+		samplerInfo.maxAnisotropy = GetMainDevice()->GetPrimaryDeviceData().mDeviceProperties.properties.limits.maxSamplerAnisotropy;
+		samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 		samplerInfo.unnormalizedCoordinates = VK_FALSE;
-		samplerInfo.compareEnable			= VK_FALSE;
-		samplerInfo.compareOp				= VK_COMPARE_OP_ALWAYS;
-		samplerInfo.mipmapMode				= VK_SAMPLER_MIPMAP_MODE_LINEAR;
-		samplerInfo.mipLodBias				= 0.0f;
-		samplerInfo.minLod					= 0.0f;
-		samplerInfo.maxLod					= 0.0f;
+		samplerInfo.compareEnable = VK_FALSE;
+		samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		samplerInfo.mipLodBias = 0.0f;
+		samplerInfo.minLod = 0.0f;
+		samplerInfo.maxLod = 0.0f;
 		vkCreateSampler(GetVkDevice(), &samplerInfo, GetAllocationCallback(), &mSampler);
 		SetVkName(VK_OBJECT_TYPE_SAMPLER, mSampler, "Default Repeat Sampler");
+	}
+
+	{
+		CONSTANT::IMAGE::gWhite = new Image();
+		const unsigned char whiteData[] = {255, 255, 255, 255};
+		CONSTANT::IMAGE::gWhite->CreateFromData(whiteData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(1, 1), "Constant white Image");
+		CONSTANT::IMAGE::gBlack = new Image();
+		const unsigned char blackData[] = {0, 0, 0, 255};
+		CONSTANT::IMAGE::gBlack->CreateFromData(blackData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(1, 1), "Constant black Image");
+		CONSTANT::IMAGE::gChecker = new Image();
+		// clang-format off
+		const unsigned char checkerData[]  = {255, 255, 255, 255, 0, 0, 0, 255, 
+									 		 0, 0, 0, 255, 255, 255, 255, 255};
+		// clang-format on
+		CONSTANT::IMAGE::gChecker->CreateFromData(checkerData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(2, 2), "Constant checker Image");
 	}
 
 	// imgui
@@ -315,8 +370,14 @@ bool VulkanGraphics::Destroy() {
 	}
 
 	vkDestroySampler(GetVkDevice(), mSampler, GetAllocationCallback());
+	vkFreeDescriptorSets(GetVkDevice(), mDescriptorPool, 1, &mTextureSet);
+	vkDestroyDescriptorSetLayout(GetVkDevice(), mTextureSetLayout, GetAllocationCallback());
 	// vkFreeDescriptorSets(GetVkDevice(), gDescriptorPool, 1, &gImGuiFontSet);
 	vkDestroyDescriptorPool(GetVkDevice(), mDescriptorPool, GetAllocationCallback());
+	mSampler = VK_NULL_HANDLE;
+	mTextureSet = VK_NULL_HANDLE;
+	mTextureSetLayout = VK_NULL_HANDLE;
+	mDescriptorPool = VK_NULL_HANDLE;
 
 #if defined(ENABLE_IMGUI)
 	ImGuiGraphics* tempImGuiGraphics = gImGuiGraphics;
@@ -406,7 +467,7 @@ AQUIRES_LOCK(mCommandPoolMutex) void VulkanGraphics::StartNewFrame() {
 	uint32_t index = mSwapchain->GetNextImage();
 	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(index);
 	VkCommandBufferBeginInfo info = {};
-	info.sType					  = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	vkBeginCommandBuffer(graphics, &info);
 
 #if defined(ENABLE_XR)
@@ -415,15 +476,15 @@ AQUIRES_LOCK(mCommandPoolMutex) void VulkanGraphics::StartNewFrame() {
 
 	//reset viewport and scissor
 	VkViewport viewport = {};
-	viewport.width		= gGraphics->GetMainSwapchain()->GetSize().width;
-	viewport.height		= gGraphics->GetMainSwapchain()->GetSize().height;
-	viewport.maxDepth	= 1.0f;
+	viewport.width = gGraphics->GetMainSwapchain()->GetSize().width;
+	viewport.height = gGraphics->GetMainSwapchain()->GetSize().height;
+	viewport.maxDepth = 1.0f;
 	vkCmdSetViewport(graphics, 0, 1, &viewport);
 
 	VkRect2D scissorRect;
-	scissorRect.offset.x	  = 0;
-	scissorRect.offset.y	  = 0;
-	scissorRect.extent.width  = viewport.width;
+	scissorRect.offset.x = 0;
+	scissorRect.offset.y = 0;
+	scissorRect.extent.width = viewport.width;
 	scissorRect.extent.height = viewport.height;
 	vkCmdSetScissor(graphics, 0, 1, &scissorRect);
 
@@ -480,9 +541,9 @@ RELEASES_LOCK(mCommandPoolMutex) void VulkanGraphics::EndFrame() {
 		//
 		//vkWaitForFences(GetVkDevice(), 1, &aBuffer.mFence, true, UINT64_MAX);
 		for(int i = 0; i < numBuffers; i++) {
-			VkSubmitInfo submitInfo		  = {};
-			submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			submitInfo.pCommandBuffers	  = &mBuffersToSubmit[i].mBuffer;
+			VkSubmitInfo submitInfo = {};
+			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			submitInfo.pCommandBuffers = &mBuffersToSubmit[i].mBuffer;
 			submitInfo.commandBufferCount = 1;
 
 			vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, 1, &submitInfo, mBuffersToSubmit[i].mFence);
@@ -509,7 +570,7 @@ RELEASES_LOCK(mCommandPoolMutex) void VulkanGraphics::EndFrame() {
 
 	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, {graphics});
 
-	{ 
+	{
 		ZoneScopedN("Unlocking Command pool lock");
 		mCommandPoolMutex.unlock();
 	}
@@ -539,23 +600,23 @@ AQUIRES_LOCK(mCommandPoolMutex) OneTimeCommandBuffer VulkanGraphics::AllocateGra
 	mCommandPoolMutex.lock();
 
 	VkCommandBufferAllocateInfo allocateInfo = {};
-	allocateInfo.sType						 = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	allocateInfo.commandPool				 = mDevicesHandler->GetGraphicsPool();
-	allocateInfo.level						 = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	allocateInfo.commandBufferCount			 = 1;
+	allocateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	allocateInfo.commandPool = mDevicesHandler->GetGraphicsPool();
+	allocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	allocateInfo.commandBufferCount = 1;
 
 	VkCommandBuffer buffer;
 	vkAllocateCommandBuffers(GetVkDevice(), &allocateInfo, &buffer);
 
 	if(aBegin) {
 		VkCommandBufferBeginInfo beginInfo = {};
-		beginInfo.sType					   = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags					   = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 		vkBeginCommandBuffer(buffer, &beginInfo);
 	}
 
 	VkFenceCreateInfo fenceInfo = {};
-	fenceInfo.sType				= VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
 	VkFence fence;
 	vkCreateFence(GetVkDevice(), &fenceInfo, GetAllocationCallback(), &fence);
@@ -565,7 +626,7 @@ AQUIRES_LOCK(mCommandPoolMutex) OneTimeCommandBuffer VulkanGraphics::AllocateGra
 
 	OneTimeCommandBuffer otcb;
 	otcb.mBuffer = buffer;
-	otcb.mFence	 = fence;
+	otcb.mFence = fence;
 	return otcb;
 }
 
@@ -650,19 +711,40 @@ const ImageSize VulkanGraphics::GetDesiredSize() const {
 #endif
 }
 
+const int VulkanGraphics::AddGlobalTexture(const VkImageView aImage) {
+
+	VkDescriptorImageInfo descriptor = {};
+	descriptor.sampler = GetDefaultSampler();
+	descriptor.imageView = aImage;
+	descriptor.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+	VkWriteDescriptorSet write_desc = {};
+	write_desc.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+	write_desc.dstSet = mTextureSet;
+	write_desc.dstBinding = 0;
+	write_desc.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+	write_desc.pImageInfo = &descriptor;
+	write_desc.descriptorCount = 1;
+	write_desc.dstArrayElement = mGlobalImageIndex;
+
+	vkUpdateDescriptorSets(gGraphics->GetVkDevice(), 1, &write_desc, 0, NULL);
+
+	return mGlobalImageIndex++;
+}
+
 bool VulkanGraphics::CreateInstance() {
 	VkResult result;
 
-	VkApplicationInfo appInfo  = {};
-	appInfo.sType			   = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-	appInfo.pApplicationName   = "Graphics Playground";
+	VkApplicationInfo appInfo = {};
+	appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+	appInfo.pApplicationName = "Graphics Playground";
 	appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.pEngineName		   = nullptr;
-	appInfo.engineVersion	   = VK_MAKE_VERSION(1, 0, 0);
-	appInfo.apiVersion		   = VULKAN_VERSION;
+	appInfo.pEngineName = nullptr;
+	appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0);
+	appInfo.apiVersion = VULKAN_VERSION;
 
 	VkInstanceCreateInfo createInfo {};
-	createInfo.sType			= VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+	createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 	createInfo.pApplicationInfo = &appInfo;
 
 	std::vector<std::string> extensionsTemp;
@@ -671,7 +753,7 @@ bool VulkanGraphics::CreateInstance() {
 
 	// glfw
 	{
-		uint32_t extensionCount		   = 0;
+		uint32_t extensionCount = 0;
 		const char** glfwExtentensions = Window::GetGLFWVulkanExtentensions(&extensionCount);
 		extensions.assign(glfwExtentensions, glfwExtentensions + extensionCount);
 	}
@@ -696,7 +778,7 @@ bool VulkanGraphics::CreateInstance() {
 			debugCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 				VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 			debugCreateInfo.pfnUserCallback = VkDebugCallback;
-			debugCreateInfo.pNext			= nullptr;
+			debugCreateInfo.pNext = nullptr;
 
 			layers.push_back(VK_LAYER_KHRONOS_validation);
 
@@ -712,10 +794,10 @@ bool VulkanGraphics::CreateInstance() {
 		extensions.push_back(extensionsTemp[i].c_str());
 	}
 
-	createInfo.enabledExtensionCount   = static_cast<uint32_t>(extensions.size());
+	createInfo.enabledExtensionCount = static_cast<uint32_t>(extensions.size());
 	createInfo.ppEnabledExtensionNames = extensions.data();
-	createInfo.enabledLayerCount	   = static_cast<uint32_t>(layers.size());
-	createInfo.ppEnabledLayerNames	   = layers.data();
+	createInfo.enabledLayerCount = static_cast<uint32_t>(layers.size());
+	createInfo.ppEnabledLayerNames = layers.data();
 
 	result = vkCreateInstance(&createInfo, GetAllocationCallback(), &gVkInstance);
 	CheckVkResult(result);
