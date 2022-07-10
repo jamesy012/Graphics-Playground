@@ -42,8 +42,11 @@ public:
 	void Destroy();
 
 	struct MeshMaterialData {
-		std::string mFileName;
 		Image* mImage = nullptr;
+		Image* mNormal = nullptr;
+		Image* mRoughness = nullptr;
+		glm::vec4 mColorFactor = glm::vec4(1.0f);
+		glm::vec2 mMetallicRoughness = glm::vec2(1.0f);
 	};
 
 	struct SubMesh {

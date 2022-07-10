@@ -190,24 +190,43 @@ bool AssimpLoader::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 			aiString str;
 			material->GetTexture(aiTextureType_DIFFUSE, i, &str);
 			const std::string fileName = str.C_Str();
-			//bool loaded				   = false;
-			//for(size_t q = 0; q < mMaterials.size(); q++) {
-			//	if(mMaterials[q].mFileName == fileName) {
-			//		mesh.mMaterialID = aMesh->mMaterialIndex;
-			//		loaded			 = true;
-			//	}
-			//}
-			//if(loaded) {
-			//	continue;
-			//}
+
 			Mesh::MeshMaterialData& materialData = mMesh->mMaterials[aMesh->mMaterialIndex];
 			if(materialData.mImage == nullptr) {
 				Image* image = new Image();
 				image->LoadImage(mMesh->mImagePath + fileName, VK_FORMAT_UNDEFINED);
-				materialData.mFileName = fileName;
 				materialData.mImage = image;
 			}
 		}
+		for(unsigned int i = 0; i < material->GetTextureCount(aiTextureType_METALNESS); i++) {
+			aiString str;
+			material->GetTexture(aiTextureType_METALNESS, i, &str);
+			const std::string fileName = str.C_Str();
+
+			Mesh::MeshMaterialData& materialData = mMesh->mMaterials[aMesh->mMaterialIndex];
+			if(materialData.mImage == nullptr) {
+				Image* image = new Image();
+				image->LoadImage(mMesh->mImagePath + fileName, VK_FORMAT_UNDEFINED);
+				materialData.mRoughness = image;
+			}
+		}
+		for(unsigned int i = 0; i < material->GetTextureCount(aiTextureType_NORMALS); i++) {
+			aiString str;
+			material->GetTexture(aiTextureType_NORMALS, i, &str);
+			const std::string fileName = str.C_Str();
+
+			Mesh::MeshMaterialData& materialData = mMesh->mMaterials[aMesh->mMaterialIndex];
+			if(materialData.mImage == nullptr) {
+				Image* image = new Image();
+				image->LoadImage(mMesh->mImagePath + fileName, VK_FORMAT_UNDEFINED);
+				materialData.mNormal = image;
+			}
+		}
+		for(unsigned int i = 0; i < mMesh->mMaterials.size(); i++) {
+			Mesh::MeshMaterialData& materialData = mMesh->mMaterials[i];
+			materialData.mColorFactor = glm::vec4(1.0f);
+			materialData.mMetallicRoughness = glm::vec2(1.0f);
+			}
 
 		//std::vector<Texture> diffuseMaps = this->loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse", scene);
 	}

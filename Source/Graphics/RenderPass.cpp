@@ -53,7 +53,7 @@ void RenderPass::Create(const char* aName /*= 0*/) {
 		multiViewInfo.pViewMasks					  = &viewMask;
 		multiViewInfo.correlationMaskCount			  = 1;
 		multiViewInfo.pCorrelationMasks				  = &correlationMask;
-		AddRecusiveTopNext(&create, &multiViewInfo);
+		VulkanResursiveSetpNext(&create, &multiViewInfo);
 	}
 
 	vkCreateRenderPass(gGraphics->GetVkDevice(), &create, GetAllocationCallback(), &mRenderPass);

@@ -275,7 +275,7 @@ bool VulkanGraphics::Initalize() {
 		layoutBindingFlags.bindingCount = 1;
 		layoutBindingFlags.pBindingFlags = &bindlessFlags;
 
-		AddRecusiveTopNext(&createInfo, &layoutBindingFlags);
+		VulkanResursiveSetpNext(&createInfo, &layoutBindingFlags);
 
 		vkCreateDescriptorSetLayout(gGraphics->GetVkDevice(), &createInfo, GetAllocationCallback(), &mTextureSetLayout);
 		SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, mTextureSetLayout, "Global Texture Descriptor Set Layout");
@@ -293,7 +293,7 @@ bool VulkanGraphics::Initalize() {
 		uint32_t descirptorCount = gMaxNumTextures - 1;
 		allocCountInfo.pDescriptorCounts = &descirptorCount;
 
-		AddRecusiveTopNext(&allocInfo, &allocCountInfo);
+		VulkanResursiveSetpNext(&allocInfo, &allocCountInfo);
 
 		VkResult err = vkAllocateDescriptorSets(gGraphics->GetVkDevice(), &allocInfo, &mTextureSet);
 		if(err == VK_ERROR_OUT_OF_POOL_MEMORY) {
@@ -370,7 +370,7 @@ bool VulkanGraphics::Destroy() {
 	}
 
 	vkDestroySampler(GetVkDevice(), mSampler, GetAllocationCallback());
-	vkFreeDescriptorSets(GetVkDevice(), mDescriptorPool, 1, &mTextureSet);
+	//vkFreeDescriptorSets(GetVkDevice(), mDescriptorPool, 1, &mTextureSet);
 	vkDestroyDescriptorSetLayout(GetVkDevice(), mTextureSetLayout, GetAllocationCallback());
 	// vkFreeDescriptorSets(GetVkDevice(), gDescriptorPool, 1, &gImGuiFontSet);
 	vkDestroyDescriptorPool(GetVkDevice(), mDescriptorPool, GetAllocationCallback());

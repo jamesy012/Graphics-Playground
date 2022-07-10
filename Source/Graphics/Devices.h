@@ -53,9 +53,22 @@ struct DeviceData {
 	std::vector<VkLayerProperties> mLayers;
 
 	VkPhysicalDeviceMultiviewFeatures mDeviceMultiViewFeatures = {};
+	VkPhysicalDeviceMultiviewProperties mDeviceMultiViewProperties = {};
 	VkPhysicalDeviceDescriptorIndexingFeatures mDeviceDescriptorIndexingFeatures = {};
+	VkPhysicalDeviceDescriptorIndexingProperties mDeviceDescriptorIndexingProperties = {};
 	VkPhysicalDeviceFeatures2 mDeviceFeatures = {};
 	VkPhysicalDeviceProperties2 mDeviceProperties = {};
+
+	//render to multible image array elements at the same time with different vertex data
+	bool IsMultiViewAvailable() const {
+		return mDeviceMultiViewFeatures.multiview && mDeviceMultiViewProperties.maxMultiviewViewCount >= 2;
+	}
+	//bind an array of uniforms to a pipeline
+	bool IsBindlessDescriptorsAvailable() const {
+		return mDeviceDescriptorIndexingFeatures.descriptorBindingPartiallyBound && mDeviceDescriptorIndexingFeatures.runtimeDescriptorArray &&
+			mDeviceDescriptorIndexingFeatures.descriptorBindingSampledImageUpdateAfterBind &&
+			mDeviceDescriptorIndexingFeatures.descriptorBindingVariableDescriptorCount;
+	}
 
 	VkSurfaceKHR mSurfaceUsed = VK_NULL_HANDLE;
 };

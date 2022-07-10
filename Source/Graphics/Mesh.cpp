@@ -88,6 +88,14 @@ void Mesh::Destroy() {
 			mMaterials[i].mImage->Destroy();
 			mMaterials[i].mImage = nullptr;
 		}
+		if(mMaterials[i].mRoughness) {
+			mMaterials[i].mRoughness->Destroy();
+			mMaterials[i].mRoughness = nullptr;
+		}	
+		if(mMaterials[i].mNormal) {
+			mMaterials[i].mNormal->Destroy();
+			mMaterials[i].mNormal = nullptr;
+		}
 	}
 	for(int i = 0; i < mMesh.size(); i++) {
 		SubMesh& mesh = mMesh[i];

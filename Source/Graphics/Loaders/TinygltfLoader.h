@@ -68,15 +68,29 @@ void TinygltfLoader::ProcessMaterials(tinygltf::Model& aModel) {
 		ZoneScoped;
 		Mesh::MeshMaterialData& materialData = mMesh->mMaterials[i];
 		tinygltf::Material& mat = aModel.materials[i];
-		if(mat.values.contains("baseColorTexture")) {
-			tinygltf::Texture& baseTexture = aModel.textures[mat.values["baseColorTexture"].TextureIndex()];
-			tinygltf::Image& baseImage = aModel.images[baseTexture.source];
-			LOGGER::Formated("Loading Texture {}\n", baseImage.uri);
+		auto SetLoadTexture = [&](tinygltf::Image& aTinyImagePath, Image** aOutputImage) {
+			LOGGER::Formated("Loading Texture {}\n", aTinyImagePath.uri);
 			Image* image = new Image();
-			image->LoadImage(mMesh->mImagePath + baseImage.uri, VK_FORMAT_UNDEFINED);
-			materialData.mFileName = baseImage.uri;
-			materialData.mImage = image;
+			image->LoadImage(mMesh->mImagePath + aTinyImagePath.uri, VK_FORMAT_UNDEFINED);
+			*aOutputImage = image;
+		};
+		if(mat.pbrMetallicRoughness.baseColorTexture.index != -1) {
+			tinygltf::Texture& baseTexture = aModel.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
+			SetLoadTexture(aModel.images[baseTexture.source], &materialData.mImage);
+		}	
+		if(mat.pbrMetallicRoughness.metallicRoughnessTexture.index != -1) {
+			tinygltf::Texture& baseTexture = aModel.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
+			SetLoadTexture(aModel.images[baseTexture.source], &materialData.mRoughness);
+		}	
+		if(mat.normalTexture.index != -1) {
+			tinygltf::Texture& baseTexture = aModel.textures[mat.normalTexture.index];
+			SetLoadTexture(aModel.images[baseTexture.source], &materialData.mNormal);
 		}
+		for(int i = 0; i < mat.pbrMetallicRoughness.baseColorFactor.size(); i++) {
+			materialData.mColorFactor[i] = mat.pbrMetallicRoughness.baseColorFactor[i];
+		}
+		materialData.mMetallicRoughness.x = mat.pbrMetallicRoughness.metallicFactor;
+		materialData.mMetallicRoughness.y = mat.pbrMetallicRoughness.roughnessFactor;
 	}
 }
 

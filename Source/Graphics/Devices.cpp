@@ -38,9 +38,9 @@ bool Devices::Setup() {
 
 	//data gather
 	for(int i = 0; i < deviceCount; i++) {
-		DeviceData& device	   = gDevices[i];
+		DeviceData& device = gDevices[i];
 		device.mPhysicalDevice = devices[i];
-		device.mSurfaceUsed	   = mSurface;
+		device.mSurfaceUsed = mSurface;
 
 		//queues
 		{
@@ -73,7 +73,7 @@ bool Devices::Setup() {
 			auto GetQueueFamily = [&](const DeviceData::Queue::QueueTypes aType, uint8_t aQueueFamily) {
 				const uint8_t queueIndex = static_cast<uint8_t>(aType);
 				//cant seem to use a union?
-				DeviceData::Queue::QueueIndex& queue	= *((&device.mQueue.mGraphicsQueue) + queueIndex);
+				DeviceData::Queue::QueueIndex& queue = *((&device.mQueue.mGraphicsQueue) + queueIndex);
 				DeviceData::Queue::QueueFamilys& family = device.mQueue.mQueueFamilies[aQueueFamily];
 				if(queue.mQueueFamily == -1 && family.mQueueTypeFlags & 1 << queueIndex && family.mProperties.queueCount != family.mUsedQueues) {
 					queue.mQueueFamily = aQueueFamily;
@@ -127,15 +127,18 @@ bool Devices::Setup() {
 
 		//extra info
 		{
-			AddRecusiveTopNext(&device.mDeviceFeatures, &device.mDeviceMultiViewFeatures);
-			device.mDeviceMultiViewFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;	
-			
-			AddRecusiveTopNext(&device.mDeviceFeatures, &device.mDeviceDescriptorIndexingFeatures);
-			device.mDeviceDescriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES_EXT;
+			VulkanResursiveSetpNext(&device.mDeviceFeatures, &device.mDeviceMultiViewFeatures);
+			device.mDeviceMultiViewFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
+			VulkanResursiveSetpNext(&device.mDeviceProperties, &device.mDeviceMultiViewProperties);
+			device.mDeviceMultiViewProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_PROPERTIES;
+
+			VulkanResursiveSetpNext(&device.mDeviceFeatures, &device.mDeviceDescriptorIndexingFeatures);
+			device.mDeviceDescriptorIndexingFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
+			VulkanResursiveSetpNext(&device.mDeviceProperties, &device.mDeviceDescriptorIndexingProperties);
+			device.mDeviceDescriptorIndexingProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_PROPERTIES;
 
 			device.mDeviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 			vkGetPhysicalDeviceFeatures2(device.mPhysicalDevice, &device.mDeviceFeatures);
-
 			device.mDeviceProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
 			vkGetPhysicalDeviceProperties2(device.mPhysicalDevice, &device.mDeviceProperties);
 		}
@@ -144,7 +147,7 @@ bool Devices::Setup() {
 	int selectedDeviceIndex = 0;
 #if defined(ENABLE_XR)
 	VkPhysicalDevice requestedDevice = gVrGraphics->GetRequestedDevice();
-	selectedDeviceIndex				 = -1;
+	selectedDeviceIndex = -1;
 	for(int i = 0; i < gDevices.size(); i++) {
 		if(gDevices[i].mPhysicalDevice == requestedDevice) {
 			selectedDeviceIndex = i;
@@ -173,7 +176,7 @@ bool Devices::Setup() {
 	float queuePriority[10];
 	std::fill_n(queuePriority, 10, 1.0f);
 	{
-		int numQueues		  = selectedDevice.mQueue.mQueueFamilies.size();
+		int numQueues = selectedDevice.mQueue.mQueueFamilies.size();
 		uint8_t* uniqueQueues = new uint8_t[numQueues];
 		memset(uniqueQueues, 0, numQueues * sizeof(uint8_t));
 		uniqueQueues[selectedDevice.mQueue.mGraphicsQueue.mQueueFamily]++;
@@ -182,10 +185,10 @@ bool Devices::Setup() {
 		uniqueQueues[selectedDevice.mQueue.mPresentQueue.mQueueFamily]++;
 
 		VkDeviceQueueCreateInfo queueInfo = {};
-		queueInfo.sType					  = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueInfo.pQueuePriorities		  = queuePriority;
+		queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueInfo.pQueuePriorities = queuePriority;
 		for(int i = 0; i < numQueues; i++) {
-			queueInfo.queueCount	   = uniqueQueues[i];
+			queueInfo.queueCount = uniqueQueues[i];
 			queueInfo.queueFamilyIndex = i;
 			if(queueInfo.queueCount != 0) {
 				queues.push_back(queueInfo);
@@ -200,47 +203,47 @@ bool Devices::Setup() {
 	}
 
 	deviceInfo.queueCreateInfoCount = queues.size();
-	deviceInfo.pQueueCreateInfos	= queues.data();
+	deviceInfo.pQueueCreateInfos = queues.data();
 
-	deviceInfo.enabledExtensionCount   = extensions.size();
+	deviceInfo.enabledExtensionCount = extensions.size();
 	deviceInfo.ppEnabledExtensionNames = extensions.data();
 
-	deviceInfo.enabledLayerCount   = 0;
+	deviceInfo.enabledLayerCount = 0;
 	deviceInfo.ppEnabledLayerNames = nullptr;
 
 	VkPhysicalDeviceFeatures2 deviceFeatures {};
-	deviceFeatures.sType					  = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+	deviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
 	deviceFeatures.features.samplerAnisotropy = VK_TRUE;
 	deviceFeatures.features.multiDrawIndirect = VK_TRUE;
 
-	if(selectedDevice.mDeviceMultiViewFeatures.multiview) {
+	if(selectedDevice.IsMultiViewAvailable()) {
 		VkPhysicalDeviceMultiviewFeatures multiView = {};
-		multiView.sType								= VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
-		multiView.multiview							= VK_TRUE;
-		AddRecusiveTopNext(&deviceFeatures, &multiView);
+		multiView.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
+		multiView.multiview = VK_TRUE;
+		VulkanResursiveSetpNext(&deviceFeatures, &multiView);
 	} else {
 		ASSERT(false);
 	}
-	if(selectedDevice.mDeviceDescriptorIndexingFeatures.descriptorBindingPartiallyBound && selectedDevice.mDeviceDescriptorIndexingFeatures.runtimeDescriptorArray) {
+	if(selectedDevice.IsBindlessDescriptorsAvailable()) {
 		VkPhysicalDeviceDescriptorIndexingFeaturesEXT descriptorIndexing = {};
 		descriptorIndexing.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES;
 		descriptorIndexing.descriptorBindingPartiallyBound = VK_TRUE;
 		descriptorIndexing.runtimeDescriptorArray = VK_TRUE;
 		descriptorIndexing.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
 		descriptorIndexing.descriptorBindingVariableDescriptorCount = VK_TRUE;
-		AddRecusiveTopNext(&deviceFeatures, &descriptorIndexing);
+		VulkanResursiveSetpNext(&deviceFeatures, &descriptorIndexing);
 	} else {
 		ASSERT(false);
 	}
 
 	deviceInfo.pEnabledFeatures = nullptr;
-	deviceInfo.pNext			= &deviceFeatures;
+	deviceInfo.pNext = &deviceFeatures;
 
 	vkCreateDevice(selectedDevice.mPhysicalDevice, &deviceInfo, GetAllocationCallback(), &selectedDevice.mDevice);
 
 	//Get Queue
 	{
-		int numQueues		  = selectedDevice.mQueue.mQueueFamilies.size();
+		int numQueues = selectedDevice.mQueue.mQueueFamilies.size();
 		uint8_t* uniqueQueues = new uint8_t[numQueues];
 		memset(uniqueQueues, 0, numQueues * sizeof(uint8_t));
 		auto getQueue = [&](DeviceData::Queue::QueueIndex& queue) {
@@ -273,8 +276,8 @@ void Devices::Destroy() {
 void Devices::CreateCommandPools() {
 
 	VkCommandPoolCreateInfo createInfo = {};
-	createInfo.sType				   = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-	createInfo.flags				   = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+	createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
 
 	createInfo.queueFamilyIndex = GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueueFamily;
 	vkCreateCommandPool(GetPrimaryDevice(), &createInfo, GetAllocationCallback(), &mCommandPoolGraphics);
@@ -295,9 +298,9 @@ void Devices::CreateCommandBuffers(const uint8_t aNumBuffers) {
 	mTransferCommandBuffers.resize(aNumBuffers);
 
 	VkCommandBufferAllocateInfo createInfo = {};
-	createInfo.sType					   = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-	createInfo.level					   = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-	createInfo.commandBufferCount		   = aNumBuffers;
+	createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+	createInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+	createInfo.commandBufferCount = aNumBuffers;
 
 	createInfo.commandPool = mCommandPoolGraphics;
 	vkAllocateCommandBuffers(GetPrimaryDevice(), &createInfo, mGraphicsCommandBuffers.data());

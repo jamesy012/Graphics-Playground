@@ -50,7 +50,7 @@ inline void SetVkName(VkObjectType aType, T aObject, const std::string aName) {
 	SetVkName(aType, (uint64_t)aObject, aName.c_str());
 }
 
-static void AddRecusiveTopNext(void* dst, void* pNext) {
+static void VulkanResursiveSetpNext(void* dst, void* pNext) {
 	if(dst == nullptr) {
 		return;
 	}
