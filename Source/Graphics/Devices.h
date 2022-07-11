@@ -105,4 +105,7 @@ private:
 	std::vector<VkCommandBuffer> mGraphicsCommandBuffers = {};
 	std::vector<VkCommandBuffer> mComputeCommandBuffers = {};
 	std::vector<VkCommandBuffer> mTransferCommandBuffers = {};
+
+	bool mMultiviewEnabled = false;
+	bool mBindlessDescriptorsEnabled = false;
 };

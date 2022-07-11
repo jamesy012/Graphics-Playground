@@ -333,7 +333,7 @@ int main() {
 			meshPipeline.Begin(buffer);
 			//bind camera data
 			vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
-			vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 1, 1, &gGraphics->mTextureSet, 0, nullptr);
+			//vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 1, 1, &gGraphics->mTextureSet, 0, nullptr);
 			//tree 1
 			modelTest1.Render(buffer, meshPipeline.GetLayout());
 			//tree 2

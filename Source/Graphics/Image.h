@@ -15,6 +15,13 @@ public:
 	Image() {}
 	~Image() {}
 
+	operator VkImageView() const {
+		return mImageView;
+	}
+	operator VkImage() const {
+		return mImage;
+	}
+
 	void SetArrayLayers(uint8_t aNumLayers) {
 		mArrayLayers = aNumLayers;
 	}

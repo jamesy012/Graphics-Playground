@@ -197,19 +197,8 @@ bool Devices::Setup() {
 		delete[] uniqueQueues;
 	}
 
-	// copy over any temporary strings
-	for(int i = 0; i < extensionsTemp.size(); i++) {
-		extensions.push_back(extensionsTemp[i].c_str());
-	}
-
 	deviceInfo.queueCreateInfoCount = queues.size();
 	deviceInfo.pQueueCreateInfos = queues.data();
-
-	deviceInfo.enabledExtensionCount = extensions.size();
-	deviceInfo.ppEnabledExtensionNames = extensions.data();
-
-	deviceInfo.enabledLayerCount = 0;
-	deviceInfo.ppEnabledLayerNames = nullptr;
 
 	VkPhysicalDeviceFeatures2 deviceFeatures {};
 	deviceFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
@@ -221,6 +210,7 @@ bool Devices::Setup() {
 		multiView.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES;
 		multiView.multiview = VK_TRUE;
 		VulkanResursiveSetpNext(&deviceFeatures, &multiView);
+		mMultiviewEnabled = true;
 	} else {
 		ASSERT(false);
 	}
@@ -232,12 +222,25 @@ bool Devices::Setup() {
 		descriptorIndexing.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
 		descriptorIndexing.descriptorBindingVariableDescriptorCount = VK_TRUE;
 		VulkanResursiveSetpNext(&deviceFeatures, &descriptorIndexing);
+		extensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+		mBindlessDescriptorsEnabled = true;
 	} else {
 		ASSERT(false);
 	}
 
 	deviceInfo.pEnabledFeatures = nullptr;
 	deviceInfo.pNext = &deviceFeatures;
+
+	// copy over any temporary strings
+	for(int i = 0; i < extensionsTemp.size(); i++) {
+		extensions.push_back(extensionsTemp[i].c_str());
+	}
+
+	deviceInfo.enabledExtensionCount = extensions.size();
+	deviceInfo.ppEnabledExtensionNames = extensions.data();
+
+	deviceInfo.enabledLayerCount = 0;
+	deviceInfo.ppEnabledLayerNames = nullptr;
 
 	vkCreateDevice(selectedDevice.mPhysicalDevice, &deviceInfo, GetAllocationCallback(), &selectedDevice.mDevice);
 

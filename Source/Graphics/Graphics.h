@@ -142,15 +142,21 @@ public:
 	const ImageSize GetDesiredSize() const;
 
 	//bindless test
-	//struct GlobalTexturePC {
-	//	unsigned int albedoTexture;
-	//};
-	static const uint32_t gMaxNumTextures = 10000;
-	const Image* mGlobalImages[gMaxNumTextures] = {nullptr};
+
+	//common layout of group
 	VkDescriptorSetLayout mTextureSetLayout;
-	VkDescriptorSet mTextureSet;
-	int mGlobalImageIndex = 0;
-	const int AddGlobalTexture(const VkImageView aImage);
+	//
+	struct BindlessTextureGroup {
+		std::vector<VkImageView> mTextures;
+		VkDescriptorSet mTextureSet;
+		int mGlobalImageIndex = 0;
+		const int AddGlobalTexture(const VkImageView aImage);
+	};
+	//one for each frame
+	std::vector<BindlessTextureGroup> mTextureGroups[3];
+	std::vector<VkImageView> mRequestedTextures;
+	unsigned int AddTexture(VkImageView aView);
+	VkDescriptorSet* FinializeTextureSet();
 
 private:
 	bool CreateInstance();

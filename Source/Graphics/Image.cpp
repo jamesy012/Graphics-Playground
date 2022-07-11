@@ -92,7 +92,7 @@ void Image::CreateFromBuffer(Buffer& aBuffer, const bool aDestroyBuffer, const V
 	}
 	gGraphics->EndGraphicsCommandBuffer(cmBuffer);
 
-	mGlobalTextureIndex = gGraphics->AddGlobalTexture(mImageView);
+	//mGlobalTextureIndex = gGraphics->AddGlobalTexture(mImageView);
 }
 
 void Image::CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, const ImageSize aSize, const char* aName /* = 0*/) {

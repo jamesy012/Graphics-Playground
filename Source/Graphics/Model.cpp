@@ -50,11 +50,17 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 			//Graphics::GlobalTexturePC texturePC;
 			Image* image = mMesh->GetMaterial(mesh.mMaterialID).mImage;
 			if(image) {
-				modelPC.mAlbedoTexture = image->GetGlobalIndex();
+				//modelPC.mAlbedoTexture = image->GetGlobalIndex();
+				modelPC.mAlbedoTexture = gGraphics->AddTexture(image->GetImageView());
 			} else {
-				modelPC.mAlbedoTexture = CONSTANT::IMAGE::gWhite->GetGlobalIndex();
+				//modelPC.mAlbedoTexture = CONSTANT::IMAGE::gWhite->GetGlobalIndex();
+				modelPC.mAlbedoTexture = gGraphics->AddTexture(CONSTANT::IMAGE::gWhite->GetImageView());
 			}
 			//vkCmdPushConstants(aBuffer, aLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Graphics::GlobalTexturePC), &texturePC);
+
+			//
+			VkDescriptorSet* textureSet = gGraphics->FinializeTextureSet();
+			vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aLayout, 1, 1, textureSet, 0, nullptr);
 		}
 		modelPC.mWorld = mLocation.GetWorldMatrix() * mesh.mMatrix;
 		vkCmdPushConstants(aBuffer, aLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(MeshPCTest), &modelPC);
