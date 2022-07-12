@@ -413,6 +413,8 @@ AQUIRES_LOCK(mCommandPoolMutex) void VulkanGraphics::StartNewFrame() {
 
 #if defined(ENABLE_IMGUI)
 	gImGuiGraphics->StartNewFrame();
+
+	mMaterialManager->ImGuiDraw();
 #endif
 
 	{

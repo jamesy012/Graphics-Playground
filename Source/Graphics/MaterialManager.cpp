@@ -1,5 +1,7 @@
 #include "MaterialManager.h"
 
+#include <imgui/imgui.h>
+
 #include "Graphics.h"
 #include "Devices.h"
 
@@ -42,30 +44,11 @@ void MaterialManager::Initalize() {
 		SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT, mTextureSetLayout, "Global Texture Descriptor Set Layout");
 
 		if(mMode == MODE::LARGE_ARRAY) {
-			mTextureGroups[0][0].Create(largeArrayTexCount);
+			mTextureGroups[0].push_back(BindlessTextureGroup());
+			BindlessTextureGroup* group = &mTextureGroups[0].back();
+
+			group->Create(largeArrayTexCount);
 		}
-		//VkDescriptorSetAllocateInfo allocInfo = {};
-		//allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		//allocInfo.descriptorPool = gGraphics->GetDesciptorPool();
-		//allocInfo.descriptorSetCount = 1;
-		//allocInfo.pSetLayouts = &mTextureSetLayout;
-		//
-		//VkDescriptorSetVariableDescriptorCountAllocateInfoEXT allocCountInfo = {};
-		//allocCountInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT;
-		//allocCountInfo.descriptorSetCount = 1;
-		//// This number is the max allocatable count
-		//uint32_t descirptorCount = gMaxNumTextures - 1;
-		//allocCountInfo.pDescriptorCounts = &descirptorCount;
-		//
-		//VulkanResursiveSetpNext(&allocInfo, &allocCountInfo);
-		//
-		//VkResult err = vkAllocateDescriptorSets(gGraphics->GetVkDevice(), &allocInfo, &mTextureSet);
-		//if(err == VK_ERROR_OUT_OF_POOL_MEMORY) {
-		//	LOGGER::Formated("Failed to allocate Global texture set, not enough pool memory");
-		//	ASSERT(false);
-		//	return false;
-		//}
-		//SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_SET, mTextureSet, "Global texture set");
 	}
 }
 
@@ -90,6 +73,19 @@ void MaterialManager::NewFrame() {
 		}
 		mTextureGroups[index].clear();
 	}
+}
+
+void MaterialManager::ImGuiDraw() {
+	if(ImGui::Begin("Material Manager")) {
+
+		if(mMode == MODE::LARGE_ARRAY) {
+			BindlessTextureGroup& group = mTextureGroups[0][0];
+			char buf[32];
+			sprintf(buf, "%d/%d", group.mGlobalImageIndex, group.mMaxImageCount);
+			ImGui::ProgressBar(group.mGlobalImageIndex / (float)group.mMaxImageCount, ImVec2(-1.f, 0.f), buf);
+		}
+	}
+	ImGui::End();
 }
 
 void MaterialManager::PrepareTexture(uint32_t& aTextureID, Image* aImage) {
@@ -146,6 +142,8 @@ void MaterialManager::BindlessTextureGroup::Create(uint32_t aCount) {
 		return;
 	}
 	SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_SET, mTextureSet, "Global texture set");
+
+	mMaxImageCount = aCount;
 }
 
 const int MaterialManager::BindlessTextureGroup::AddGlobalTexture(const VkImageView aImage) {
@@ -199,79 +197,3 @@ const VkDescriptorSet* MaterialManager::PerDrawFinializeTextureSet(std::vector<R
 	}
 	return &group->mTextureSet;
 }
-
-/*
-unsigned int MaterialManager::AddTexture(VkImageView aView) {
-	mRequestedTextures.push_back(aView);
-	return mRequestedTextures.size() - 1;
-}
-
-VkDescriptorSet* MaterialManager::FinializeTextureSet() {
-	const uint32_t maxTextures =
-		gGraphics->GetMainDevice()->GetPrimaryDeviceData().mDeviceDescriptorIndexingProperties.maxPerStageDescriptorUpdateAfterBindSamplers;
-	ASSERT(mRequestedTextures.size() <= maxTextures - 1);
-
-	BindlessTextureGroup* lastGroup =
-		mTextureGroups[gGraphics->GetCurrentImageIndex()].size() != 0 ? &mTextureGroups[gGraphics->GetCurrentImageIndex()].back() : nullptr;
-
-	bool lastGroupHasImages = true;
-	if(lastGroup == nullptr || lastGroup->mTextures.size() != mRequestedTextures.size()) {
-		lastGroupHasImages = false;
-	} else {
-		for(int i = 0; i < mRequestedTextures.size(); i++) {
-			bool hasImage = false;
-			//for(int q = 0; q < lastGroup->mTextures.size(); q++)
-			int q = i;
-			{
-				if(mRequestedTextures[i] == lastGroup->mTextures[q]) {
-					hasImage = true;
-					break;
-				}
-			}
-			if(hasImage == false) {
-				lastGroupHasImages = false;
-				break;
-			}
-		}
-	}
-
-	if(lastGroupHasImages) {
-		mRequestedTextures.clear();
-		return &lastGroup->mTextureSet;
-	}
-
-	mTextureGroups[gGraphics->GetCurrentImageIndex()].push_back(BindlessTextureGroup());
-	lastGroup = &mTextureGroups[gGraphics->GetCurrentImageIndex()].back();
-
-	VkDescriptorSetAllocateInfo allocInfo = {};
-	allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-	allocInfo.descriptorPool = gGraphics->GetDesciptorPool();
-	allocInfo.descriptorSetCount = 1;
-	allocInfo.pSetLayouts = &mTextureSetLayout;
-
-	VkDescriptorSetVariableDescriptorCountAllocateInfoEXT allocCountInfo = {};
-	allocCountInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_VARIABLE_DESCRIPTOR_COUNT_ALLOCATE_INFO_EXT;
-	allocCountInfo.descriptorSetCount = 1;
-	// This number is the max allocatable count
-	uint32_t descirptorCount = mRequestedTextures.size();
-	allocCountInfo.pDescriptorCounts = &descirptorCount;
-
-	VulkanResursiveSetpNext(&allocInfo, &allocCountInfo);
-
-	VkResult err = vkAllocateDescriptorSets(gGraphics->GetVkDevice(), &allocInfo, &lastGroup->mTextureSet);
-	if(err == VK_ERROR_OUT_OF_POOL_MEMORY) {
-		LOGGER::Formated("Failed to allocate Global texture set, not enough pool memory");
-		ASSERT(false);
-		mRequestedTextures.clear();
-		return nullptr;
-	}
-	SetVkName(VK_OBJECT_TYPE_DESCRIPTOR_SET, lastGroup->mTextureSet, "Global texture set");
-
-	for(int i = 0; i < mRequestedTextures.size(); i++) {
-		lastGroup->AddGlobalTexture(mRequestedTextures[i]);
-	}
-
-	mRequestedTextures.clear();
-	return &lastGroup->mTextureSet;
-}
-*/

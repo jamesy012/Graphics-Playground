@@ -24,6 +24,8 @@ public:
 
 	void NewFrame();
 
+	void ImGuiDraw();
+
 	VkDescriptorSetLayout GetDescriptorLayout() const {
 		return mTextureSetLayout;
 	}
@@ -67,6 +69,7 @@ private:
 		VkDescriptorSet mTextureSet;
 		std::vector<VkImageView> mTextures;
 		int mGlobalImageIndex = 0;
+		int mMaxImageCount = 0;
 	};
 	//one for each frame
 	std::vector<BindlessTextureGroup> mTextureGroups[3];
