@@ -8,6 +8,7 @@
 #include "Image.h"
 #include "Graphics/Helpers.h"
 #include "Engine/Transform.h"
+#include "Graphics/MaterialManager.h"
 
 void Model::Destroy() {
 	mLocation.Clear();
@@ -49,18 +50,23 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 			//}
 			//Graphics::GlobalTexturePC texturePC;
 			Image* image = mMesh->GetMaterial(mesh.mMaterialID).mImage;
+			MaterialManager* matManager = gGraphics->GetMaterialManager();
 			if(image) {
 				//modelPC.mAlbedoTexture = image->GetGlobalIndex();
-				modelPC.mAlbedoTexture = gGraphics->AddTexture(image->GetImageView());
+				//modelPC.mAlbedoTexture = gGraphics->AddTexture(image->GetImageView());
+				matManager->PrepareTexture(modelPC.mAlbedoTexture, image);
 			} else {
 				//modelPC.mAlbedoTexture = CONSTANT::IMAGE::gWhite->GetGlobalIndex();
-				modelPC.mAlbedoTexture = gGraphics->AddTexture(CONSTANT::IMAGE::gWhite->GetImageView());
+				//modelPC.mAlbedoTexture = gGraphics->AddTexture(CONSTANT::IMAGE::gWhite->GetImageView());
+				matManager->PrepareTexture(modelPC.mAlbedoTexture, CONSTANT::IMAGE::gWhite);
 			}
 			//vkCmdPushConstants(aBuffer, aLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Graphics::GlobalTexturePC), &texturePC);
 
 			//
-			VkDescriptorSet* textureSet = gGraphics->FinializeTextureSet();
-			vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aLayout, 1, 1, textureSet, 0, nullptr);
+			const VkDescriptorSet* textureSet = matManager->FinializeTextureSet();
+			if(textureSet) {
+				vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aLayout, 1, 1, textureSet, 0, nullptr);
+			}
 		}
 		modelPC.mWorld = mLocation.GetWorldMatrix() * mesh.mMatrix;
 		vkCmdPushConstants(aBuffer, aLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(MeshPCTest), &modelPC);

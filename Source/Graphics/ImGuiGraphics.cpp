@@ -6,7 +6,7 @@
 #include <glm/glm.hpp>
 
 #include "Graphics.h"
-#include "SwapChain.h"
+#include "Swapchain.h"
 #include "RenderPass.h"
 #include "Image.h"
 #include "Pipeline.h"

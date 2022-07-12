@@ -4,6 +4,7 @@
 
 #include "Graphics.h"
 #include "Material.h"
+#include "MaterialManager.h"
 #include "PlatformDebug.h"
 
 bool Pipeline::AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage) {
@@ -161,7 +162,7 @@ bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 			layouts[i] = mMaterials[i]->mLayout;
 		}
 		if(mBindlessTextures) {
-			layouts[numMaterials] = gGraphics->mTextureSetLayout;
+			layouts[numMaterials] = gGraphics->GetMaterialManager()->GetDescriptorLayout();
 		}
 		pipelineLayoutInfo.pSetLayouts = layouts.data();
 		pipelineLayoutInfo.setLayoutCount = layouts.size();

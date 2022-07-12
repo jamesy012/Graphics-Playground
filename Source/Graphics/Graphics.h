@@ -23,6 +23,7 @@ class Window;
 class Devices;
 class Swapchain;
 
+class MaterialManager;
 class VRGraphics;
 
 #pragma region Vulkan Helpers
@@ -141,22 +142,9 @@ public:
 
 	const ImageSize GetDesiredSize() const;
 
-	//bindless test
-
-	//common layout of group
-	VkDescriptorSetLayout mTextureSetLayout;
-	//
-	struct BindlessTextureGroup {
-		std::vector<VkImageView> mTextures;
-		VkDescriptorSet mTextureSet;
-		int mGlobalImageIndex = 0;
-		const int AddGlobalTexture(const VkImageView aImage);
-	};
-	//one for each frame
-	std::vector<BindlessTextureGroup> mTextureGroups[3];
-	std::vector<VkImageView> mRequestedTextures;
-	unsigned int AddTexture(VkImageView aView);
-	VkDescriptorSet* FinializeTextureSet();
+	MaterialManager* GetMaterialManager() const {
+		return mMaterialManager;
+	}
 
 private:
 	bool CreateInstance();
@@ -183,6 +171,8 @@ private:
 
 	VkDescriptorPool mDescriptorPool = VK_NULL_HANDLE;
 	VkSampler mSampler = VK_NULL_HANDLE;
+
+	MaterialManager* mMaterialManager = nullptr;
 
 	uint32_t mFrameCounter = 0;
 

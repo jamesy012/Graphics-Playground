@@ -19,6 +19,8 @@
 #include "Graphics/Mesh.h"
 #include "Graphics/Model.h"
 #include "Graphics/Pipeline.h"
+#include "Graphics/MaterialManager.h"
+		 
 #include <glm/ext.hpp>
 
 #include "Graphics/Conversions.h"
@@ -124,8 +126,8 @@ int main() {
 					  std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/");
 
 	Mesh handMesh;
-	handMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/handModel2.fbx");	
-	
+	handMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/handModel2.fbx");
+
 	Mesh referenceMesh;
 	referenceMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/5m reference.fbx");
 
@@ -333,7 +335,16 @@ int main() {
 			meshPipeline.Begin(buffer);
 			//bind camera data
 			vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
-			//vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline.GetLayout(), 1, 1, &gGraphics->mTextureSet, 0, nullptr);
+			if(gGraphics->GetMaterialManager()->IsInLargeArrayMode()) {
+				vkCmdBindDescriptorSets(buffer,
+										VK_PIPELINE_BIND_POINT_GRAPHICS,
+										meshPipeline.GetLayout(),
+										1,
+										1,
+										gGraphics->GetMaterialManager()->GetMainTextureSet(),
+										0,
+										nullptr);
+			}
 			//tree 1
 			modelTest1.Render(buffer, meshPipeline.GetLayout());
 			//tree 2

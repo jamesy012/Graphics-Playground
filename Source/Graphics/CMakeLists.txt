@@ -35,6 +35,8 @@ set(GRAPHICS_SOURCE
     "RenderTarget.cpp"
     "Material.h"
     "Material.cpp"
+    "MaterialManager.h"
+    "MaterialManager.cpp"
     "Screenspace.h"
     "Screenspace.cpp"
     "Mesh.h"

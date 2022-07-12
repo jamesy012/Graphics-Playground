@@ -3,6 +3,7 @@
 #include "PlatformDebug.h"
 #include "Graphics.h"
 #include "Buffer.h"
+#include "MaterialManager.h"//global texture ID
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
@@ -92,7 +93,7 @@ void Image::CreateFromBuffer(Buffer& aBuffer, const bool aDestroyBuffer, const V
 	}
 	gGraphics->EndGraphicsCommandBuffer(cmBuffer);
 
-	//mGlobalTextureIndex = gGraphics->AddGlobalTexture(mImageView);
+	mGlobalTextureIndex = gGraphics->GetMaterialManager()->AddTextureToGlobalSet(mImageView);
 }
 
 void Image::CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, const ImageSize aSize, const char* aName /* = 0*/) {
