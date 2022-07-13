@@ -11,7 +11,7 @@
 class Swapchain {
 public:
 	Swapchain(const DeviceData& aDevice) : mAttachedDevice(aDevice) {};
-	void Setup(const ImageSize aRequestedSize);
+	void Setup();
 	void Destroy();
 
 	const uint32_t GetImageIndex() const {
@@ -37,7 +37,12 @@ public:
 
 private:
 	void SetupImages();
+	void DestroySyncObjects();
 	void SetupSyncObjects();
+
+	//works out a good size for this swapchain
+	//and resizes it
+	void ResizeWindow();
 
 	VkSwapchainKHR mSwapchain = VK_NULL_HANDLE;
 	const DeviceData& mAttachedDevice;
@@ -52,7 +57,6 @@ private:
 	VkSemaphore mRenderSemaphore = VK_NULL_HANDLE;
 	VkSemaphore mPresentSemaphore = VK_NULL_HANDLE;
 
-	uint8_t mNumImages = 0;
 	std::vector<PerFrameInfo> mFrameInfo = {};
 
 	uint32_t mImageIndex = 0;
@@ -60,5 +64,16 @@ private:
 	//remove?
 	std::vector<Image*> mSwapchainImages = {};
 
-	VkExtent2D mSwapchainSize = {0,0};
+	VkExtent2D mSwapchainSize = {0, 0};
+
+	//device swapchain details
+	struct SwapchainSupportDetails {
+		VkSurfaceCapabilitiesKHR capabilities {};
+		std::vector<VkSurfaceFormatKHR> formats {};
+		std::vector<VkPresentModeKHR> presentModes {};
+	};
+
+	SwapchainSupportDetails mSwapChainSupportDetails;
+	uint32_t mNumImages;
+	VkPresentModeKHR mPresentMode;
 };

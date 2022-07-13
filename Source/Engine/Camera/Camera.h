@@ -11,16 +11,22 @@ public:
 	virtual void Update() = 0;
 
 	void SetFov(float aLeft, float aRight, float aUp, float aDown) {
-		mFov	   = glm::tan(glm::vec4(aLeft, aRight, aUp, aDown));
+		mFov = glm::tan(glm::vec4(aLeft, aRight, aUp, aDown));
 		mProjDirty = true;
 	}
 	void SetFov(float aFovYDegrees, float aAspect) {
-		mFov	   = glm::vec4(glm::radians(aFovYDegrees), aAspect, 0, 0);
+		mFov = glm::vec4(glm::radians(aFovYDegrees), aAspect, 0, 0);
 		mProjDirty = true;
 	}
 	void SetNearFar(float aNear, float aFar) {
-		mNearFar   = glm::vec2(aNear, aFar);
+		mNearFar = glm::vec2(aNear, aFar);
 		mProjDirty = true;
+	}
+
+	float GetFovDegrees() {
+        //todo get degrees of uneven fov?
+		ASSERT(mFov.z == 0 && mFov.w == 0);
+		return glm::degrees(mFov.x);
 	}
 
 	glm::mat4 GetViewMatrix() {

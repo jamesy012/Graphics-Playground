@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <mutex>
+#include <functional>
 
 #include "Engine/IGraphicsBase.h"
 
@@ -66,10 +67,10 @@ static void VulkanResursiveSetpNext(void* dst, void* pNext) {
 //XR Runtime seems to have issues?
 void VulkanValidationMessage(int32_t aMessageId, bool aEnabled);
 
-#define VALIDATEVK(function)              \
-	{                                     \
+#define VALIDATEVK(function)                  \
+	{                                         \
 		const VkResult vkResult = (function); \
-		ASSERT(vkResult == VK_SUCCESS);     \
+		ASSERT(vkResult == VK_SUCCESS);       \
 	}
 
 #pragma endregion
@@ -150,6 +151,15 @@ public:
 
 	MaterialManager* GetMaterialManager() const {
 		return mMaterialManager;
+	}
+
+	//start of messenging system
+	typedef std::function<void()> MessageCallback;
+	std::vector<MessageCallback> mResizeMessage;
+	void ResizeEvent() {
+		for(auto event: mResizeMessage) {
+			event();
+		}
 	}
 
 private:

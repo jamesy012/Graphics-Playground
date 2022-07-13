@@ -36,6 +36,25 @@ void FlyCamera::Update() {
 
 	gEngine->GetWindow()->SetLock(mStartedDoubleClickFly || mStartedLeftClickFly || mStartedRightClickFly);
 
+#if PLATFORM_APPLE
+	//my mac has a trackpad to so it's hard to use the mouse controls
+	//this should be a device check or an option instead of a platform define
+	if(mStartedRightClickFly) {
+		glm::vec2 delta = -gInput->GetMouseDelta() * mouseRotationSpeed;
+		delta = glm::vec2(delta.y, delta.x * yawMovementMulti); //mouse is swapped
+		mTransform.RotateAxis(delta);
+
+		if(gInput->IsMouseButtonUp(GLFW_MOUSE_BUTTON_1) && gInput->IsMouseButtonUp(GLFW_MOUSE_BUTTON_2)) {
+				mStartedRightClickFly = false;
+			}
+		return;
+	} else {
+		if(gInput->IsMouseButtonDown(GLFW_MOUSE_BUTTON_1) || gInput->IsMouseButtonDown(GLFW_MOUSE_BUTTON_2)) {
+			mStartedRightClickFly = true;
+		}
+	}
+#else
+
 	if(mStartedDoubleClickFly) {
 		glm::vec2 delta = gInput->GetMouseDelta() * mouseMovementSpeed;
 		mTransform.TranslateLocal(glm::vec3(delta.x, -delta.y, 0));
@@ -79,4 +98,5 @@ void FlyCamera::Update() {
 			mStartedLeftClickFly = true;
 		}
 	}
+#endif
 }

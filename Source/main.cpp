@@ -20,7 +20,7 @@
 #include "Graphics/Model.h"
 #include "Graphics/Pipeline.h"
 #include "Graphics/MaterialManager.h"
-		 
+
 #include <glm/ext.hpp>
 
 #include "Graphics/Conversions.h"
@@ -45,23 +45,6 @@ int main() {
 	Engine gameEngine;
 	gameEngine.Startup(&vulkanGraphics);
 
-	//FRAMEBUFFER TEST
-	//will need one for each eye?, container?
-	Image fbImage;
-	fbImage.SetArrayLayers(gGraphics->GetNumActiveViews());
-	Image fbDepthImage;
-	fbDepthImage.SetArrayLayers(gGraphics->GetNumActiveViews());
-	fbImage.CreateVkImage(Graphics::GetDeafultColorFormat(), gGraphics->GetDesiredSize(), "Main FB Image");
-	fbDepthImage.CreateVkImage(Graphics::GetDeafultDepthFormat(), gGraphics->GetDesiredSize(), "Main FB Depth Image");
-
-	//convert to correct layout
-	{
-		auto buffer = gGraphics->AllocateGraphicsCommandBuffer();
-		fbImage.SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-		fbDepthImage.SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
-		gGraphics->EndGraphicsCommandBuffer(buffer);
-	}
-
 	//we want to render with these outputs
 	RenderPass mainRenderPass;
 #if defined(ENABLE_XR)
@@ -82,11 +65,34 @@ int main() {
 		mainRenderPass.SetClearColors(mainPassClear);
 	}
 
-	//FB write to these images, following the layout from mainRenderPass
+	//FRAMEBUFFER TEST
+	Image fbImage;
+	Image fbDepthImage;
 	Framebuffer fb;
-	fb.AddImage(&fbImage);
-	fb.AddImage(&fbDepthImage);
-	fb.Create(mainRenderPass, "Main Render FB");
+	auto CreateSizeDependentRenderObjects = [&]() {
+		fb.Destroy();
+		fbDepthImage.Destroy();
+		fbImage.Destroy();
+		fbImage.SetArrayLayers(gGraphics->GetNumActiveViews());
+		fbDepthImage.SetArrayLayers(gGraphics->GetNumActiveViews());
+		fbImage.CreateVkImage(Graphics::GetDeafultColorFormat(), gGraphics->GetDesiredSize(), "Main FB Image");
+		fbDepthImage.CreateVkImage(Graphics::GetDeafultDepthFormat(), gGraphics->GetDesiredSize(), "Main FB Depth Image");
+
+		//convert to correct layout
+		{
+			auto buffer = gGraphics->AllocateGraphicsCommandBuffer();
+			fbImage.SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			fbDepthImage.SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			gGraphics->EndGraphicsCommandBuffer(buffer);
+		}
+
+		//FB write to these images, following the layout from mainRenderPass
+		fb.AddImage(&fbImage);
+		fb.AddImage(&fbDepthImage);
+		fb.Create(mainRenderPass, "Main Render FB");
+	};
+	CreateSizeDependentRenderObjects();
+	gGraphics->mResizeMessage.push_back(CreateSizeDependentRenderObjects);
 
 	//SCREEN SPACE TEST
 	//used to copy fbImage to backbuffer
@@ -113,12 +119,18 @@ int main() {
 	vrMirrorPass.mAttachmentFormat = gGraphics->GetSwapchainFormat();
 	vrMirrorPass.AddMaterialBase(&ssTestBase);
 	vrMirrorPass.Create("/Shaders/Screenspace/ImageTwoArray.frag.spv", "ScreenSpace Mirror ImageCopy");
-	vrMirrorPass.GetMaterial(0).SetImages(fbImage, 0, 0);
 #else
 	//windows doesnt do multiview so just needs the non array version
 	ssTest.Create("/Shaders/Screenspace/ImageSingle.frag.spv", "ScreenSpace ImageCopy");
 #endif
-	ssTest.GetMaterial(0).SetImages(fbImage, 0, 0);
+	auto SetupSSImages = [&]() {
+#if defined(ENABLE_XR)
+		vrMirrorPass.GetMaterial(0).SetImages(fbImage, 0, 0);
+#endif
+		ssTest.GetMaterial(0).SetImages(fbImage, 0, 0);
+	};
+	SetupSSImages();
+	gGraphics->mResizeMessage.push_back(SetupSSImages);
 
 	//Mesh Test
 	Mesh meshTest;
@@ -209,6 +221,17 @@ int main() {
 	controllerTest2.mLocation.SetParent(&camera.mTransform);
 	controllerTest1.mLocation.SetScale(0);
 	controllerTest2.mLocation.SetScale(0);
+	//Xr does not need to respond to resize messages
+	//it's fov comes from XR land
+#if !defined(ENABLE_XR)
+	auto SetupCameraAspect = [&]() {
+		const ImageSize size = gGraphics->GetDesiredSize();
+		float aspect = size.mWidth / (float)size.mHeight;
+		camera.SetFov(camera.GetFovDegrees(), aspect);
+	};
+	SetupCameraAspect();
+	gGraphics->mResizeMessage.push_back(SetupCameraAspect);
+#endif
 
 	while(!gEngine->GetWindow()->ShouldClose()) {
 		ZoneScoped;

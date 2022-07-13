@@ -23,7 +23,7 @@ public:
 	}
 
 private:
-	VkFramebuffer mFramebuffer;
+	VkFramebuffer mFramebuffer = VK_NULL_HANDLE;
 	VkExtent2D mSize;
 	std::vector<const Image*> mLinkedImages;
 };

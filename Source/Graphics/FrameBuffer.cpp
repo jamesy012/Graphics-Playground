@@ -14,8 +14,7 @@ void Framebuffer::Create(const RenderPass& mRenderPassTemplate, const char* aNam
 		attachments[i] = mLinkedImages[i]->GetImageView();
 	}
 	//debug only
-	if(mLinkedImages.size() != 0)
-	{
+	if(mLinkedImages.size() != 0) {
 		mSize = mLinkedImages[0]->GetImageSize();
 		for(size_t i = 1; i < numImages; i++) {
 			ASSERT(mLinkedImages[i]->GetImageSize() == mSize);
@@ -23,14 +22,14 @@ void Framebuffer::Create(const RenderPass& mRenderPassTemplate, const char* aNam
 	}
 
 	VkFramebufferCreateInfo info = {};
-	info.sType					 = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-	info.renderPass				 = mRenderPassTemplate.GetRenderPass();
+	info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+	info.renderPass = mRenderPassTemplate.GetRenderPass();
 
 	info.attachmentCount = numImages;
-	info.pAttachments	 = attachments.data();
+	info.pAttachments = attachments.data();
 
 	info.height = mSize.height;
-	info.width	= mSize.width;
+	info.width = mSize.width;
 	info.layers = 1;
 
 	info.flags = 0;
@@ -41,6 +40,9 @@ void Framebuffer::Create(const RenderPass& mRenderPassTemplate, const char* aNam
 }
 
 void Framebuffer::Destroy() {
-	vkDestroyFramebuffer(gGraphics->GetVkDevice(), mFramebuffer, GetAllocationCallback());
+	if(mFramebuffer != VK_NULL_HANDLE) {
+		vkDestroyFramebuffer(gGraphics->GetVkDevice(), mFramebuffer, GetAllocationCallback());
+	}
 	mFramebuffer = VK_NULL_HANDLE;
+	mLinkedImages.clear();
 }

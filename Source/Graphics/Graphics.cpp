@@ -182,11 +182,7 @@ bool VulkanGraphics::Initalize() {
 	mDevicesHandler->CreateCommandPools();
 
 	mSwapchain = new Swapchain(mDevicesHandler->GetPrimaryDeviceData());
-	{
-		int width, height;
-		mSurfaces[0]->GetFramebufferSize(&width, &height);
-		mSwapchain->Setup(ImageSize(width, height));
-	}
+	mSwapchain->Setup();
 
 #if defined(ENABLE_XR)
 	//needs the device setup
@@ -214,12 +210,18 @@ bool VulkanGraphics::Initalize() {
 
 		mRenderPass.AddColorAttachment(GetSwapchainFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
 		mRenderPass.Create("Present Renderpass");
-		mFramebuffer[0].AddImage(&mSwapchain->GetImage(0));
-		mFramebuffer[0].Create(mRenderPass, "Swapchain Framebuffer 0");
-		mFramebuffer[1].AddImage(&mSwapchain->GetImage(1));
-		mFramebuffer[1].Create(mRenderPass, "Swapchain Framebuffer 1");
-		mFramebuffer[2].AddImage(&mSwapchain->GetImage(2));
-		mFramebuffer[2].Create(mRenderPass, "Swapchain Framebuffer 2");
+
+		auto CreateFramebuffers = [=]() {
+			for(int i = 0; i < 3; i++) {
+				if(mFramebuffer[i].GetFramebuffer() != VK_NULL_HANDLE) {
+					mFramebuffer[i].Destroy();
+				}
+				mFramebuffer[i].AddImage(&mSwapchain->GetImage(i));
+				mFramebuffer[i].Create(mRenderPass, "Swapchain Framebuffer");
+			}
+		};
+		mResizeMessage.push_back(CreateFramebuffers);
+		CreateFramebuffers();
 #if defined(ENABLE_XR)
 		mXrRenderPass.SetClearColors(clear);
 		mXrRenderPass.AddColorAttachment(GetXRSwapchainFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
@@ -419,11 +421,11 @@ AQUIRES_LOCK(mCommandPoolMutex) void VulkanGraphics::StartNewFrame() {
 	mMaterialManager->ImGuiDraw();
 #endif
 
+	uint32_t index = mSwapchain->GetNextImage();
 	{
 		ZoneScopedN("Locking Command pool lock");
 		mCommandPoolMutex.lock();
 	}
-	uint32_t index = mSwapchain->GetNextImage();
 	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(index);
 	VkCommandBufferBeginInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
