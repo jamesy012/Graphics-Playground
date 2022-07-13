@@ -81,16 +81,16 @@ void Swapchain::Setup(const ImageSize aRequestedSize) {
 	ASSERT(mSwapchainSize.height <= swapChainSupport.capabilities.currentExtent.height);
 
 	VkSwapchainCreateInfoKHR createInfo = {};
-	createInfo.sType					= VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-	createInfo.surface					= deviceSurface;
+	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+	createInfo.surface = deviceSurface;
 
-	createInfo.minImageCount	= imageCount;
-	createInfo.imageFormat		= mColorFormat;
-	createInfo.imageExtent		= mSwapchainSize;
+	createInfo.minImageCount = imageCount;
+	createInfo.imageFormat = mColorFormat;
+	createInfo.imageExtent = mSwapchainSize;
 	createInfo.imageArrayLayers = 1;
-	createInfo.imageUsage		= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+	createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
-	createInfo.preTransform	  = swapChainSupport.capabilities.currentTransform;
+	createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
 	createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 	createInfo.presentMode = presentMode;
 	createInfo.clipped = VK_TRUE;
@@ -114,13 +114,13 @@ void Swapchain::Setup(const ImageSize aRequestedSize) {
 		addQueue(mAttachedDevice.mQueue.mPresentQueue.mQueueFamily);
 
 		if(queueFamilies.size() > 1) {
-			createInfo.imageSharingMode		 = VK_SHARING_MODE_CONCURRENT;
+			createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
 			createInfo.queueFamilyIndexCount = queueFamilies.size();
-			createInfo.pQueueFamilyIndices	 = queueFamilies.data();
+			createInfo.pQueueFamilyIndices = queueFamilies.data();
 		} else {
-			createInfo.imageSharingMode		 = VK_SHARING_MODE_EXCLUSIVE;
+			createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
 			createInfo.queueFamilyIndexCount = 0; // Optional
-			createInfo.pQueueFamilyIndices	 = nullptr; // Optional
+			createInfo.pQueueFamilyIndices = nullptr; // Optional
 		}
 	}
 
@@ -210,6 +210,12 @@ const uint32_t Swapchain::GetNextImage() {
 	ZoneScoped;
 	VkResult result = vkAcquireNextImageKHR(mAttachedDevice.mDevice, mSwapchain, UINT64_MAX, mPresentSemaphore, nullptr, &mImageIndex);
 
+	if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
+		//windowResize();
+	} else {
+		VALIDATEVK(result);
+	}
+
 	//result = vkWaitForFences(mAttachedDevice.mDevice, 1, &mFrameInfo[mImageIndex].mSubmitFence, VK_TRUE, UINT64_MAX);
 	//result = vkResetFences(mAttachedDevice.mDevice, 1, &mFrameInfo[mImageIndex].mSubmitFence);
 
@@ -218,35 +224,42 @@ const uint32_t Swapchain::GetNextImage() {
 
 void Swapchain::SubmitQueue(VkQueue aQueue, std::vector<VkCommandBuffer> aCommands) {
 	ZoneScoped;
-	VkSubmitInfo submitInfo			= {};
-	submitInfo.sType				= VK_STRUCTURE_TYPE_SUBMIT_INFO;
-	submitInfo.pSignalSemaphores	= &mRenderSemaphore;
+	VkSubmitInfo submitInfo = {};
+	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+	submitInfo.pSignalSemaphores = &mRenderSemaphore;
 	submitInfo.signalSemaphoreCount = 1;
-	submitInfo.pWaitSemaphores		= &mPresentSemaphore;
-	submitInfo.waitSemaphoreCount	= 1;
+	submitInfo.pWaitSemaphores = &mPresentSemaphore;
+	submitInfo.waitSemaphoreCount = 1;
 
-	submitInfo.pCommandBuffers	  = aCommands.data();
+	submitInfo.pCommandBuffers = aCommands.data();
 	submitInfo.commandBufferCount = aCommands.size();
 
 	const VkPipelineStageFlags flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-	submitInfo.pWaitDstStageMask	 = &flags;
+	submitInfo.pWaitDstStageMask = &flags;
 	//vkQueueSubmit(aQueue, 1, &submitInfo, mFrameInfo[mImageIndex].mSubmitFence);
-	vkQueueSubmit(aQueue, 1, &submitInfo, VK_NULL_HANDLE);
+	VALIDATEVK(vkQueueSubmit(aQueue, 1, &submitInfo, VK_NULL_HANDLE));
 
-	vkQueueWaitIdle(aQueue);
+	VALIDATEVK(vkQueueWaitIdle(aQueue));
 }
 
 void Swapchain::PresentImage() {
 	ZoneScoped;
-	VkPresentInfoKHR presentInfo   = {};
-	presentInfo.sType			   = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+	VkPresentInfoKHR presentInfo = {};
+	presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	presentInfo.waitSemaphoreCount = 1;
-	presentInfo.pWaitSemaphores	   = &mRenderSemaphore;
+	presentInfo.pWaitSemaphores = &mRenderSemaphore;
 
 	presentInfo.pImageIndices = &mImageIndex;
 
-	presentInfo.pSwapchains	   = &mSwapchain;
+	presentInfo.pSwapchains = &mSwapchain;
 	presentInfo.swapchainCount = 1;
 
-	vkQueuePresentKHR(mAttachedDevice.mQueue.mPresentQueue.mQueue, &presentInfo);
+	VkResult result = vkQueuePresentKHR(mAttachedDevice.mQueue.mPresentQueue.mQueue, &presentInfo);
+	if(!((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR))) {
+		if(result == VK_ERROR_OUT_OF_DATE_KHR) {
+			//windowResize();
+		} else {
+			VALIDATEVK(result);
+		}
+	}
 }

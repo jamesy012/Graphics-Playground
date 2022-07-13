@@ -89,7 +89,7 @@ private:
 	std::vector<SubMesh> mMesh;
 	std::vector<MeshMaterialData> mMaterials;
 
-	Job::WorkHandle* mLoadingHandle;
+	Job::WorkHandle* mLoadingHandle = nullptr;
 	LoaderBase* mLoadingBase;
 
 	std::string mImagePath;

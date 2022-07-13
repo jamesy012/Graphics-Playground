@@ -25,7 +25,10 @@ public:
 		return mWindow;
 	}
 
+	//size of window
 	void GetSize(int* aWidth, int* aHeight) const;
+	//size of the windows framebuffer
+	void GetFramebufferSize(int* aWidth, int* aHeight) const;
 
 	bool HasFocus() const;
 	void SetLock(const bool aShouldLock);

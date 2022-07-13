@@ -73,6 +73,9 @@ const char** Window::GetGLFWVulkanExtentensions(uint32_t* aCount) {
 void Window::GetSize(int* aWidth, int* aHeight) const {
 	glfwGetWindowSize(mWindow, aWidth, aHeight);
 }
+void Window::GetFramebufferSize(int* aWidth, int* aHeight) const {
+	glfwGetFramebufferSize(mWindow, aWidth, aHeight);
+}
 
 bool Window::HasFocus() const {
 	return glfwGetWindowAttrib(mWindow, GLFW_FOCUSED) != 0;

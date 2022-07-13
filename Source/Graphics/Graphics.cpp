@@ -182,9 +182,11 @@ bool VulkanGraphics::Initalize() {
 	mDevicesHandler->CreateCommandPools();
 
 	mSwapchain = new Swapchain(mDevicesHandler->GetPrimaryDeviceData());
-	int width, height;
-	mSurfaces[0]->GetSize(&width, &height);
-	mSwapchain->Setup(ImageSize(width, height));
+	{
+		int width, height;
+		mSurfaces[0]->GetFramebufferSize(&width, &height);
+		mSwapchain->Setup(ImageSize(width, height));
+	}
 
 #if defined(ENABLE_XR)
 	//needs the device setup
@@ -324,7 +326,7 @@ bool VulkanGraphics::Destroy() {
 	}
 
 	vkDestroySampler(GetVkDevice(), mSampler, GetAllocationCallback());
-	if(mMaterialManager){
+	if(mMaterialManager) {
 		mMaterialManager->Destroy();
 		delete mMaterialManager;
 		mMaterialManager = nullptr;
@@ -427,7 +429,7 @@ AQUIRES_LOCK(mCommandPoolMutex) void VulkanGraphics::StartNewFrame() {
 	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	vkBeginCommandBuffer(graphics, &info);
 
-	if(mMaterialManager){
+	if(mMaterialManager) {
 		mMaterialManager->NewFrame();
 	}
 

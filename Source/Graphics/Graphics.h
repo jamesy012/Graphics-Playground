@@ -66,6 +66,12 @@ static void VulkanResursiveSetpNext(void* dst, void* pNext) {
 //XR Runtime seems to have issues?
 void VulkanValidationMessage(int32_t aMessageId, bool aEnabled);
 
+#define VALIDATEVK(function)              \
+	{                                     \
+		const VkResult vkResult = (function); \
+		ASSERT(vkResult == VK_SUCCESS);     \
+	}
+
 #pragma endregion
 
 //Controls Vulkan startup/Shutdown
