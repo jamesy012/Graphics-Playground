@@ -75,8 +75,8 @@ int main() {
 		fbImage.Destroy();
 		fbImage.SetArrayLayers(gGraphics->GetNumActiveViews());
 		fbDepthImage.SetArrayLayers(gGraphics->GetNumActiveViews());
-		fbImage.CreateVkImage(Graphics::GetDeafultColorFormat(), gGraphics->GetDesiredSize(), "Main FB Image");
-		fbDepthImage.CreateVkImage(Graphics::GetDeafultDepthFormat(), gGraphics->GetDesiredSize(), "Main FB Depth Image");
+		fbImage.CreateVkImage(Graphics::GetDeafultColorFormat(), gGraphics->GetDesiredSize(), true, "Main FB Image");
+		fbDepthImage.CreateVkImage(Graphics::GetDeafultDepthFormat(), gGraphics->GetDesiredSize(), true, "Main FB Depth Image");
 
 		//convert to correct layout
 		{

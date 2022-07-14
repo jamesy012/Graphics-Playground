@@ -207,7 +207,6 @@ void Swapchain::PresentImage() {
 	presentInfo.swapchainCount = 1;
 
 	VkResult result = vkQueuePresentKHR(mAttachedDevice.mQueue.mPresentQueue.mQueue, &presentInfo);
-	VALIDATEVK(result);
 	if(!((result == VK_SUCCESS) || (result == VK_SUBOPTIMAL_KHR))) {
 		if(result == VK_ERROR_OUT_OF_DATE_KHR) {
 			ResizeWindow();
@@ -226,8 +225,8 @@ void Swapchain::ResizeWindow() {
 		mSwapchainSize.width = width;
 		mSwapchainSize.height = height;
 	}
-	ASSERT(mSwapchainSize.width <= mSwapChainSupportDetails.capabilities.maxImageExtent.width);
-	ASSERT(mSwapchainSize.height <= mSwapChainSupportDetails.capabilities.maxImageExtent.height);
+	//ASSERT(mSwapchainSize.width <= mSwapChainSupportDetails.capabilities.maxImageExtent.width);
+	//ASSERT(mSwapchainSize.height <= mSwapChainSupportDetails.capabilities.maxImageExtent.height);
 
 	VkSwapchainCreateInfoKHR createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;

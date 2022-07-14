@@ -29,7 +29,7 @@ public:
 		mArrayLayers = aNumLayers;
 	}
 
-	void CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
+	void CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const bool aAttachment, const char* aName /*= 0*/);
 	void CreateFromBuffer(Buffer& aBuffer, const bool aDestroyBuffer, const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
 	void CreateFromVkImage(const VkImage aImage, const VkFormat aFormat, const ImageSize aSize, const char* aName = 0);
 	//always 4bit

@@ -82,10 +82,10 @@ void TinygltfLoader::ProcessMaterials(tinygltf::Model& aModel) {
 			tinygltf::Texture& baseTexture = aModel.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
 			SetLoadTexture(aModel.images[baseTexture.source], &materialData.mRoughness);
 		}	
-		if(mat.normalTexture.index != -1) {
-			tinygltf::Texture& baseTexture = aModel.textures[mat.normalTexture.index];
-			SetLoadTexture(aModel.images[baseTexture.source], &materialData.mNormal);
-		}
+		//if(mat.normalTexture.index != -1) {
+		//	tinygltf::Texture& baseTexture = aModel.textures[mat.normalTexture.index];
+		//	SetLoadTexture(aModel.images[baseTexture.source], &materialData.mNormal);
+		//}
 		for(int i = 0; i < mat.pbrMetallicRoughness.baseColorFactor.size(); i++) {
 			materialData.mColorFactor[i] = mat.pbrMetallicRoughness.baseColorFactor[i];
 		}
