@@ -9,8 +9,11 @@
 #include "Engine/Job.h"
 
 class Buffer;
+class LoaderBase;
+class StbImageLoader;
 
 class Image {
+	friend StbImageLoader;
 public:
 	Image() {}
 	~Image() {}
@@ -88,6 +91,7 @@ private:
 	VmaAllocationInfo mAllocationInfo = {};
 
 	Job::WorkHandle* mLoadedHandle = nullptr;
+	LoaderBase* mLoadingBase;
 };
 
 namespace CONSTANT {

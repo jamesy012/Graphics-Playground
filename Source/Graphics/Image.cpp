@@ -5,8 +5,8 @@
 #include "Buffer.h"
 #include "MaterialManager.h"//global texture ID
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include "Loaders/StbImageLoader.h"
+#include "Loaders/DDSLoader.h"
 
 namespace CONSTANT {
 	namespace IMAGE {
@@ -120,12 +120,6 @@ void Image::CreateFromData(const void* aData, const VkFormat aFormat, const Imag
 	//dataBuffer.Destroy();
 }
 
-struct AsyncLoadDataImage {
-	stbi_uc* mData;
-	int width, height, comp;
-	Image* ptr;
-};
-
 void Image::LoadImageSync(const FileIO::Path aFilePath, const VkFormat aFormat) {
 	Job::Work work = GetLoadImageWork(aFilePath, aFormat);
 	work.DoWork();
@@ -136,31 +130,45 @@ void Image::LoadImage(const FileIO::Path aFilePath, const VkFormat aFormat) {
 }
 
 Job::Work Image::GetLoadImageWork(const FileIO::Path aFilePath, const VkFormat aFormat) {
-	Job::Work work;
-	AsyncLoadDataImage* imageData = new AsyncLoadDataImage();
-	imageData->ptr			 = this;
-
-	work.mUserData = imageData;
-	work.mWorkPtr  = [aFilePath](void* userData) {
-		 ZoneScoped;
-		 ZoneText(aFilePath.String().c_str(), aFilePath.String().size());
-		 AsyncLoadDataImage* imageData = (AsyncLoadDataImage*)userData;
-		 //todo
-		 imageData->mData = stbi_load(aFilePath.String().c_str(), &imageData->width, &imageData->height, &imageData->comp, STBI_rgb_alpha);
-		 ASSERT(imageData->mData != nullptr);
-		 //ASSERT(imageData->comp == 4);
-		 ZoneValue(imageData->width);
-		 ZoneValue(imageData->height);
-
+	const std::string ext = aFilePath.Extension();
+	struct LoaderMap {
+		ImageLoaders loader;
+		std::vector<std::string> extensions;
 	};
-	//work.mFinishOnMainThread = true;
-	work.mFinishPtr = [=](void* userData) {
-		ZoneScoped;
-		AsyncLoadDataImage* imageData = (AsyncLoadDataImage*)userData;
-		imageData->ptr->CreateFromData(imageData->mData, aFormat, {imageData->width, imageData->height}, aFilePath.String().c_str());
-		stbi_image_free(imageData->mData);
-	};
-	return work;
+	ImageLoaders selectedLoader = ImageLoaders::COUNT;
+
+	const LoaderMap loaderMap[(int)ImageLoaders::COUNT] = {{ImageLoaders::DDS, {".dds"}}, {}};
+	for(int i = 0; i < (int)ImageLoaders::COUNT && selectedLoader == ImageLoaders::COUNT; i++) {
+		const LoaderMap& map = loaderMap[i];
+		for(int q = 0; q < map.extensions.size(); q++) {
+			if(map.extensions[q] == ext) {
+				selectedLoader = (ImageLoaders)i;
+				break;
+			}
+		}
+	}
+
+	mLoadingBase = nullptr;
+
+	switch(selectedLoader) {
+		case ImageLoaders::DDS:
+			mLoadingBase = new DDSLoader();
+			break;
+		case ImageLoaders::STB:
+		case ImageLoaders::COUNT: //fallback
+			mLoadingBase = new StbImageLoader();
+			break;
+		default:
+			ASSERT(false);
+	}
+
+	if(mLoadingBase == nullptr){
+		return Job::Work();
+	}
+
+	mLoadingBase->SetUp(this);
+	mFormat = aFormat;
+	return mLoadingBase->GetWork(aFilePath);
 }
 
 void Image::Destroy() {

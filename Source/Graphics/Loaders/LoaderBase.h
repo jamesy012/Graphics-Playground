@@ -7,8 +7,14 @@ class Mesh;
 class Image;
 
 enum class MeshLoaders {
-	TINYGLTF,
-	ASSIMP,
+	TINYGLTF,//for .gltf files
+	ASSIMP,//generic fallback
+	COUNT
+};
+
+enum class ImageLoaders {
+	DDS,//for .dds files
+	STB,//generic fallback
 	COUNT
 };
 

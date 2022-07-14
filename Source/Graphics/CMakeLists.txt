@@ -48,6 +48,9 @@ set(GRAPHICS_SOURCE
     "Loaders/Loader.cpp"
     "Loaders/AssimpLoader.h"
     "Loaders/TinygltfLoader.h"
+    "Loaders/StbImageLoader.h"
+    "Loaders/StbImageLoader.cpp"
+    "Loaders/DDSLoader.h"
     ${IMGUI_GRAPHICS_SOURCES}
     ${VR_GRAPHICS_SOURCES})
 
