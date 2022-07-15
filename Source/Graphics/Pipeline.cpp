@@ -24,6 +24,8 @@ bool Pipeline::AddShader(FileIO::Path aPath, VkShaderStageFlagBits aStage) {
 
 	vkCreateShaderModule(gGraphics->GetVkDevice(), &moduleInfo, GetAllocationCallback(), &stageInfo.module);
 
+	FileIO::UnloadFile(file);
+
 	SetVkName(VK_OBJECT_TYPE_SHADER_MODULE, stageInfo.module, aPath);
 
 	mShaders.push_back(stageInfo);
@@ -152,7 +154,7 @@ bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 		//	pushConstants[numPcs] = globalTexturePCRange;
 		//}
 		//pipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
-		//pipelineLayoutInfo.pushConstantRangeCount = pushConstants.size();	
+		//pipelineLayoutInfo.pushConstantRangeCount = pushConstants.size();
 		pipelineLayoutInfo.pPushConstantRanges = mPushConstants.data();
 		pipelineLayoutInfo.pushConstantRangeCount = mPushConstants.size();
 
@@ -169,6 +171,27 @@ bool Pipeline::Create(VkRenderPass aPass, const char* aName /*= 0*/) {
 
 		vkCreatePipelineLayout(gGraphics->GetVkDevice(), &pipelineLayoutInfo, GetAllocationCallback(), &mPipelineLayout);
 		SetVkName(VK_OBJECT_TYPE_PIPELINE_LAYOUT, mPipelineLayout, aName);
+	}
+
+	//~~~ Shader Specilation
+	struct SpecializationTest {
+		int test;
+	} specTest;
+	specTest.test = 10;
+
+	VkSpecializationMapEntry specMapEntry = {};
+	specMapEntry.constantID = 0;
+	specMapEntry.offset = 0;
+	specMapEntry.size = sizeof(SpecializationTest);
+
+	VkSpecializationInfo specializationInfo = {};
+	specializationInfo.mapEntryCount = 1;
+	specializationInfo.pMapEntries = &specMapEntry;
+	specializationInfo.dataSize = sizeof(SpecializationTest);
+	specializationInfo.pData = &specTest;
+
+	for(int i = 0; i < mShaders.size(); i++) {
+		mShaders[i].pSpecializationInfo = &specializationInfo;
 	}
 
 	//~~~ VkGraphicsPipelineCreateInfo

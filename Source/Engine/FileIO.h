@@ -30,5 +30,5 @@ namespace FileIO {
 		size_t mSize = 0;
 	};
 	File LoadFile(Path aPath);
-	void UnloadFile(File aFile);
+	void UnloadFile(File& aFile);
 }; // namespace FileIO

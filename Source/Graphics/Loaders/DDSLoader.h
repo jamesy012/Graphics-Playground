@@ -21,7 +21,10 @@ private:
 	VkFormat SelectVKFormatFromDXGI(uint32_t aFormat);
 };
 struct DDSFileHeader {
-	uint8_t ddsCode[4]; // 'DDS '
+	union {
+		uint8_t ddsCode[4]; // 'DDS
+		uint32_t ddsCodeValue;
+	};
 	uint32_t size; //size of header always 124
 	uint32_t flags; //. bitflags that tells you if data is present in the file
 		//      CAPS         0x1
@@ -42,15 +45,18 @@ struct DDSFileHeader {
 	uint32_t depth; //depth of volume texture in pixels
 	uint32_t mipMapCount;
 	uint32_t unused[11];
-	uint32_t size2;//always 32
-	uint32_t Flags; //. bitflags that tells you if data is present in the file for following 28 bytes
-		//      ALPHAPIXELS  0x1
-		//      ALPHA        0x2
-		//      FOURCC       0x4
-		//      RGB          0x40
-		//      YUV          0x200
-		//      LUMINANCE    0x20000
-	uint8_t fourCC[4]; // fileFormat
+	uint32_t size2; //always 32
+	uint32_t dataFlags; //. bitflags that tells you if data is present in the file for following 28 bytes
+	//      ALPHAPIXELS  0x1
+	//      ALPHA        0x2
+	//      FOURCC       0x4
+	//      RGB          0x40
+	//      YUV          0x200
+	//      LUMINANCE    0x20000
+	union {
+		uint8_t fourCC[4]; // fileFormat
+		uint32_t fourCCValue;
+	};
 	uint32_t RGBBitCount; // bits per pixel
 	uint32_t RBitMask;
 	uint32_t GBitMask;
@@ -73,6 +79,11 @@ struct DDSFileHeader {
 	uint32_t reserved2; //unused
 };
 
+#define MakeFourCC(x, y, z, w) (x | y << 8 | z << 16 | w << 24);
+static constexpr uint32_t DDSMagic = MakeFourCC('D', 'D', 'S', ' ');
+static constexpr uint32_t DXT10Magic = MakeFourCC('D', 'X', '1', '0');
+static constexpr uint32_t ATI2Magic = MakeFourCC('A', 'T', 'I', '2');
+
 struct DDSDXT10Header {
 	uint32_t dxgiFormat;
 	uint32_t resourceDimension;
@@ -82,7 +93,6 @@ struct DDSDXT10Header {
 };
 
 Job::Work DDSLoader::GetWork(FileIO::Path aPath) {
-	//todo
 	FileIO::File file = FileIO::LoadFile(aPath);
 	char* data = file.mData;
 	DDSFileHeader* header = (DDSFileHeader*)data;
@@ -90,18 +100,31 @@ Job::Work DDSLoader::GetWork(FileIO::Path aPath) {
 	DDSDXT10Header* dxt10 = (DDSDXT10Header*)(data + pixelDataOffset);
 
 	ASSERT(data[0] == 'D' && data[1] == 'D' && data[2] == 'S');
+	ASSERT(header->ddsCodeValue == DDSMagic);
 
 	VkFormat desiredFormat = VK_FORMAT_UNDEFINED;
 
-
-	//ATI2 - BC5 https://en.wikipedia.org/wiki/3Dc
-	ASSERT(header->fourCC[0] == 'D');
 	if(header->fourCC[0] == 'D') {
-		switch(header->fourCC[3]) {
-			case '0': //DX10
+		switch(header->fourCCValue) {
+			case DXT10Magic: //DX10
 				desiredFormat = SelectVKFormatFromDXGI(dxt10->dxgiFormat);
-				ASSERT(dxt10->resourceDimension == 3);//TEXTURE2D
+				ASSERT(dxt10->resourceDimension == 3); //TEXTURE2D
 				pixelDataOffset += sizeof(DDSDXT10Header);
+				break;
+			default:
+				break;
+		}
+	}
+	//ATI2 - BC5 https://en.wikipedia.org/wiki/3Dc
+	if(header->fourCC[0] == 'A') {
+		switch(header->fourCCValue) {
+			case ATI2Magic:
+				desiredFormat = VK_FORMAT_BC5_UNORM_BLOCK;
+				//no blue channel
+				//possibly r and b are flipped?
+				//should load this, then do a conversion to another format..
+				//probably compute shader that adds in the blue channel?
+				LOGGER::Log("ATI2 texture is incorrect - investigte\n");
 				break;
 			default:
 				break;
@@ -109,7 +132,20 @@ Job::Work DDSLoader::GetWork(FileIO::Path aPath) {
 	}
 	ASSERT(desiredFormat != VK_FORMAT_UNDEFINED);
 
+	ASSERT(header->flags & 0x2); //height
+	ASSERT(header->flags & 0x4); //width
+	ASSERT(header->dataFlags & 0x4); //fourCC
+
+	uint8_t mipCount = 1;
+	if(header->flags & 0x20000) { //mipcount
+		mipCount = header->mipMapCount;
+	}
+
+	//todo mips
+
 	mImage->CreateFromData(data + pixelDataOffset, desiredFormat, {header->width, header->height}, aPath.String().c_str());
+
+	FileIO::UnloadFile(file);
 
 	return Job::Work();
 }

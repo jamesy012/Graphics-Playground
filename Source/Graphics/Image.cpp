@@ -20,6 +20,7 @@ namespace CONSTANT {
 uint32_t ConvertImageSizeToByteSize(ImageSize aSize, VkFormat aFormat) {
 	switch(aFormat) {
 		case VK_FORMAT_BC7_UNORM_BLOCK:
+		case VK_FORMAT_BC5_UNORM_BLOCK:
 			return ((aSize.mWidth / 4) * (aSize.mHeight / 4)) * 16;
 	}
 

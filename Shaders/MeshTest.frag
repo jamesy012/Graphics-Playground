@@ -16,9 +16,17 @@ const float gAlphaClip = 0.5f;
 
 void main() {
     fColor = texture(sTextures[pc.uAlbedo], In.UV.st) * In.Color;
+
+    //ATI texture does not come with blue channel?
+    //if(normalTex.b == 0) {
+    //    normalTex.b = 1;
+    //    normalTex.rgb = normalize(normalTex.rgb);
+    //}
+
     if(fColor.a <= gAlphaClip) {
         discard;
     }
+
     //fColor *= vec4(floor(In.UV.xyx * 8.0f) / 8.0f, 1);
     //vec3 val = floor(In.UV.xyx * 8.0f) / 8.0f;
     //fColor = vec4(val, 1);

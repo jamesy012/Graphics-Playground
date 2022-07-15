@@ -144,8 +144,10 @@ int main() {
 	referenceMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/5m reference.fbx");
 
 	Mesh sponzaTest;
-	sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/Sponza.gltf",
-						std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/");
+	//sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/Sponza.gltf",
+	//					std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/");
+	sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza-New/scene.gltf",
+						std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza-New/");
 
 	MeshUniformTest meshUniform;
 
@@ -178,13 +180,8 @@ int main() {
 
 	MaterialBase meshTestBase;
 	meshTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
-	//meshTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
 	meshTestBase.Create();
 	meshPipeline.AddMaterialBase(&meshTestBase);
-	//MaterialBase meshImageTestBase;
-	//meshImageTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-	//meshImageTestBase.Create();
-	//meshPipeline.AddMaterialBase(&meshImageTestBase);
 	meshPipeline.AddBindlessTexture();
 	meshPipeline.Create(mainRenderPass.GetRenderPass(), "Mesh");
 
@@ -193,23 +190,17 @@ int main() {
 
 	Model modelTest1;
 	modelTest1.SetMesh(&meshTest);
-	//modelTest1.SetMaterialBase(&meshImageTestBase);
 	Model modelTest2;
 	modelTest2.SetMesh(&meshTest);
-	//modelTest2.SetMaterialBase(&meshImageTestBase);
 	Model controllerTest1;
 	controllerTest1.SetMesh(&handMesh);
-	//controllerTest1.SetMaterialBase(&meshImageTestBase);
 	Model controllerTest2;
 	controllerTest2.SetMesh(&handMesh);
-	//controllerTest2.SetMaterialBase(&meshImageTestBase);
 	Model worldBase;
 	worldBase.SetMesh(&referenceMesh);
-	//worldBase.SetMaterialBase(&meshImageTestBase);
 
 	Model sponzaTestModel;
 	sponzaTestModel.SetMesh(&sponzaTest);
-	//sponzaTestModel.SetMaterialBase(&meshImageTestBase);
 
 	Transform mRootTransform;
 	modelTest1.mLocation.Set(glm::vec3(0, 0, 0), 1.0f, &mRootTransform);
