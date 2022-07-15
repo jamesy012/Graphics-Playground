@@ -23,7 +23,7 @@ private:
 	void ProcessMaterials(tinygltf::Model& aModel);
 	void ProcessModel(tinygltf::Model& aModel);
 	void ProcessScene(tinygltf::Model& aModel, tinygltf::Scene& aScene);
-	void ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode);
+	void ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode, const glm::mat4& aMatrix);
 	void ProcessMesh(tinygltf::Model& aModel, tinygltf::Mesh& aMesh);
 	void ProcessPrimitive(tinygltf::Model& aModel, tinygltf::Primitive& aPrimitive);
 };
@@ -77,11 +77,11 @@ void TinygltfLoader::ProcessMaterials(tinygltf::Model& aModel) {
 		if(mat.pbrMetallicRoughness.baseColorTexture.index != -1) {
 			tinygltf::Texture& baseTexture = aModel.textures[mat.pbrMetallicRoughness.baseColorTexture.index];
 			SetLoadTexture(aModel.images[baseTexture.source], &materialData.mImage);
-		}	
+		}
 		if(mat.pbrMetallicRoughness.metallicRoughnessTexture.index != -1) {
 			tinygltf::Texture& baseTexture = aModel.textures[mat.pbrMetallicRoughness.metallicRoughnessTexture.index];
 			SetLoadTexture(aModel.images[baseTexture.source], &materialData.mRoughness);
-		}	
+		}
 		if(mat.normalTexture.index != -1) {
 			tinygltf::Texture& baseTexture = aModel.textures[mat.normalTexture.index];
 			SetLoadTexture(aModel.images[baseTexture.source], &materialData.mNormal);
@@ -105,15 +105,11 @@ void TinygltfLoader::ProcessModel(tinygltf::Model& aModel) {
 void TinygltfLoader::ProcessScene(tinygltf::Model& aModel, tinygltf::Scene& aScene) {
 	const int numNodes = aScene.nodes.size();
 	for(size_t i = 0; i < numNodes; i++) {
-		ProcessNode(aModel, aModel.nodes[i]);
+		ProcessNode(aModel, aModel.nodes[aScene.nodes[i]], glm::mat4(1));
 	}
 }
-void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode) {
-	if(aNode.mesh == -1) {
-		return;
-	}
-	const int numMeshBefore = mMesh->mMesh.size();
-	ProcessMesh(aModel, aModel.meshes[aNode.mesh]);
+void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode, const glm::mat4& aMatrix) {
+
 	//also contains position information here
 	Transform nodeTransform;
 	ASSERT(aNode.matrix.size() == 0);
@@ -131,9 +127,22 @@ void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode)
 	} else if(aNode.rotation.size() == 4) {
 		nodeTransform.SetRotation(glm::quat(aNode.rotation[3], aNode.rotation[0], aNode.rotation[1], aNode.rotation[2]));
 	}
+	const glm::mat4 nodeMatrix = aMatrix * nodeTransform.GetWorldMatrix();
+
+	const int numChildren = aNode.children.size();
+	if(numChildren != 0) {
+		for(size_t i = 0; i < numChildren; i++) {
+			ProcessNode(aModel, aModel.nodes[aNode.children[i]], nodeMatrix);
+		}
+	}
+	if(aNode.mesh == -1) {
+		return;
+	}
+	const int numMeshBefore = mMesh->mMesh.size();
+	ProcessMesh(aModel, aModel.meshes[aNode.mesh]);
 	const int numMeshs = mMesh->mMesh.size();
 	for(size_t i = numMeshBefore; i < numMeshs; i++) {
-		mMesh->mMesh[i].mMatrix = nodeTransform.GetWorldMatrix();
+		mMesh->mMesh[i].mMatrix = nodeMatrix;
 	}
 }
 void TinygltfLoader::ProcessMesh(tinygltf::Model& aModel, tinygltf::Mesh& aMesh) {
@@ -279,12 +288,25 @@ void TinygltfLoader::ProcessPrimitive(tinygltf::Model& aModel, tinygltf::Primiti
 			accessor.ByteStride(view); //tinygltf::GetComponentSizeInBytes(accessor.componentType) * tinygltf::GetNumComponentsInType(accessor.type);
 		const int count = accessor.count;
 
-		ASSERT(accessor.type == TINYGLTF_TYPE_SCALAR && accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT);
+		ASSERT(accessor.type == TINYGLTF_TYPE_SCALAR);
+		int indexTypeSize = 0;
+		switch(accessor.componentType) {
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+				indexTypeSize = sizeof(unsigned char);
+				break;
+			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+				indexTypeSize = sizeof(unsigned int);
+				break;
+			default:
+				indexTypeSize = sizeof(unsigned char);
+				ASSERT(false);
+				break;
+		}
 		indices.resize(count);
 
 		for(int i = 0; i < count; i++) {
 			MeshIndex data = 0;
-			memcpy(&data, datastart + (dataSize * i), dataSize * sizeof(char));
+			memcpy(&data, datastart + (dataSize * i), dataSize);
 			indices[i] = data;
 		}
 	}
