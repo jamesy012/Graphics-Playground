@@ -22,6 +22,8 @@ void Window::Create(const int aWidth, const int aHeight, const char* aTitle) {
 	glfwInit();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	mWindow = glfwCreateWindow(aWidth, aHeight, aTitle, nullptr, nullptr);
+
+	glfwSetInputMode(mWindow, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 }
 
 void Window::Destroy() {

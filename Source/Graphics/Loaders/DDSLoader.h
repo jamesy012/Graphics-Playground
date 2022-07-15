@@ -18,7 +18,7 @@ public:
 	virtual Job::Work GetWork(FileIO::Path aPath) override;
 
 private:
-	VkFormat SelectVKFormatFromDXGI(uint32_t aFormat);
+	static VkFormat SelectVKFormatFromDXGI(uint32_t aFormat);
 };
 struct DDSFileHeader {
 	union {
@@ -93,61 +93,67 @@ struct DDSDXT10Header {
 };
 
 Job::Work DDSLoader::GetWork(FileIO::Path aPath) {
-	FileIO::File file = FileIO::LoadFile(aPath);
-	char* data = file.mData;
-	DDSFileHeader* header = (DDSFileHeader*)data;
-	uint32_t pixelDataOffset = header->size + 4;
-	DDSDXT10Header* dxt10 = (DDSDXT10Header*)(data + pixelDataOffset);
+	Job::Work work;
+	work.mUserData = this;
+	work.mWorkPtr = [aPath](void* userData) {
+		ZoneScoped;
+		ZoneText(aPath.String().c_str(), aPath.String().size());
+		DDSLoader* pThis = (DDSLoader*)userData;
+		FileIO::File file = FileIO::LoadFile(aPath);
+		char* data = file.mData;
+		DDSFileHeader* header = (DDSFileHeader*)data;
+		uint32_t pixelDataOffset = header->size + 4;
+		DDSDXT10Header* dxt10 = (DDSDXT10Header*)(data + pixelDataOffset);
 
-	ASSERT(data[0] == 'D' && data[1] == 'D' && data[2] == 'S');
-	ASSERT(header->ddsCodeValue == DDSMagic);
+		ASSERT(data[0] == 'D' && data[1] == 'D' && data[2] == 'S');
+		ASSERT(header->ddsCodeValue == DDSMagic);
 
-	VkFormat desiredFormat = VK_FORMAT_UNDEFINED;
+		VkFormat desiredFormat = VK_FORMAT_UNDEFINED;
 
-	if(header->fourCC[0] == 'D') {
-		switch(header->fourCCValue) {
-			case DXT10Magic: //DX10
-				desiredFormat = SelectVKFormatFromDXGI(dxt10->dxgiFormat);
-				ASSERT(dxt10->resourceDimension == 3); //TEXTURE2D
-				pixelDataOffset += sizeof(DDSDXT10Header);
-				break;
-			default:
-				break;
+		if(header->fourCC[0] == 'D') {
+			switch(header->fourCCValue) {
+				case DXT10Magic: //DX10
+					desiredFormat = SelectVKFormatFromDXGI(dxt10->dxgiFormat);
+					ASSERT(dxt10->resourceDimension == 3); //TEXTURE2D
+					pixelDataOffset += sizeof(DDSDXT10Header);
+					break;
+				default:
+					break;
+			}
 		}
-	}
-	//ATI2 - BC5 https://en.wikipedia.org/wiki/3Dc
-	if(header->fourCC[0] == 'A') {
-		switch(header->fourCCValue) {
-			case ATI2Magic:
-				desiredFormat = VK_FORMAT_BC5_UNORM_BLOCK;
-				//no blue channel
-				//possibly r and b are flipped?
-				//should load this, then do a conversion to another format..
-				//probably compute shader that adds in the blue channel?
-				LOGGER::Log("ATI2 texture is incorrect - investigte\n");
-				break;
-			default:
-				break;
+		//ATI2 - BC5 https://en.wikipedia.org/wiki/3Dc
+		if(header->fourCC[0] == 'A') {
+			switch(header->fourCCValue) {
+				case ATI2Magic:
+					desiredFormat = VK_FORMAT_BC5_UNORM_BLOCK;
+					//no blue channel
+					//possibly r and b are flipped?
+					//should load this, then do a conversion to another format..
+					//probably compute shader that adds in the blue channel?
+					LOGGER::Log("ATI2 texture is incorrect - investigte\n");
+					break;
+				default:
+					break;
+			}
 		}
-	}
-	ASSERT(desiredFormat != VK_FORMAT_UNDEFINED);
+		ASSERT(desiredFormat != VK_FORMAT_UNDEFINED);
 
-	ASSERT(header->flags & 0x2); //height
-	ASSERT(header->flags & 0x4); //width
-	ASSERT(header->dataFlags & 0x4); //fourCC
+		ASSERT(header->flags & 0x2); //height
+		ASSERT(header->flags & 0x4); //width
+		ASSERT(header->dataFlags & 0x4); //fourCC
 
-	uint8_t mipCount = 1;
-	if(header->flags & 0x20000) { //mipcount
-		mipCount = header->mipMapCount;
-	}
+		uint8_t mipCount = 1;
+		if(header->flags & 0x20000) { //mipcount
+			mipCount = header->mipMapCount;
+		}
 
-	//todo mips
+		//todo mips
 
-	mImage->CreateFromData(data + pixelDataOffset, desiredFormat, {header->width, header->height}, aPath.String().c_str());
+		pThis->mImage->CreateFromData(data + pixelDataOffset, desiredFormat, {header->width, header->height}, aPath.String().c_str());
 
-	FileIO::UnloadFile(file);
-
-	return Job::Work();
+		FileIO::UnloadFile(file);
+	};
+	return work;
 }
 
 VkFormat DDSLoader::SelectVKFormatFromDXGI(uint32_t aFormat) {

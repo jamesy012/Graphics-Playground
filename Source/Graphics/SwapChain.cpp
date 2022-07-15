@@ -11,7 +11,7 @@ extern VkInstance gVkInstance;
 extern Graphics* gGraphics;
 
 //todo implement
-const bool gVSYNC = false;
+const bool gVSYNC = true;
 
 void Swapchain::Setup() {
 	const VkSurfaceKHR deviceSurface = mAttachedDevice.mSurfaceUsed;
@@ -36,27 +36,30 @@ void Swapchain::Setup() {
 	}
 
 	//https://www.intel.com/content/www/us/en/developer/articles/training/api-without-secrets-introduction-to-vulkan-part-2.html?language=en#_Toc445674479:~:text=cpp%2C%20function%20GetSwapChainTransform()-,Selecting%20Presentation%20Mode,-Present%20modes%20determine
-	mPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-	for(int i = 0; i < presentModeCount; i++) {
-		if(gVSYNC) {
+	mPresentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;
+	const VkPresentModeKHR desiredModes[] = {VK_PRESENT_MODE_MAILBOX_KHR, VK_PRESENT_MODE_FIFO_KHR, VK_PRESENT_MODE_IMMEDIATE_KHR};
+	const uint8_t numDesiredModes = sizeof(desiredModes) / sizeof(VkPresentModeKHR);
+	//if vsync is on, lets search for the vsync present mode's first
+	if(gVSYNC) {
+		for(int i = 0; i < presentModeCount; i++) {
 			if(mSwapChainSupportDetails.presentModes[i] == VK_PRESENT_MODE_FIFO_KHR) {
 				mPresentMode = VK_PRESENT_MODE_FIFO_KHR;
 				break;
 			}
 		}
-		if(mSwapChainSupportDetails.presentModes[i] == VK_PRESENT_MODE_MAILBOX_KHR) {
-			mPresentMode = VK_PRESENT_MODE_MAILBOX_KHR;
-			break;
-		}
-		if(mSwapChainSupportDetails.presentModes[i] == VK_PRESENT_MODE_FIFO_KHR) {
-			mPresentMode = VK_PRESENT_MODE_FIFO_KHR;
-			break;
-		}
-		if(mSwapChainSupportDetails.presentModes[i] == VK_PRESENT_MODE_IMMEDIATE_KHR) {
-			mPresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
-			break;
+	}
+	if(mPresentMode == VK_PRESENT_MODE_MAX_ENUM_KHR) {
+		for(int i = 0; i < numDesiredModes && mPresentMode == VK_PRESENT_MODE_MAX_ENUM_KHR; i++) {
+			for(int q = 0; q < presentModeCount; q++) {
+				//
+				if(mSwapChainSupportDetails.presentModes[q] == desiredModes[i]) {
+					mPresentMode = desiredModes[i];
+					break;
+				}
+			}
 		}
 	}
+	ASSERT(mPresentMode != VK_PRESENT_MODE_MAX_ENUM_KHR);
 
 	//VkSurfaceFormatKHR surfaceFormat =
 	//    ChooseSwapSurfaceFormat(swapChainSupport.formats);
@@ -190,8 +193,10 @@ void Swapchain::SubmitQueue(VkQueue aQueue, std::vector<VkCommandBuffer> aComman
 	submitInfo.pWaitDstStageMask = &flags;
 	//vkQueueSubmit(aQueue, 1, &submitInfo, mFrameInfo[mImageIndex].mSubmitFence);
 	VALIDATEVK(vkQueueSubmit(aQueue, 1, &submitInfo, VK_NULL_HANDLE));
-
-	VALIDATEVK(vkQueueWaitIdle(aQueue));
+	{
+		ZoneScoped;
+		VALIDATEVK(vkQueueWaitIdle(aQueue));
+	}
 }
 
 void Swapchain::PresentImage() {

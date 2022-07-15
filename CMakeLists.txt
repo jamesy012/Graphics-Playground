@@ -46,6 +46,9 @@ target_compile_definitions(GraphicsPlayground
                            PUBLIC PLATFORM_APPLE=${PLATFORM_APPLE})
 target_compile_definitions(GraphicsPlayground
                            PUBLIC PLATFORM_LINUX=${PLATFORM_LINUX})
+                           
+target_compile_definitions(GraphicsPlayground
+                           PUBLIC NOMINMAX)
 
 #why is apple different?
 #is this a problem with my cmake?

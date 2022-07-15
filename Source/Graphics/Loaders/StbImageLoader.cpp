@@ -16,7 +16,7 @@ Job::Work StbImageLoader::GetWork(FileIO::Path aPath) {
 	work.mUserData = imageData;
 	work.mWorkPtr = [aPath](void* userData) {
 		ZoneScoped;
-		ZoneText(aFilePath.String().c_str(), aFilePath.String().size());
+		ZoneText(aPath.String().c_str(), aPath.String().size());
 		AsyncLoadData* imageData = (AsyncLoadData*)userData;
 		//todo
 		imageData->mData = stbi_load(aPath.String().c_str(), &imageData->width, &imageData->height, &imageData->comp, STBI_rgb_alpha);
