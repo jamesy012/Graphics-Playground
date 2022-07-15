@@ -90,7 +90,7 @@ private:
 	std::vector<MeshMaterialData> mMaterials;
 
 	Job::WorkHandle* mLoadingHandle = nullptr;
-	LoaderBase* mLoadingBase;
+	LoaderBase* mLoadingBase = nullptr;
 
 	std::string mImagePath;
 };

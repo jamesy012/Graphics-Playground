@@ -28,7 +28,19 @@ void Transform::Clear(bool aReparent /* = true*/) {
 	}
 }
 
-void Transform::SetWorldPosition(glm::vec3 aPos) {
+void Transform::SetMatrix(const glm::mat4& aMat) {
+	glm::vec3 scale;
+	glm::quat rotation;
+	glm::vec3 translation;
+	glm::vec3 skew;
+	glm::vec4 perspective;
+	glm::decompose(aMat, scale, rotation, translation, skew, perspective);
+	SetPosition(translation);
+	SetScale(scale);
+	SetRotation(glm::conjugate(rotation));
+}
+
+void Transform::SetWorldPosition(const glm::vec3& aPos) {
 	if(mParent) {
 		//skip out matrix
 		mPos = glm::inverse(mParent->GetWorldMatrix()) * glm::vec4(aPos, 1);
@@ -38,7 +50,7 @@ void Transform::SetWorldPosition(glm::vec3 aPos) {
 	}
 }
 
-void Transform::SetWorldScale(glm::vec3 aScale) {
+void Transform::SetWorldScale(const glm::vec3& aScale) {
 	if(mParent) {
 		//todo
 		ASSERT(false);
@@ -47,7 +59,7 @@ void Transform::SetWorldScale(glm::vec3 aScale) {
 	}
 }
 
-void Transform::SetWorldRotation(glm::quat aRot) {
+void Transform::SetWorldRotation(const glm::quat& aRot) {
 	if(mParent) {
 		mRot = glm::inverse(mParent->GetWorldMatrix()) * glm::mat4_cast(aRot);
 		SetDirty();
@@ -56,12 +68,12 @@ void Transform::SetWorldRotation(glm::quat aRot) {
 	}
 }
 
-void Transform::TranslateLocal(glm::vec3 aTranslation) {
+void Transform::TranslateLocal(const glm::vec3& aTranslation) {
 	mPos += mRot * aTranslation;
 	SetDirty();
 }
 
-void Transform::RotateAxis(glm::vec2 aEulerAxisRotation) {
+void Transform::RotateAxis(const glm::vec2& aEulerAxisRotation) {
 	const glm::vec2 axisRotation = glm::radians(aEulerAxisRotation);
 
 	mRot = mRot * glm::angleAxis(axisRotation.x, glm::vec3(1, 0, 0));
@@ -70,7 +82,7 @@ void Transform::RotateAxis(glm::vec2 aEulerAxisRotation) {
 	SetDirty();
 }
 
-void Transform::RotateAxis(glm::vec3 aEulerAxisRotation) {
+void Transform::RotateAxis(const glm::vec3& aEulerAxisRotation) {
 	const glm::vec3 axisRotation = glm::radians(aEulerAxisRotation);
 
 	mRot = mRot * glm::angleAxis(axisRotation.x, glm::vec3(1, 0, 0));
@@ -80,7 +92,7 @@ void Transform::RotateAxis(glm::vec3 aEulerAxisRotation) {
 	SetDirty();
 }
 
-void Transform::Rotate(glm::quat aRotation) {
+void Transform::Rotate(const glm::quat& aRotation) {
 	mRot *= aRotation;
 	SetDirty();
 }
@@ -122,7 +134,7 @@ glm::quat Transform::GetWorldRotation() {
 	//return glm::quat_cast(rotMtx);
 }
 
-bool Transform::IsChild(Transform* aChild) const {
+bool Transform::IsChild(const Transform* aChild) const {
 	for(const Transform* child: mChildren) {
 		if(child == aChild) {
 			return true;

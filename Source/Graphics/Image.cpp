@@ -145,7 +145,7 @@ void Image::LoadImage(const FileIO::Path aFilePath, const VkFormat aFormat) {
 }
 
 Job::Work Image::GetLoadImageWork(const FileIO::Path aFilePath, const VkFormat aFormat) {
-	const std::string ext = aFilePath.Extension();
+	const std::string ext = str_tolower(aFilePath.Extension());
 	struct LoaderMap {
 		ImageLoaders loader;
 		std::vector<std::string> extensions;

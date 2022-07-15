@@ -1,7 +1,9 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
+#include <string>
+#include <algorithm>
 
+#include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 
 struct MeshPCTest {
@@ -58,4 +60,16 @@ struct BitMask {
 	}
 
 	uint32_t mValue;
+};
+
+//https://en.cppreference.com/w/cpp/string/byte/tolower
+static std::string str_tolower(std::string s) {
+	std::transform(s.begin(),
+				   s.end(),
+				   s.begin(),
+				   [](unsigned char c) {
+					   return std::tolower(c);
+				   }
+	);
+	return s;
 };

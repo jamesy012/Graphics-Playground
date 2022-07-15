@@ -143,11 +143,35 @@ int main() {
 	Mesh referenceMesh;
 	referenceMesh.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/5m reference.fbx");
 
-	Mesh sponzaTest;
-	//sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/Sponza.gltf",
-	//					std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza/glTF/");
-	sponzaTest.LoadMesh(std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza-New/scene.gltf",
-						std::string(WORK_DIR_REL) + "/Assets/Cauldron-Media/Sponza-New/");
+	Mesh meshSceneTest;
+	struct MeshTestHolder {
+		std::string mName;
+		std::string mFilePath;
+		std::string mTexturePath;
+	};
+	// clang-format off
+	const MeshTestHolder sceneMeshs[] = {
+		{"Sponza", "/Assets/Cauldron-Media/Sponza/glTF/Sponza.gltf", "/Assets/Cauldron-Media/Sponza/glTF/"},
+		{"Sponza-New", "/Assets/Cauldron-Media/Sponza-New/scene.gltf", "/Assets/Cauldron-Media/Sponza-New/"},
+		{"BistroInterior", "/Assets/Cauldron-Media/BistroInterior/scene.gltf", "/Assets/Cauldron-Media/BistroInterior/"},
+		{"HybridReflections", "/Assets/Cauldron-Media/HybridReflections/scene.gltf", "/Assets/Cauldron-Media/HybridReflections/"},
+		{"SciFiHelmet", "/Assets/Cauldron-Media/SciFiHelmet/glTF/SciFiHelmet.gltf", "/Assets/Cauldron-Media/SciFiHelmet/glTF/"},
+		{"MetalRoughSpheres", "/Assets/Cauldron-Media/MetalRoughSpheres/glTF/MetalRoughSpheres.gltf", "/Assets/Cauldron-Media/MetalRoughSpheres/glTF/"},
+		{"Brutalism", "/Assets/Cauldron-Media/Brutalism/BrutalistHall.gltf", "/Assets/Cauldron-Media/Brutalism/"},
+		{"AbandonedWarehouse", "/Assets/Cauldron-Media/AbandonedWarehouse/AbandonedWarehouse.gltf", "/Assets/Cauldron-Media/AbandonedWarehouse/"},
+		{"DamagedHelmet", "/Assets/Cauldron-Media/DamagedHelmet/glTF/DamagedHelmet.gltf", "/Assets/Cauldron-Media/DamagedHelmet/glTF/"},
+	};
+	// clang-format on
+	const int numMesh = sizeof(sceneMeshs) / sizeof(MeshTestHolder);
+	int selectedMesh = 0;
+	const auto ChangeMesh = [&](int aIndex) {
+		selectedMesh = aIndex;
+		meshSceneTest.Destroy();
+		meshSceneTest.LoadMesh(std::string(WORK_DIR_REL) + sceneMeshs[selectedMesh].mFilePath,
+							   std::string(WORK_DIR_REL) + sceneMeshs[selectedMesh].mTexturePath);
+	};
+	//inital load
+	ChangeMesh(selectedMesh);
 
 	MeshUniformTest meshUniform;
 
@@ -199,8 +223,8 @@ int main() {
 	Model worldBase;
 	worldBase.SetMesh(&referenceMesh);
 
-	Model sponzaTestModel;
-	sponzaTestModel.SetMesh(&sponzaTest);
+	Model modelSceneTest;
+	modelSceneTest.SetMesh(&meshSceneTest);
 
 	Transform mRootTransform;
 	modelTest1.mLocation.Set(glm::vec3(0, 0, 0), 1.0f, &mRootTransform);
@@ -307,8 +331,18 @@ int main() {
 #if defined(ENABLE_XR)
 				ImGui::Checkbox("updateControllers", &updateControllers);
 #endif
-				ImGui::End();
+				if(ImGui::BeginCombo("Scene Mesh", sceneMeshs[selectedMesh].mName.c_str())) {
+
+					for(int i = 0; i < numMesh; i++) {
+						const bool is_selected = (selectedMesh == i);
+						if(ImGui::Selectable(sceneMeshs[i].mName.c_str(), is_selected)) {
+							ChangeMesh(i);
+						}
+					}
+					ImGui::EndCombo();
+				}
 			}
+			ImGui::End();
 			const float time = gEngine->GetTimeSinceStart() * 50;
 			if(updateRoot) {
 				mRootTransform.SetRotation(glm::vec3(0, -time, 0));
@@ -369,7 +403,7 @@ int main() {
 			controllerTest2.Render(buffer, meshPipeline.GetLayout());
 			//world base reference
 			worldBase.Render(buffer, meshPipeline.GetLayout());
-			sponzaTestModel.Render(buffer, meshPipeline.GetLayout());
+			modelSceneTest.Render(buffer, meshPipeline.GetLayout());
 			meshPipeline.End(buffer);
 			mainRenderPass.End(buffer);
 
@@ -418,7 +452,7 @@ int main() {
 
 	referenceMesh.Destroy();
 	handMesh.Destroy();
-	sponzaTest.Destroy();
+	meshSceneTest.Destroy();
 	meshTest.Destroy();
 	meshUniformBuffer.Destroy();
 

@@ -100,6 +100,8 @@ void TinygltfLoader::ProcessModel(tinygltf::Model& aModel) {
 	//for(size_t i = 0; i < numScenes; i++) {
 	//	ProcessScene(aModel, aModel.scenes[i]);
 	//}
+	ASSERT(aModel.scenes.size() == 1);
+	ASSERT(aModel.defaultScene == 0);
 	ProcessScene(aModel, aModel.scenes[aModel.defaultScene]);
 }
 void TinygltfLoader::ProcessScene(tinygltf::Model& aModel, tinygltf::Scene& aScene) {
@@ -112,7 +114,7 @@ void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode,
 
 	//also contains position information here
 	Transform nodeTransform;
-	ASSERT(aNode.matrix.size() == 0);
+	ASSERT(aNode.matrix.size() == 0 || aNode.matrix.size() == 16);
 	ASSERT(aNode.translation.size() == 3 || aNode.translation.size() == 0);
 	ASSERT(aNode.scale.size() == 3 || aNode.scale.size() == 0);
 	ASSERT(aNode.rotation.size() == 3 || aNode.rotation.size() == 4 || aNode.rotation.size() == 0);
@@ -126,6 +128,15 @@ void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode,
 		nodeTransform.SetRotation(glm::vec3(aNode.rotation[0], aNode.rotation[1], aNode.rotation[2]));
 	} else if(aNode.rotation.size() == 4) {
 		nodeTransform.SetRotation(glm::quat(aNode.rotation[3], aNode.rotation[0], aNode.rotation[1], aNode.rotation[2]));
+	}
+	if(aNode.matrix.size() == 16) {
+		// clang-format off
+		glm::mat4 mat(aNode.matrix[0],			  aNode.matrix[1],				  aNode.matrix[2],				  aNode.matrix[3],
+				  aNode.matrix[4],				  aNode.matrix[5],				  aNode.matrix[6],				  aNode.matrix[7],
+				  aNode.matrix[8],				  aNode.matrix[9],				  aNode.matrix[10],				  aNode.matrix[11],
+				  aNode.matrix[12],				  aNode.matrix[13],				  aNode.matrix[14],				  aNode.matrix[15]);
+		// clang-format on
+		nodeTransform.SetMatrix(mat);
 	}
 	const glm::mat4 nodeMatrix = aMatrix * nodeTransform.GetWorldMatrix();
 

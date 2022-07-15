@@ -6,11 +6,13 @@
 #include "Graphics/Material.h"
 #include "Graphics/Image.h"
 
+#include "Helpers.h"
+
 #include "Loaders/AssimpLoader.h"
 #include "Loaders/TinygltfLoader.h"
 
 Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
-	const std::string ext = aFilePath.Extension();
+	const std::string ext = str_tolower(aFilePath.Extension());
 	struct LoaderMap {
 		MeshLoaders loader;
 		std::vector<std::string> extensions;
@@ -97,12 +99,20 @@ void Mesh::Destroy() {
 			mMaterials[i].mNormal = nullptr;
 		}
 	}
+	mMaterials.clear();
 	for(int i = 0; i < mMesh.size(); i++) {
 		SubMesh& mesh = mMesh[i];
 		mesh.mVertexBuffer.Destroy();
 		mesh.mIndexBuffer.Destroy();
 	}
 	mMesh.clear();
+
+	mAABB = AABB();
+	mImagePath = "";
+	if(mLoadingBase) {
+		delete mLoadingBase;
+		mLoadingBase = nullptr;
+	}
 }
 
 const bool Mesh::HasLoaded() const {
