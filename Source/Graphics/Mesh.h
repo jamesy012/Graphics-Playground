@@ -44,9 +44,11 @@ public:
 	struct MeshMaterialData {
 		Image* mImage = nullptr;
 		Image* mNormal = nullptr;
-		Image* mRoughness = nullptr;
+		Image* mMetallicRoughnessTexture = nullptr;
+		float mAlphaCutoff = 0.5f;
 		glm::vec4 mColorFactor = glm::vec4(1.0f);
 		glm::vec2 mMetallicRoughness = glm::vec2(1.0f);
+		bool mNormalBC5 = false;//bc5 textures are incorrect atm
 	};
 
 	struct SubMesh {

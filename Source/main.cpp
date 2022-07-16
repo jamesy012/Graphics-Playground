@@ -173,44 +173,47 @@ int main() {
 	//inital load
 	ChangeMesh(selectedMesh);
 
-	MeshUniformTest meshUniform;
-
-	Buffer meshUniformBuffer;
-	meshUniformBuffer.Create(BufferType::UNIFORM, sizeof(MeshUniformTest), "Mesh Uniform");
-
 	Pipeline meshPipeline;
 	meshPipeline.AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	meshPipeline.AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+
+	{
+		meshPipeline.vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		meshPipeline.vertexBinding.stride = sizeof(MeshVert);
+		meshPipeline.vertexAttribute = std::vector<VkVertexInputAttributeDescription>(4);
+		meshPipeline.vertexAttribute[0].location = 0;
+		meshPipeline.vertexAttribute[0].format = VK_FORMAT_R32G32B32_SFLOAT; //3
+		meshPipeline.vertexAttribute[0].offset = offsetof(MeshVert, mPos);
+		meshPipeline.vertexAttribute[1].location = 1;
+		meshPipeline.vertexAttribute[1].format = VK_FORMAT_R32G32B32_SFLOAT; //6
+		meshPipeline.vertexAttribute[1].offset = offsetof(MeshVert, mNorm);
+		meshPipeline.vertexAttribute[2].location = 2;
+		meshPipeline.vertexAttribute[2].format = VK_FORMAT_R32G32B32A32_SFLOAT; //10
+		meshPipeline.vertexAttribute[2].offset = offsetof(MeshVert, mColors[0]);
+		meshPipeline.vertexAttribute[3].location = 3;
+		meshPipeline.vertexAttribute[3].format = VK_FORMAT_R32G32_SFLOAT; //12
+		meshPipeline.vertexAttribute[3].offset = offsetof(MeshVert, mUVs[0]);
+	}
 
 	VkPushConstantRange meshPCRange {};
 	meshPCRange.size = sizeof(MeshPCTest);
 	meshPCRange.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
 	meshPipeline.AddPushConstant(meshPCRange);
-	{
-		meshPipeline.vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		meshPipeline.vertexBinding.stride = sizeof(MeshVert);
-		MeshVert temp;
-		meshPipeline.vertexAttribute = std::vector<VkVertexInputAttributeDescription>(3);
-		meshPipeline.vertexAttribute[0].location = 0;
-		meshPipeline.vertexAttribute[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-		meshPipeline.vertexAttribute[0].offset = offsetof(MeshVert, mPos);
-		meshPipeline.vertexAttribute[1].location = 1;
-		meshPipeline.vertexAttribute[1].format = VK_FORMAT_R32G32B32A32_SFLOAT;
-		meshPipeline.vertexAttribute[1].offset = offsetof(MeshVert, mColors[0]);
-		meshPipeline.vertexAttribute[2].location = 2;
-		meshPipeline.vertexAttribute[2].format = VK_FORMAT_R32G32_SFLOAT;
-		meshPipeline.vertexAttribute[2].offset = offsetof(MeshVert, mUVs[0]);
-	}
+
+	SceneData sceneData;
+
+	Buffer sceneDataBuffer;
+	sceneDataBuffer.Create(BufferType::UNIFORM, sizeof(SceneData), "Mesh Scene Uniform");
 
 	MaterialBase meshTestBase;
-	meshTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
+	meshTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS);
 	meshTestBase.Create();
 	meshPipeline.AddMaterialBase(&meshTestBase);
 	meshPipeline.AddBindlessTexture();
 	meshPipeline.Create(mainRenderPass.GetRenderPass(), "Mesh");
 
 	Material meshMaterial = meshTestBase.MakeMaterials()[0];
-	meshMaterial.SetBuffers(meshUniformBuffer, 0, 0);
+	meshMaterial.SetBuffers(sceneDataBuffer, 0, 0);
 
 	Model modelTest1;
 	modelTest1.SetMesh(&meshTest);
@@ -248,6 +251,14 @@ int main() {
 	gGraphics->mResizeMessage.push_back(SetupCameraAspect);
 #endif
 
+	//lighting test
+	{
+		sceneData.mDirectionalLight.mDirection = glm::vec4(-0.2f, -1.0f, -0.3f, 0);
+		sceneData.mDirectionalLight.mAmbient = glm::vec4(0.20f, 0.2f, 0.2f, 0);
+		sceneData.mDirectionalLight.mDiffuse = glm::vec4(0.8f, 0.8f, 0.8f, 0);
+		sceneData.mDirectionalLight.mSpecular = glm::vec4(0.5f, 0.5f, 0.5f, 0);
+	}
+
 	while(!gEngine->GetWindow()->ShouldClose()) {
 		ZoneScoped;
 		gEngine->GameLoop();
@@ -269,6 +280,14 @@ int main() {
 			ImGui::Text("Is Up? %i", camera.mTransform.IsUp());
 			ImGui::End();
 		}
+
+		if(ImGui::Begin("Lighting")) {
+			ImGui::DragFloat3("Direction", glm::value_ptr(sceneData.mDirectionalLight.mDirection), 0.01f, -1.0f, 1.0f);
+			ImGui::ColorEdit3("Ambient", glm::value_ptr(sceneData.mDirectionalLight.mAmbient));
+			ImGui::ColorEdit3("Diffuse", glm::value_ptr(sceneData.mDirectionalLight.mDiffuse));
+			ImGui::ColorEdit3("Specular", glm::value_ptr(sceneData.mDirectionalLight.mSpecular));
+		}
+		ImGui::End();
 
 		{
 			glm::mat4 proj;
@@ -312,13 +331,15 @@ int main() {
 				proj = frustum;
 				proj[1][1] *= -1.0f;
 
-				meshUniform.mPV[i] = proj * view;
+				sceneData.mPV[i] = proj * view;
+				sceneData.mViewPos[i] = view[3];
 			}
 #else
-			meshUniform.mPV[0] = camera.GetViewProjMatrix();
+			sceneData.mPV[0] = camera.GetViewProjMatrix();
+			sceneData.mViewPos[0] = glm::vec4(camera.mTransform.GetWorldPosition(), 1);
 #endif
 
-			meshUniformBuffer.UpdateData(0, VK_WHOLE_SIZE, &meshUniform);
+			sceneDataBuffer.UpdateData(0, VK_WHOLE_SIZE, &sceneData);
 		}
 
 		{
@@ -341,6 +362,10 @@ int main() {
 					}
 					ImGui::EndCombo();
 				}
+				ImGui::BeginDisabled();
+				bool loaded = meshSceneTest.HasLoaded();
+				ImGui::Checkbox("Has Loaded", &loaded);
+				ImGui::EndDisabled();
 			}
 			ImGui::End();
 			const float time = gEngine->GetTimeSinceStart() * 50;
@@ -454,7 +479,7 @@ int main() {
 	handMesh.Destroy();
 	meshSceneTest.Destroy();
 	meshTest.Destroy();
-	meshUniformBuffer.Destroy();
+	sceneDataBuffer.Destroy();
 
 	mainRenderPass.Destroy();
 	fb.Destroy();

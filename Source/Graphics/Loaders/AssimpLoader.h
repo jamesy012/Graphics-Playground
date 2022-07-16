@@ -180,12 +180,12 @@ bool AssimpLoader::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 	if(aMesh->mMaterialIndex >= 0) {
 		mesh.mMaterialID = aMesh->mMaterialIndex;
 		const aiMaterial* material = aScene->mMaterials[aMesh->mMaterialIndex];
-		//for(int i = 0; i < material->mNumProperties; i++) {
-		//	const aiMaterialProperty* prop = material->mProperties[i];
-		//	//if(strcmp(prop->mKey.data, _AI_MATKEY_TEXTURE_BASE)){
-		//	//LOGGER::Formated("Material semantic {}, {}\n", prop->mKey.C_Str(), prop->mSemantic);
-		//	//}
-		//}
+		for(int i = 0; i < material->mNumProperties; i++) {
+			const aiMaterialProperty* prop = material->mProperties[i];
+			//if(strcmp(prop->mKey.data, _AI_MATKEY_TEXTURE_BASE)){
+			LOGGER::Formated("Material semantic {}, {}\n", prop->mKey.C_Str(), prop->mSemantic);
+			//}
+		}
 		for(unsigned int i = 0; i < material->GetTextureCount(aiTextureType_DIFFUSE); i++) {
 			aiString str;
 			material->GetTexture(aiTextureType_DIFFUSE, i, &str);
@@ -207,7 +207,7 @@ bool AssimpLoader::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 			if(materialData.mImage == nullptr) {
 				Image* image = new Image();
 				image->LoadImage(mMesh->mImagePath + fileName, VK_FORMAT_UNDEFINED);
-				materialData.mRoughness = image;
+				materialData.mMetallicRoughnessTexture = image;
 			}
 		}
 		for(unsigned int i = 0; i < material->GetTextureCount(aiTextureType_NORMALS); i++) {
@@ -224,9 +224,21 @@ bool AssimpLoader::ProcessMesh(const aiScene* aScene, const aiMesh* aMesh) {
 		}
 		for(unsigned int i = 0; i < mMesh->mMaterials.size(); i++) {
 			Mesh::MeshMaterialData& materialData = mMesh->mMaterials[i];
-			materialData.mColorFactor = glm::vec4(1.0f);
-			materialData.mMetallicRoughness = glm::vec2(1.0f);
+			aiColor4D colorFactor;
+			if(material->Get(AI_MATKEY_BASE_COLOR, colorFactor) == aiReturn_SUCCESS) {
+				materialData.mColorFactor = AssimpToGlm(colorFactor);
+			} else if(material->Get(AI_MATKEY_COLOR_DIFFUSE, colorFactor) == aiReturn_SUCCESS) {
+				materialData.mColorFactor = AssimpToGlm(colorFactor);
 			}
+			float metallic;
+			if(material->Get(AI_MATKEY_METALLIC_FACTOR, metallic) == aiReturn_SUCCESS) {
+				materialData.mMetallicRoughness.x = metallic;
+			}
+			float roughness;
+			if(material->Get(AI_MATKEY_ROUGHNESS_FACTOR, roughness) == aiReturn_SUCCESS) {
+				materialData.mMetallicRoughness.y = roughness;
+			}
+		}
 
 		//std::vector<Texture> diffuseMaps = this->loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse", scene);
 	}

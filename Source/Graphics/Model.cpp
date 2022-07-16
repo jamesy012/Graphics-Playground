@@ -41,26 +41,23 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 		const Mesh::SubMesh& mesh = mMesh->GetMesh(i);
 		MeshPCTest modelPC;
 		if(mesh.mMaterialID != -1) {
-			//const ModelMaterial& material = mMaterials[mesh.mMaterialID];
-			//if(material.mSet) {
-			//vkCmdBindDescriptorSets(
-			//	aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aLayout, 1, 1, mMaterials[mesh.mMaterialID].mMaterial.GetSet(), 0, nullptr);
-			//} else {
-			//ASSERT(false);
-			//}
-			//Graphics::GlobalTexturePC texturePC;
-			Image* image = mMesh->GetMaterial(mesh.mMaterialID).mImage;
 			MaterialManager* matManager = gGraphics->GetMaterialManager();
-			if(image) {
-				//modelPC.mAlbedoTexture = image->GetGlobalIndex();
-				//modelPC.mAlbedoTexture = gGraphics->AddTexture(image->GetImageView());
-				matManager->PrepareTexture(modelPC.mAlbedoTexture, image);
-			} else {
-				//modelPC.mAlbedoTexture = CONSTANT::IMAGE::gWhite->GetGlobalIndex();
-				//modelPC.mAlbedoTexture = gGraphics->AddTexture(CONSTANT::IMAGE::gWhite->GetImageView());
-				matManager->PrepareTexture(modelPC.mAlbedoTexture, CONSTANT::IMAGE::gWhite);
-			}
-			//vkCmdPushConstants(aBuffer, aLayout, VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(Graphics::GlobalTexturePC), &texturePC);
+			const Mesh::MeshMaterialData& material = mMesh->GetMaterial(mesh.mMaterialID);
+
+			const auto ApplyTexture = [&matManager](unsigned int& aIndex, Image* aImage, Image* aDefault = CONSTANT::IMAGE::gWhite) {
+				if(aImage) {
+					matManager->PrepareTexture(aIndex, aImage);
+				} else {
+					matManager->PrepareTexture(aIndex, aDefault);
+				}
+			};
+
+			ApplyTexture(modelPC.mAlbedoTexture, material.mImage);
+			ApplyTexture(modelPC.mNormalTexture, material.mNormal, CONSTANT::IMAGE::gChecker);
+			ApplyTexture(modelPC.mMetallicRoughnessTexture, material.mMetallicRoughnessTexture, CONSTANT::IMAGE::gBlack);
+			modelPC.mColorFactor = material.mColorFactor;
+			modelPC.mMetallicRoughness = material.mMetallicRoughness;
+			modelPC.mNormalBC5 = material.mNormalBC5;
 
 			//
 			const VkDescriptorSet* textureSet = matManager->FinializeTextureSet();

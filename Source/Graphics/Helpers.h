@@ -13,9 +13,28 @@ struct MeshPCTest {
 	//possibly make it material index, which holds other info about the material
 	//which could make more sense being part of the vertex stage
 	unsigned int mAlbedoTexture;
+	unsigned int mNormalTexture;
+	unsigned int mMetallicRoughnessTexture;
+	float mAlphaCutoff = 0.5f;//making sure the next vec4 is alligned
+	glm::vec4 mColorFactor = glm::vec4(0.75f);
+	glm::vec2 mMetallicRoughness = glm::vec2(0.25f);
+	bool mNormalBC5 = 0; //bc5 textures are incorrect atm
 };
-struct MeshUniformTest {
+
+struct DirLight {
+	glm::vec4 mDirection;
+
+	glm::vec4 mAmbient;
+	glm::vec4 mDiffuse;
+	glm::vec4 mSpecular;
+};
+
+
+struct SceneData {
 	glm::mat4 mPV[2];
+	glm::vec4 mViewPos[2];
+
+	DirLight mDirectionalLight;
 };
 
 struct ImageSize {

@@ -177,6 +177,7 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 	ASSERT(result == XR_SUCCESS || result == XR_EVENT_UNAVAILABLE);
 
 	while(result == XR_SUCCESS) {
+		ZoneScopedN("XR EVENT");
 		switch(eventData.type) {
 			case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED: {
 				const char* stateText[] = {"XR_SESSION_STATE_UNKNOWN",
@@ -236,117 +237,122 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 	syncInfo.countActiveActionSets = 1;
 	syncInfo.activeActionSets	   = &activeActionSet;
 
-	result = xrSyncActions(gXrSession, &syncInfo);
-	ASSERT(result == XR_SUCCESS || result == XR_SESSION_LOSS_PENDING || result == XR_SESSION_NOT_FOCUSED);
-	if(result != XR_SUCCESS && result != XR_SESSION_LOSS_PENDING && result != XR_SESSION_NOT_FOCUSED) {
-		return;
+	{
+		ZoneScopedN("XR Frame");
+		result = xrSyncActions(gXrSession, &syncInfo);
+		ASSERT(result == XR_SUCCESS || result == XR_SESSION_LOSS_PENDING || result == XR_SESSION_NOT_FOCUSED);
+		if(result != XR_SUCCESS && result != XR_SESSION_LOSS_PENDING && result != XR_SESSION_NOT_FOCUSED) {
+			return;
+		}
+
+		XrFrameWaitInfo frameWaitInfo {XR_TYPE_FRAME_WAIT_INFO};
+		VALIDATEXR(xrWaitFrame(gXrSession, &frameWaitInfo, &gFrameState));
+
+		XrFrameBeginInfo frameBeginInfo {XR_TYPE_FRAME_BEGIN_INFO};
+		VALIDATEXR(xrBeginFrame(gXrSession, &frameBeginInfo));
 	}
-
-	XrFrameWaitInfo frameWaitInfo {XR_TYPE_FRAME_WAIT_INFO};
-	VALIDATEXR(xrWaitFrame(gXrSession, &frameWaitInfo, &gFrameState));
-
-	XrFrameBeginInfo frameBeginInfo {XR_TYPE_FRAME_BEGIN_INFO};
-	VALIDATEXR(xrBeginFrame(gXrSession, &frameBeginInfo));
 
 	gFrameActive = true;
+	{
+		ZoneScopedN("XR Locate");
+		result = xrLocateSpace(gSpaces[XR_REFERENCE_SPACE_TYPE_LOCAL - 1].mSpace,
+							   gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mSpace,
+							   gFrameState.predictedDisplayTime,
+							   &gHeadLocation);
+		PoseConvert(gHeadLocation.pose, gHeadPose);
 
-	result = xrLocateSpace(gSpaces[XR_REFERENCE_SPACE_TYPE_LOCAL - 1].mSpace,
-						   gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mSpace,
-						   gFrameState.predictedDisplayTime,
-						   &gHeadLocation);
-	PoseConvert(gHeadLocation.pose, gHeadPose);
+		for(int i = 0; i < NUM_VIEWS; i++) {
+			Swapchain& swapchain = gXrSwapchains[i];
 
-	for(int i = 0; i < NUM_VIEWS; i++) {
-		Swapchain& swapchain = gXrSwapchains[i];
+			XrSwapchainImageAcquireInfo acquireInfo = {XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
 
-		XrSwapchainImageAcquireInfo acquireInfo = {XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
+			VALIDATEXR(xrAcquireSwapchainImage(swapchain.mSwapchain, &acquireInfo, &swapchain.mActiveImage));
 
-		VALIDATEXR(xrAcquireSwapchainImage(swapchain.mSwapchain, &acquireInfo, &swapchain.mActiveImage));
+			XrSwapchainImageWaitInfo waitInfo = {XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
+			waitInfo.timeout = XR_INFINITE_DURATION;
 
-		XrSwapchainImageWaitInfo waitInfo = {XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO};
-		waitInfo.timeout				  = XR_INFINITE_DURATION;
+			VALIDATEXR(xrWaitSwapchainImage(swapchain.mSwapchain, &waitInfo));
 
-		VALIDATEXR(xrWaitSwapchainImage(swapchain.mSwapchain, &waitInfo));
-
-		//swapchain.mImages[swapchain.mActiveImage].SetImageLayout(aBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-	}
-
-	for(int i = 0; i < NUM_SPACES; i++) {
-		SpaceInfo& spaceInfo = gSpaces[i];
-
-		XrViewState viewState {XR_TYPE_VIEW_STATE};
-		uint32_t viewCapacityInput = NUM_VIEWS;
-		uint32_t viewCountOutput;
-
-		XrViewLocateInfo locateInfo		 = {XR_TYPE_VIEW_LOCATE_INFO};
-		locateInfo.space				 = spaceInfo.mSpace;
-		locateInfo.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-		locateInfo.displayTime			 = gFrameState.predictedDisplayTime;
-
-		for(int q = 0; q < NUM_VIEWS; q++) {
-			spaceInfo.mViews[q].type = XR_TYPE_VIEW;
+			//swapchain.mImages[swapchain.mActiveImage].SetImageLayout(aBuffer, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 		}
 
-		VALIDATEXR(xrLocateViews(gXrSession, &locateInfo, &viewState, viewCapacityInput, &viewCountOutput, spaceInfo.mViews));
+		for(int i = 0; i < NUM_SPACES; i++) {
+			SpaceInfo& spaceInfo = gSpaces[i];
 
-		for(int q = 0; q < NUM_VIEWS; q++) {
-			ViewConvert(spaceInfo.mViews[q], spaceInfo.mInfos[q]);
+			XrViewState viewState {XR_TYPE_VIEW_STATE};
+			uint32_t viewCapacityInput = NUM_VIEWS;
+			uint32_t viewCountOutput;
+
+			XrViewLocateInfo locateInfo = {XR_TYPE_VIEW_LOCATE_INFO};
+			locateInfo.space = spaceInfo.mSpace;
+			locateInfo.viewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
+			locateInfo.displayTime = gFrameState.predictedDisplayTime;
+
+			for(int q = 0; q < NUM_VIEWS; q++) {
+				spaceInfo.mViews[q].type = XR_TYPE_VIEW;
+			}
+
+			VALIDATEXR(xrLocateViews(gXrSession, &locateInfo, &viewState, viewCapacityInput, &viewCountOutput, spaceInfo.mViews));
+
+			for(int q = 0; q < NUM_VIEWS; q++) {
+				ViewConvert(spaceInfo.mViews[q], spaceInfo.mInfos[q]);
+			}
 		}
-	}
 
-	for(int i = 0; i < Side::COUNT; i++) {
-		XrActionStateGetInfo getInfo {XR_TYPE_ACTION_STATE_GET_INFO};
-		getInfo.subactionPath = handSubactionPath[i];
+		for(int i = 0; i < Side::COUNT; i++) {
+			XrActionStateGetInfo getInfo {XR_TYPE_ACTION_STATE_GET_INFO};
+			getInfo.subactionPath = handSubactionPath[i];
 
-		//grip
-		getInfo.action = grabAction;
-		XrActionStateFloat grabValue {XR_TYPE_ACTION_STATE_FLOAT};
-		VALIDATEXR(xrGetActionStateFloat(gXrSession, &getInfo, &grabValue));
+			//grip
+			getInfo.action = grabAction;
+			XrActionStateFloat grabValue {XR_TYPE_ACTION_STATE_FLOAT};
+			VALIDATEXR(xrGetActionStateFloat(gXrSession, &getInfo, &grabValue));
 
-		//pose? hand avaliable?
-		getInfo.action = poseAction;
-		XrActionStatePose poseState {XR_TYPE_ACTION_STATE_POSE};
-		VALIDATEXR(xrGetActionStatePose(gXrSession, &getInfo, &poseState));
+			//pose? hand avaliable?
+			getInfo.action = poseAction;
+			XrActionStatePose poseState {XR_TYPE_ACTION_STATE_POSE};
+			VALIDATEXR(xrGetActionStatePose(gXrSession, &getInfo, &poseState));
 
-		//m_input.handActive[hand] = poseState.isActive;
+			//m_input.handActive[hand] = poseState.isActive;
 
-		//quit?
-		//getInfo.action		  = quitAction;
-		////getInfo.subactionPath = XR_NULL_PATH;
-		////getInfo.next		  = nullptr;
-		//XrActionStateBoolean quitValue {XR_TYPE_ACTION_STATE_BOOLEAN};
-		//VALIDATEXR(xrGetActionStateBoolean(gXrSession, &getInfo, &quitValue);QWE)
-		//
-		//if((quitValue.isActive == XR_TRUE) && (quitValue.changedSinceLastSync == XR_TRUE) && (quitValue.currentState == XR_TRUE)) {
-		//	xrRequestExitSession(gXrSession);
-		//}
+			//quit?
+			//getInfo.action		  = quitAction;
+			////getInfo.subactionPath = XR_NULL_PATH;
+			////getInfo.next		  = nullptr;
+			//XrActionStateBoolean quitValue {XR_TYPE_ACTION_STATE_BOOLEAN};
+			//VALIDATEXR(xrGetActionStateBoolean(gXrSession, &getInfo, &quitValue);QWE)
+			//
+			//if((quitValue.isActive == XR_TRUE) && (quitValue.changedSinceLastSync == XR_TRUE) && (quitValue.currentState == XR_TRUE)) {
+			//	xrRequestExitSession(gXrSession);
+			//}
 
-		//vibration test?
-		//if(grabValue.isActive == XR_TRUE) {
-		//	// Scale the rendered hand by 1.0f (open) to 0.5f (fully squeezed).
-		//	//handScale[i] = 1.0f - 0.5f * grabValue.currentState;
-		//	if(grabValue.currentState > 0.9f) {
-		//		XrHapticVibration vibration {XR_TYPE_HAPTIC_VIBRATION};
-		//		vibration.amplitude = 0.5;
-		//		vibration.duration	= XR_MIN_HAPTIC_DURATION;
-		//		vibration.frequency = XR_FREQUENCY_UNSPECIFIED;
-		//
-		//		XrHapticActionInfo hapticActionInfo {XR_TYPE_HAPTIC_ACTION_INFO};
-		//		hapticActionInfo.action		   = vibrateAction;
-		//		hapticActionInfo.subactionPath = handSubactionPath[i];
-		//		result						   = xrApplyHapticFeedback(gXrSession, &hapticActionInfo, (XrHapticBaseHeader*)&vibration);
-		//	}
-		//}
-		VALIDATEXR(
-			xrLocateSpace(handSpace[i], gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mSpace, gFrameState.predictedDisplayTime, &handLocation[i]));
+			//vibration test?
+			//if(grabValue.isActive == XR_TRUE) {
+			//	// Scale the rendered hand by 1.0f (open) to 0.5f (fully squeezed).
+			//	//handScale[i] = 1.0f - 0.5f * grabValue.currentState;
+			//	if(grabValue.currentState > 0.9f) {
+			//		XrHapticVibration vibration {XR_TYPE_HAPTIC_VIBRATION};
+			//		vibration.amplitude = 0.5;
+			//		vibration.duration	= XR_MIN_HAPTIC_DURATION;
+			//		vibration.frequency = XR_FREQUENCY_UNSPECIFIED;
+			//
+			//		XrHapticActionInfo hapticActionInfo {XR_TYPE_HAPTIC_ACTION_INFO};
+			//		hapticActionInfo.action		   = vibrateAction;
+			//		hapticActionInfo.subactionPath = handSubactionPath[i];
+			//		result						   = xrApplyHapticFeedback(gXrSession, &hapticActionInfo, (XrHapticBaseHeader*)&vibration);
+			//	}
+			//}
+			VALIDATEXR(
+				xrLocateSpace(handSpace[i], gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mSpace, gFrameState.predictedDisplayTime, &handLocation[i]));
 
-		//update hand info
-		ControllerInfo& handInfo = gHandInfo[i];
-		handInfo.mTrigger		 = grabValue.currentState;
-		handInfo.mActive		 = poseState.isActive;
-		PoseConvert(handLocation[i].pose, handInfo.mPose);
-		PositionConvert(handVeloity[i].linearVelocity, handInfo.mLinearVelocity);
-		PositionConvert(handVeloity[i].angularVelocity, handInfo.mAngularVelocity);
+			//update hand info
+			ControllerInfo& handInfo = gHandInfo[i];
+			handInfo.mTrigger = grabValue.currentState;
+			handInfo.mActive = poseState.isActive;
+			PoseConvert(handLocation[i].pose, handInfo.mPose);
+			PositionConvert(handVeloity[i].linearVelocity, handInfo.mLinearVelocity);
+			PositionConvert(handVeloity[i].angularVelocity, handInfo.mAngularVelocity);
+		}
 	}
 }
 

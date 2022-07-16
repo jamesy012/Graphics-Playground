@@ -24,7 +24,7 @@ public:
 	}
 
 	float GetFovDegrees() {
-        //todo get degrees of uneven fov?
+		//todo get degrees of uneven fov?
 		ASSERT(mFov.z == 0 && mFov.w == 0);
 		return glm::degrees(mFov.x);
 	}
@@ -40,6 +40,10 @@ public:
 	glm::mat4 GetViewProjMatrix() {
 		mTransform.CheckUpdate();
 		return mViewProjMatrix;
+	}
+
+	Transform& GetTransform() {
+		return mTransform;
 	}
 
 	Transform mTransform;

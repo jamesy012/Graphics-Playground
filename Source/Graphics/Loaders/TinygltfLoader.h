@@ -39,6 +39,8 @@ Job::Work TinygltfLoader::GetWork(FileIO::Path aPath) {
 		std::string err;
 		std::string warn;
 
+		asyncData->loader.SetStoreOriginalJSONForExtrasAndExtensions(true);
+
 		asyncData->loader.LoadASCIIFromFile(&asyncData->model, &err, &warn, aPath.String());
 
 		if(!err.empty()) {
@@ -80,7 +82,7 @@ void TinygltfLoader::ProcessMaterials(tinygltf::Model& aModel) {
 		}
 		if(mat.pbrMetallicRoughness.metallicRoughnessTexture.index != -1) {
 			tinygltf::Texture& baseTexture = aModel.textures[mat.pbrMetallicRoughness.metallicRoughnessTexture.index];
-			SetLoadTexture(aModel.images[baseTexture.source], &materialData.mRoughness);
+			SetLoadTexture(aModel.images[baseTexture.source], &materialData.mMetallicRoughnessTexture);
 		}
 		if(mat.normalTexture.index != -1) {
 			tinygltf::Texture& baseTexture = aModel.textures[mat.normalTexture.index];
@@ -91,6 +93,7 @@ void TinygltfLoader::ProcessMaterials(tinygltf::Model& aModel) {
 		}
 		materialData.mMetallicRoughness.x = mat.pbrMetallicRoughness.metallicFactor;
 		materialData.mMetallicRoughness.y = mat.pbrMetallicRoughness.roughnessFactor;
+		materialData.mAlphaCutoff = mat.alphaCutoff;
 	}
 }
 

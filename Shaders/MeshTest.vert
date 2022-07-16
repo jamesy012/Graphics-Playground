@@ -6,20 +6,24 @@
 #include "test.inc"
 
 layout(location = 0) in vec3 inPos;
-layout(location = 1) in vec4 inColor;
-layout(location = 2) in vec2 inUV;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec4 inColor;
+layout(location = 3) in vec2 inUV;
 
-layout(location = 0) out struct {
-    vec4 Color;
-    vec2 UV;
-} Out;
+//todo move this into combined include with a #if SHADER_VERT
+layout(location = 0) out vec4 outColor;
+layout(location = 1) out vec2 outUV;
+layout(location = 2) out vec3 outFragPos;
+layout(location = 3) out vec3 outNormal;
 
 out gl_PerVertex {
     vec4 gl_Position;
 };
 
 void main() {
-    Out.Color = inColor;
-    Out.UV = inUV;
-    gl_Position = sceneData.viewProj[gl_ViewIndex] * pc.world  * vec4(inPos,1);
+   outFragPos = vec3(pc.mWorld * vec4(inPos, 1.0f));
+   outNormal = mat3(transpose(inverse(pc.mWorld))) * inNormal;  
+   outColor = inColor;
+   outUV = inUV;
+   gl_Position = sceneData.mViewProj[gl_ViewIndex] * vec4(outFragPos,1);
 }
