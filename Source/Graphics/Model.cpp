@@ -45,7 +45,7 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 			const Mesh::MeshMaterialData& material = mMesh->GetMaterial(mesh.mMaterialID);
 
 			const auto ApplyTexture = [&matManager](unsigned int& aIndex, Image* aImage, Image* aDefault = CONSTANT::IMAGE::gWhite) {
-				if(aImage) {
+				if(aImage && aImage->GetImageView()) {
 					matManager->PrepareTexture(aIndex, aImage);
 				} else {
 					matManager->PrepareTexture(aIndex, aDefault);

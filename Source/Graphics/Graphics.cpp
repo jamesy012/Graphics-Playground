@@ -243,7 +243,14 @@ bool VulkanGraphics::Initalize() {
 	//global descriptor pool
 	//todo look into a better solution?
 	{
-		static const uint32_t resourceSizes = 16536;
+		static const uint32_t resourceSizes = 16536*2;//doubleing as temp
+		LOGGER::Log("\n!!!!!!!!!!!\n\tdoubled global texture resource cap, need to revise\n!!!!!!!!!!!\n\n");
+		//bistro model has ~2000 models
+		//in PER_DRAW mode we it needs 4 elements which means 4*2000, 8000 resources used
+		//PER_DRAW also keeps the last two frames of resources allocated which means it used 16000 resources
+		//so it fails to allocate a new set of textures on the 3rd frame
+		//will likely need to do it by material instead of mesh (71 materials per model drawn)
+		//or reuse allocated sets if the textures match (probably the better but slower? solution)
 		VkDescriptorPoolSize pools[] = {
 			{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, resourceSizes},
 			{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, resourceSizes},
