@@ -6,6 +6,7 @@ class IGraphicsBase;
 
 class Window;
 class Camera;
+class StateBase;
 
 //controls the opening of the game
 //game loop
@@ -17,6 +18,11 @@ public:
 	void Startup(IGraphicsBase* aGraphics);
 	bool GameLoop();
 	void Shutdown();
+
+	StateBase* GetCurrentState() const {
+		return mCurrentState;
+	};
+	void SetDesiredState(StateBase* aNewState);
 
 	const double GetTimeSinceStart() const {
 		return mTimeSinceStart;
@@ -42,15 +48,23 @@ public:
 	void SetMainCamera(Camera* aCamera) {
 		mMainCamera = aCamera;
 	}
+	Camera* GetMainCamera() const{
+		return mMainCamera;
+	}
 
 	bool IsMouseLocked() const;
 
 private:
+	void UpdateFramerate();
+	void StateLogic();
+	void ChangeStates();
 	//imgui for engine class
 	void ImGuiWindow();
 
-
 	IGraphicsBase* mGraphics;
+
+	StateBase* mCurrentState = nullptr;
+	StateBase* mDesiredState = nullptr;
 
 	//time at the last time we ran a game loop
 	std::chrono::high_resolution_clock::time_point mLastTime;

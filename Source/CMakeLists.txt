@@ -18,6 +18,7 @@ set("GraphicsPlayground_Enable_ImGui"
 add_subdirectory(Engine)
 add_subdirectory(Graphics)
 add_subdirectory(Libraries)
+add_subdirectory(Game)
 
 target_include_directories(GraphicsPlayground
                            PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

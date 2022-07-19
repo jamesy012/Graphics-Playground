@@ -17,6 +17,8 @@ set(ENGINE_FILES
     "Camera/Camera.cpp"
     "Camera/FlyCamera.h"
     "Camera/FlyCamera.cpp"
+    "StateBase.h"
+    "StateBase.cpp"
     )
 
 target_sources(GraphicsPlayground PRIVATE ${ENGINE_FILES})
