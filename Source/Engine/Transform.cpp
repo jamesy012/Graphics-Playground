@@ -92,6 +92,13 @@ void Transform::RotateAxis(const glm::vec3& aEulerAxisRotation) {
 	SetDirty();
 }
 
+void Transform::SetLookAt(const glm::vec3& aPos, const glm::vec3& aLookAt, const glm::vec3& aUp) {
+	glm::mat4 lookAt = glm::lookAt(aPos, aLookAt, aUp);
+
+	SetRotation(glm::quat(glm::inverse(lookAt)));
+	SetPosition(aPos);
+}
+
 void Transform::Rotate(const glm::quat& aRotation) {
 	mRot *= aRotation;
 	SetDirty();

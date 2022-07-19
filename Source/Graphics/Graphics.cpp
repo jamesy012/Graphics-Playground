@@ -243,7 +243,7 @@ bool VulkanGraphics::Initalize() {
 	//global descriptor pool
 	//todo look into a better solution?
 	{
-		static const uint32_t resourceSizes = 16536*2;//doubleing as temp
+		static const uint32_t resourceSizes = 16536 * 2; //doubleing as temp
 		LOGGER::Log("\n!!!!!!!!!!!\n\tdoubled global texture resource cap, need to revise\n!!!!!!!!!!!\n\n");
 		//bistro model has ~2000 models
 		//in PER_DRAW mode we it needs 4 elements which means 4*2000, 8000 resources used
@@ -416,7 +416,7 @@ void VulkanGraphics::AddWindow(Window* aWindow) {
 	}
 }
 
-AQUIRES_LOCK(mCommandPoolMutex) void VulkanGraphics::StartNewFrame() {
+void VulkanGraphics::StartNewFrame() {
 	FrameMark;
 	ZoneScoped;
 
@@ -427,13 +427,16 @@ AQUIRES_LOCK(mCommandPoolMutex) void VulkanGraphics::StartNewFrame() {
 
 	mMaterialManager->ImGuiDraw();
 #endif
+}
+AQUIRES_LOCK(mCommandPoolMutex) void VulkanGraphics::StartGraphicsFrame() {
+	ZoneScoped;
 
 	uint32_t index = mSwapchain->GetNextImage();
 	{
 		ZoneScopedN("Locking Command pool lock");
 		mCommandPoolMutex.lock();
 	}
-	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(index);
+	VkCommandBuffer graphics = mDevicesHandler->GetGraphicsCB(GetCurrentImageIndex());
 	VkCommandBufferBeginInfo info = {};
 	info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 	vkBeginCommandBuffer(graphics, &info);
@@ -498,47 +501,7 @@ RELEASES_LOCK(mCommandPoolMutex) void VulkanGraphics::EndFrame() {
 #endif
 	vkEndCommandBuffer(graphics);
 
-	{
-		//std::unique_lock<std::mutex> lock(mBuffersToSubmitMutex);
-		std::unique_lock<LockableBase(std::mutex)> lock(mBuffersToSubmitMutex);
-		const size_t numBuffers = mBuffersToSubmit.size();
-		//std::vector<VkCommandBuffer> commandBuffers(numBuffers);
-		std::vector<VkFence> fences(numBuffers);
-		//VkSubmitInfo submitInfo		  = {};
-		//submitInfo.sType			  = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		//submitInfo.pCommandBuffers	  = &aBuffer.mBuffer;
-		//submitInfo.commandBufferCount = 1;
-		//
-		//vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, 1, &submitInfo, aBuffer.mFence);
-		//
-		//vkWaitForFences(GetVkDevice(), 1, &aBuffer.mFence, true, UINT64_MAX);
-		for(int i = 0; i < numBuffers; i++) {
-			VkSubmitInfo submitInfo = {};
-			submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-			submitInfo.pCommandBuffers = &mBuffersToSubmit[i].mBuffer;
-			submitInfo.commandBufferCount = 1;
-
-			vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, 1, &submitInfo, mBuffersToSubmit[i].mFence);
-			fences[i] = mBuffersToSubmit[i].mFence;
-		}
-
-		if(numBuffers != 0) {
-			ZoneScopedN("Waiting for fences");
-			vkWaitForFences(GetVkDevice(), numBuffers, fences.data(), true, UINT64_MAX);
-		}
-
-		for(int i = 0; i < numBuffers; i++) {
-			vkDestroyFence(GetVkDevice(), mBuffersToSubmit[i].mFence, GetAllocationCallback());
-			vkFreeCommandBuffers(GetVkDevice(), mDevicesHandler->GetGraphicsPool(), 1, &mBuffersToSubmit[i].mBuffer);
-
-			if(mBuffersToSubmit[i].mDataBuffer.GetBuffer() != VK_NULL_HANDLE) {
-				//Buffer* buffer = (Buffer*)mBuffersToSubmit[i].mDataBuffer;
-				mBuffersToSubmit[i].mDataBuffer.Destroy();
-			}
-		}
-		mBuffersToSubmit.clear();
-		lock.unlock();
-	}
+	ExecuteOneTimeCommandBuffers();
 
 	mSwapchain->SubmitQueue(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, {graphics});
 
@@ -598,7 +561,7 @@ AQUIRES_LOCK(mCommandPoolMutex) OneTimeCommandBuffer VulkanGraphics::AllocateGra
 
 	OneTimeCommandBuffer otcb;
 	otcb.mBuffer = buffer;
-	otcb.mFence = fence;
+	//otcb.mFence = fence;
 	return otcb;
 }
 
@@ -786,6 +749,43 @@ bool VulkanGraphics::HasInstanceLayer(const char* aLayer) const {
 		}
 	}
 	return false;
+}
+
+void VulkanGraphics::ExecuteOneTimeCommandBuffers() {
+	VkFenceCreateInfo fenceInfo = {};
+	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+	VkFence fence;
+	vkCreateFence(GetVkDevice(), &fenceInfo, GetAllocationCallback(), &fence);
+
+	std::unique_lock<LockableBase(std::mutex)> lock(mBuffersToSubmitMutex);
+	const size_t numBuffers = mBuffersToSubmit.size();
+	std::vector<VkSubmitInfo> submitInfos(numBuffers);
+
+	for(int i = 0; i < numBuffers; i++) {
+		VkSubmitInfo& submitInfo = submitInfos[i] = {};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.pCommandBuffers = &mBuffersToSubmit[i].mBuffer;
+		submitInfo.commandBufferCount = 1;
+	}
+
+	if(numBuffers != 0) {
+		vkQueueSubmit(mDevicesHandler->GetPrimaryDeviceData().mQueue.mGraphicsQueue.mQueue, numBuffers, submitInfos.data(), fence);
+		ZoneScopedN("Waiting for fences");
+		vkWaitForFences(GetVkDevice(), 1, &fence, true, UINT64_MAX);
+	}
+
+	vkDestroyFence(GetVkDevice(), fence, GetAllocationCallback());
+	for(int i = 0; i < numBuffers; i++) {
+		vkFreeCommandBuffers(GetVkDevice(), mDevicesHandler->GetGraphicsPool(), 1, &mBuffersToSubmit[i].mBuffer);
+
+		if(mBuffersToSubmit[i].mDataBuffer.GetBuffer() != VK_NULL_HANDLE) {
+			//Buffer* buffer = (Buffer*)mBuffersToSubmit[i].mDataBuffer;
+			mBuffersToSubmit[i].mDataBuffer.Destroy();
+		}
+	}
+	mBuffersToSubmit.clear();
+	lock.unlock();
 }
 
 #pragma warning(pop) // 26812

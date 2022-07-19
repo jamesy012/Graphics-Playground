@@ -12,5 +12,6 @@ public:
 	virtual void AddWindow(Window* aWindow) = 0;
 
 	virtual void StartNewFrame() = 0;
+	virtual void StartGraphicsFrame() = 0;
 	virtual void EndFrame()		 = 0;
 };

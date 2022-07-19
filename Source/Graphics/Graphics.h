@@ -39,7 +39,7 @@ struct OneTimeCommandBuffer {
 protected:
 	friend class VulkanGraphics;
 	VkCommandBuffer mBuffer;
-	VkFence mFence;
+	//VkFence mFence;
 };
 
 void SetVkName(VkObjectType aType, uint64_t aObject, const char* aName);
@@ -94,6 +94,7 @@ public:
 
 	//~~~ Frame Management
 	void StartNewFrame() override;
+	void StartGraphicsFrame() override;
 	void EndFrame() override;
 
 	const uint32_t GetCurrentImageIndex() const;
@@ -174,6 +175,8 @@ private:
 
 	bool HasInstanceExtension(const char* aExtension) const;
 	bool HasInstanceLayer(const char* aLayer) const;
+
+	void ExecuteOneTimeCommandBuffers();
 
 	std::vector<VkLayerProperties> mInstanceLayers = {};
 	std::vector<std::vector<VkExtensionProperties>> mLayerExtensions = {};

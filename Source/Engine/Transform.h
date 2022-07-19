@@ -103,6 +103,8 @@ public:
 	//rotates transform on vec3 X then Y then Z
 	void RotateAxis(const glm::vec3& aEulerAxisRotation);
 
+	void SetLookAt(const glm::vec3& aPos, const glm::vec3& aLookAt, const glm::vec3& up);
+
 	glm::vec3 GetLocalPosition() const {
 		return mPos;
 	}
