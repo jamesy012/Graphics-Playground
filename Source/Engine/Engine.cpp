@@ -5,6 +5,7 @@
 #include "PlatformDebug.h"
 
 #include "IGraphicsBase.h"
+#include "Physics.h"
 #include "Job.h"
 #include "Window.h"
 #include "Input.h"
@@ -32,6 +33,9 @@ void Engine::Startup(IGraphicsBase* aGraphics) {
 	input->StartUp();
 	input->AddWindow(window.GetWindow());
 	LOGGER::Log("Input Initalized\n");
+
+	mPhysics = new Physics();
+	mPhysics->Startup();
 
 	WorkManager::Startup();
 }
@@ -77,6 +81,10 @@ bool Engine::GameLoop() {
 void Engine::Shutdown() {
 	ASSERT(gEngine != nullptr);
 	WorkManager::Shutdown();
+
+	mPhysics->Shutdown();
+	delete mPhysics;
+	mPhysics = nullptr;
 
 	gInput->Shutdown();
 	delete gInput;

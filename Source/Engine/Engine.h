@@ -3,7 +3,7 @@
 #include <chrono>
 
 class IGraphicsBase;
-
+class Physics;
 class Window;
 class Camera;
 class StateBase;
@@ -62,6 +62,7 @@ private:
 	void ImGuiWindow();
 
 	IGraphicsBase* mGraphics;
+	Physics* mPhysics;
 
 	StateBase* mCurrentState = nullptr;
 	StateBase* mDesiredState = nullptr;
