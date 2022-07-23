@@ -98,6 +98,7 @@ public:
 
 	void TranslateLocal(const glm::vec3& aTranslation);
 	void Rotate(const glm::quat& aRotation);
+	void RotateAxis(const float aAmount, const glm::vec3& aAxis);
 	//rotates transform on vec2 X then Y
 	void RotateAxis(const glm::vec2& aEulerAxisRotation);
 	//rotates transform on vec3 X then Y then Z

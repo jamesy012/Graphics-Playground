@@ -52,14 +52,16 @@ VRGraphics::Pose gHeadPose;
 XrSpaceLocation gHeadLocation = {XR_TYPE_SPACE_LOCATION};
 
 //hands
-XrPath handSubactionPath[VRGraphics::Side::COUNT]	  = {};
-XrActionSet actionSet								  = XR_NULL_HANDLE;
-XrAction poseAction									  = XR_NULL_HANDLE;
-XrAction grabAction									  = XR_NULL_HANDLE;
-XrAction vibrateAction								  = XR_NULL_HANDLE;
-XrAction quitAction									  = XR_NULL_HANDLE;
-XrSpace handSpace[VRGraphics::Side::COUNT]			  = {XR_NULL_HANDLE};
-XrSpaceVelocity handVeloity[VRGraphics::Side::COUNT]  = {{XR_TYPE_SPACE_VELOCITY}, {XR_TYPE_SPACE_VELOCITY}};
+XrPath handSubactionPath[VRGraphics::Side::COUNT] = {};
+XrActionSet actionSet = XR_NULL_HANDLE;
+XrAction poseAction = XR_NULL_HANDLE;
+XrAction grabAction = XR_NULL_HANDLE;
+XrAction vibrateAction = XR_NULL_HANDLE;
+XrAction tackpadXAction = XR_NULL_HANDLE;
+XrAction tackpadYAction = XR_NULL_HANDLE;
+XrAction menuAction = XR_NULL_HANDLE;
+XrSpace handSpace[VRGraphics::Side::COUNT] = {XR_NULL_HANDLE};
+XrSpaceVelocity handVeloity[VRGraphics::Side::COUNT] = {{XR_TYPE_SPACE_VELOCITY}, {XR_TYPE_SPACE_VELOCITY}};
 XrSpaceLocation handLocation[VRGraphics::Side::COUNT] = {{XR_TYPE_SPACE_LOCATION, &handVeloity[0]}, {XR_TYPE_SPACE_LOCATION, &handVeloity[1]}};
 VRGraphics::ControllerInfo gHandInfo[VRGraphics::Side::COUNT] = {};
 
@@ -70,16 +72,16 @@ VRGraphics::ControllerInfo gHandInfo[VRGraphics::Side::COUNT] = {};
 
 #define VALIDATEXR_SUCCEEDED(function)                               \
 	{                                                                \
-		XrResult result = function;                                  \
-		if(!XR_UNQUALIFIED_SUCCESS(result)) {                        \
-			LOGGER::Formated("\tXR result not 0 {}\n", (int)result); \
+		XrResult xrResult = function;                                  \
+		if(!XR_UNQUALIFIED_SUCCESS(xrResult)) {                        \
+			LOGGER::Formated("\tXR result not 0 {}\n", (int)xrResult); \
 		}                                                            \
-		ASSERT(XR_SUCCEEDED(result));                                \
+		ASSERT(XR_SUCCEEDED(xrResult));                                \
 	}
 #define VALIDATEXR(function)                    \
 	{                                           \
-		XrResult result = function;             \
-		ASSERT(XR_UNQUALIFIED_SUCCESS(result)); \
+		XrResult xrResult = function;             \
+		ASSERT(XR_UNQUALIFIED_SUCCESS(xrResult)); \
 	}
 
 XrDebugUtilsMessengerEXT gXrDebugMessenger = XR_NULL_HANDLE;
@@ -91,9 +93,9 @@ static XRAPI_ATTR XrBool32 XRAPI_CALL XrDebugCallback(XrDebugUtilsMessageSeverit
 	TracyMessage(callbackData->message, strlen(callbackData->message));
 
 	const char* severityText[4] = {"VERBOSE", "INFO", "WARNING", "ERROR"};
-	const char* typeText[4]		= {"GENERAL", "VALIDATION", "PERFORMANCE", "CONFORMANCE"};
-	std::string severity		= "";
-	std::string type			= "";
+	const char* typeText[4] = {"GENERAL", "VALIDATION", "PERFORMANCE", "CONFORMANCE"};
+	std::string severity = "";
+	std::string type = "";
 	for(int i = 0; i < 4; i++) {
 		if(messageSeverity & (1 << i)) {
 			severity += std::string(";") + severityText[i];
@@ -128,7 +130,7 @@ XrDebugUtilsMessengerCreateInfoEXT GetMessengerCreateInfo() {
 		XR_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
 	// clang-format on
 	debugCreateInfo.userCallback = XrDebugCallback;
-	debugCreateInfo.next		 = nullptr;
+	debugCreateInfo.next = nullptr;
 	return debugCreateInfo;
 }
 
@@ -170,10 +172,10 @@ void VRGraphics::Initalize() {
 
 void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 	ZoneScoped;
-	XrResult result				= XR_SUCCESS;
+	XrResult result = XR_SUCCESS;
 	XrEventDataBuffer eventData = {};
-	eventData.type				= XR_TYPE_EVENT_DATA_BUFFER;
-	result						= xrPollEvent(gXrInstance, &eventData);
+	eventData.type = XR_TYPE_EVENT_DATA_BUFFER;
+	result = xrPollEvent(gXrInstance, &eventData);
 	ASSERT(result == XR_SUCCESS || result == XR_EVENT_UNAVAILABLE);
 
 	while(result == XR_SUCCESS) {
@@ -195,7 +197,7 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 				LOGGER::Formated("Session state changed to {}\n", stateText[(int)sessionState->state]);
 
 				if(sessionState->state == XR_SESSION_STATE_READY) {
-					XrSessionBeginInfo beginInfo		   = {XR_TYPE_SESSION_BEGIN_INFO};
+					XrSessionBeginInfo beginInfo = {XR_TYPE_SESSION_BEGIN_INFO};
 					beginInfo.primaryViewConfigurationType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
 					VALIDATEXR(xrBeginSession(gXrSession, &beginInfo));
@@ -222,9 +224,9 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 			default:
 				ASSERT(false);
 		}
-		eventData	   = XrEventDataBuffer();
+		eventData = XrEventDataBuffer();
 		eventData.type = XR_TYPE_EVENT_DATA_BUFFER;
-		result		   = xrPollEvent(gXrInstance, &eventData);
+		result = xrPollEvent(gXrInstance, &eventData);
 		ASSERT(result == XR_SUCCESS || result == XR_EVENT_UNAVAILABLE);
 	}
 
@@ -235,7 +237,7 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 	XrActionsSyncInfo syncInfo = {XR_TYPE_ACTIONS_SYNC_INFO};
 	const XrActiveActionSet activeActionSet {actionSet, XR_NULL_PATH};
 	syncInfo.countActiveActionSets = 1;
-	syncInfo.activeActionSets	   = &activeActionSet;
+	syncInfo.activeActionSets = &activeActionSet;
 
 	{
 		ZoneScopedN("XR Frame");
@@ -308,6 +310,16 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 			XrActionStateFloat grabValue {XR_TYPE_ACTION_STATE_FLOAT};
 			VALIDATEXR(xrGetActionStateFloat(gXrSession, &getInfo, &grabValue));
 
+			//trackpad X
+			getInfo.action = tackpadXAction;
+			XrActionStateFloat trackpadXValue {XR_TYPE_ACTION_STATE_FLOAT};
+			VALIDATEXR(xrGetActionStateFloat(gXrSession, &getInfo, &trackpadXValue));
+
+			//trackpad Y
+			getInfo.action = tackpadYAction;
+			XrActionStateFloat trackpadYValue {XR_TYPE_ACTION_STATE_FLOAT};
+			VALIDATEXR(xrGetActionStateFloat(gXrSession, &getInfo, &trackpadYValue));
+
 			//pose? hand avaliable?
 			getInfo.action = poseAction;
 			XrActionStatePose poseState {XR_TYPE_ACTION_STATE_POSE};
@@ -347,6 +359,7 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 
 			//update hand info
 			ControllerInfo& handInfo = gHandInfo[i];
+			handInfo.mTrackpad = glm::vec2(trackpadXValue.currentState, trackpadYValue.currentState);
 			handInfo.mTrigger = grabValue.currentState;
 			handInfo.mActive = poseState.isActive;
 			PoseConvert(handLocation[i].pose, handInfo.mPose);
@@ -379,7 +392,6 @@ void VRGraphics::FrameEnd() {
 	if(gFrameActive == false) {
 		return;
 	}
-	XrResult result;
 
 	for(int i = 0; i < NUM_VIEWS; i++) {
 		Swapchain& swapchain = gXrSwapchains[i];
@@ -391,28 +403,28 @@ void VRGraphics::FrameEnd() {
 
 	XrCompositionLayerProjectionView projectionViews[NUM_VIEWS] = {};
 	for(int i = 0; i < NUM_VIEWS; i++) {
-		projectionViews[i].type						= XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
-		projectionViews[i].fov						= gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mViews->fov;
-		projectionViews[i].pose						= gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mViews->pose;
-		projectionViews[i].subImage.swapchain		= gXrSwapchains[i].mSwapchain;
+		projectionViews[i].type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW;
+		projectionViews[i].fov = gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mViews->fov;
+		projectionViews[i].pose = gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mViews->pose;
+		projectionViews[i].subImage.swapchain = gXrSwapchains[i].mSwapchain;
 		projectionViews[i].subImage.imageArrayIndex = 0;
-		projectionViews[i].subImage.imageRect		= {
-			  0, 0, (int32_t)gViewConfigs[i].recommendedImageRectWidth, (int32_t)gViewConfigs[i].recommendedImageRectHeight};
+		projectionViews[i].subImage.imageRect = {
+			0, 0, (int32_t)gViewConfigs[i].recommendedImageRectWidth, (int32_t)gViewConfigs[i].recommendedImageRectHeight};
 	}
 
-	XrCompositionLayerProjection projectionLayer			  = {};
+	XrCompositionLayerProjection projectionLayer = {};
 	const XrCompositionLayerBaseHeader* projectionLayerHeader = (XrCompositionLayerBaseHeader*)&projectionLayer;
-	projectionLayer.type									  = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
-	projectionLayer.space									  = gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mSpace;
-	projectionLayer.viewCount								  = NUM_VIEWS;
-	projectionLayer.views									  = projectionViews;
-	projectionLayer.layerFlags								  = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
+	projectionLayer.type = XR_TYPE_COMPOSITION_LAYER_PROJECTION;
+	projectionLayer.space = gSpaces[XR_REFERENCE_SPACE_TYPE_STAGE - 1].mSpace;
+	projectionLayer.viewCount = NUM_VIEWS;
+	projectionLayer.views = projectionViews;
+	projectionLayer.layerFlags = XR_COMPOSITION_LAYER_BLEND_TEXTURE_SOURCE_ALPHA_BIT;
 
-	XrFrameEndInfo endInfo		 = {XR_TYPE_FRAME_END_INFO};
-	endInfo.displayTime			 = gFrameState.predictedDisplayTime;
+	XrFrameEndInfo endInfo = {XR_TYPE_FRAME_END_INFO};
+	endInfo.displayTime = gFrameState.predictedDisplayTime;
 	endInfo.environmentBlendMode = gBlendMode;
 
-	endInfo.layers	   = &projectionLayerHeader;
+	endInfo.layers = &projectionLayerHeader;
 	endInfo.layerCount = 1;
 
 	VulkanValidationMessage(416909302, false);
@@ -425,9 +437,8 @@ void VRGraphics::FrameEnd() {
 }
 
 const VkPhysicalDevice VRGraphics::GetRequestedDevice() const {
-	XrResult result;
 	PFN_xrGetVulkanGraphicsDeviceKHR xrGetVulkanGraphicsDeviceKHR;
-	VkInstance vkInstance			  = gGraphics->GetVkInstance();
+	VkInstance vkInstance = gGraphics->GetVkInstance();
 	VkPhysicalDevice vkPhysicalDevice = VK_NULL_HANDLE;
 	if(getXrInstanceProcAddr(&xrGetVulkanGraphicsDeviceKHR, "xrGetVulkanGraphicsDeviceKHR")) {
 		VALIDATEXR(xrGetVulkanGraphicsDeviceKHR(gXrInstance, gXrSystemId, vkInstance, &vkPhysicalDevice));
@@ -442,10 +453,10 @@ const std::vector<std::string> VRGraphics::GetVulkanInstanceExtensions() const {
 	getXrInstanceProcAddr(&xrGetVulkanInstanceExtensionsKHR, "xrGetVulkanInstanceExtensionsKHR");
 
 	uint32_t extensionBufferSize = 0;
-	XrResult xrResult;
-	xrResult		   = xrGetVulkanInstanceExtensionsKHR(gXrInstance, gXrSystemId, 0, &extensionBufferSize, NULL);
+
+	VALIDATEXR(xrGetVulkanInstanceExtensionsKHR(gXrInstance, gXrSystemId, 0, &extensionBufferSize, NULL));
 	char* xrExtensions = new char[extensionBufferSize];
-	xrResult		   = xrGetVulkanInstanceExtensionsKHR(gXrInstance, gXrSystemId, extensionBufferSize, &extensionBufferSize, xrExtensions);
+	VALIDATEXR(xrGetVulkanInstanceExtensionsKHR(gXrInstance, gXrSystemId, extensionBufferSize, &extensionBufferSize, xrExtensions));
 
 	int lastPoint = 0;
 	for(int i = 0; i < extensionBufferSize; i++) {
@@ -468,10 +479,9 @@ const std::vector<std::string> VRGraphics::GetVulkanDeviceExtensions() const {
 	getXrInstanceProcAddr(&xrGetVulkanDeviceExtensionsKHR, "xrGetVulkanDeviceExtensionsKHR");
 
 	uint32_t extensionBufferSize = 0;
-	XrResult xrResult;
-	xrResult		   = xrGetVulkanDeviceExtensionsKHR(gXrInstance, gXrSystemId, 0, &extensionBufferSize, NULL);
+	VALIDATEXR(xrGetVulkanDeviceExtensionsKHR(gXrInstance, gXrSystemId, 0, &extensionBufferSize, NULL));
 	char* xrExtensions = new char[extensionBufferSize];
-	xrResult		   = xrGetVulkanDeviceExtensionsKHR(gXrInstance, gXrSystemId, extensionBufferSize, &extensionBufferSize, xrExtensions);
+	VALIDATEXR(xrGetVulkanDeviceExtensionsKHR(gXrInstance, gXrSystemId, extensionBufferSize, &extensionBufferSize, xrExtensions));
 
 	int lastPoint = 0;
 	for(int i = 0; i < extensionBufferSize; i++) {
@@ -502,7 +512,7 @@ void VRGraphics::Destroy() {
 	for(int i = 0; i < NUM_SPACES; i++) {
 		if(gSpaces[i].mSpace != XR_NULL_HANDLE) {
 			xrDestroySpace(gSpaces[i].mSpace);
-			gSpaces[i].mSpace  = XR_NULL_HANDLE;
+			gSpaces[i].mSpace = XR_NULL_HANDLE;
 			gSpaces[i].mBounds = XrExtent2Df();
 		}
 	}
@@ -585,20 +595,20 @@ void VRGraphics::CreateInstance() {
 	//optionalXrExtension(XR_KHR_COMPOSITION_LAYER_DEPTH_EXTENSION_NAME);
 	optionalXrExtension(XR_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
-	XrInstanceCreateInfo create				  = {};
-	create.type								  = XR_TYPE_INSTANCE_CREATE_INFO;
-	create.applicationInfo.apiVersion		  = XR_MAKE_VERSION(1, 0, 0);
+	XrInstanceCreateInfo create = {};
+	create.type = XR_TYPE_INSTANCE_CREATE_INFO;
+	create.applicationInfo.apiVersion = XR_MAKE_VERSION(1, 0, 0);
 	create.applicationInfo.applicationVersion = 0;
-	create.applicationInfo.engineVersion	  = 0;
+	create.applicationInfo.engineVersion = 0;
 	strcpy(create.applicationInfo.applicationName, "Graphics-Playground");
 	strcpy(create.applicationInfo.engineName, "Graphics-Playground");
 	create.enabledExtensionCount = extensions.size();
 	create.enabledExtensionNames = extensions.data();
-	create.enabledApiLayerCount	 = apiLayers.size();
-	create.enabledApiLayerNames	 = apiLayers.data();
+	create.enabledApiLayerCount = apiLayers.size();
+	create.enabledApiLayerNames = apiLayers.data();
 
 	XrDebugUtilsMessengerCreateInfoEXT debugCreateInfo = GetMessengerCreateInfo();
-	create.next										   = &debugCreateInfo;
+	create.next = &debugCreateInfo;
 
 	VALIDATEXR(xrCreateInstance(&create, &gXrInstance));
 }
@@ -613,11 +623,10 @@ void VRGraphics::CreateDebugUtils() {
 }
 
 bool VRGraphics::SessionSetup() {
-	XrResult result;
 	XrSystemGetInfo systemGet = {};
-	systemGet.type			  = XR_TYPE_SYSTEM_GET_INFO;
-	systemGet.formFactor	  = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
-	systemGet.next			  = NULL;
+	systemGet.type = XR_TYPE_SYSTEM_GET_INFO;
+	systemGet.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
+	systemGet.next = NULL;
 
 	VALIDATEXR(xrGetSystem(gXrInstance, &systemGet, &gXrSystemId));
 
@@ -640,7 +649,7 @@ bool VRGraphics::SessionSetup() {
 	VALIDATEXR(xrGetSystemProperties(gXrInstance, gXrSystemId, &gSystemProperties));
 
 	uint32_t blendCount = 0;
-	result				= xrEnumerateEnvironmentBlendModes(gXrInstance, gXrSystemId, viewType, 0, &blendCount, nullptr);
+	VALIDATEXR(xrEnumerateEnvironmentBlendModes(gXrInstance, gXrSystemId, viewType, 0, &blendCount, nullptr));
 
 	std::vector<XrEnvironmentBlendMode> environmentBlendModes(blendCount);
 	VALIDATEXR(xrEnumerateEnvironmentBlendModes(gXrInstance, gXrSystemId, viewType, blendCount, &blendCount, environmentBlendModes.data()));
@@ -654,10 +663,10 @@ bool VRGraphics::SessionSetup() {
 	}
 
 	XrViewConfigurationProperties viewConfigProps = {XR_TYPE_VIEW_CONFIGURATION_PROPERTIES};
-	result										  = xrGetViewConfigurationProperties(gXrInstance, gXrSystemId, viewType, &viewConfigProps);
+	VALIDATEXR(xrGetViewConfigurationProperties(gXrInstance, gXrSystemId, viewType, &viewConfigProps));
 
 	uint32_t viewConfigCount = 0;
-	result					 = xrEnumerateViewConfigurationViews(gXrInstance, gXrSystemId, viewType, 0, &viewConfigCount, nullptr);
+	VALIDATEXR(xrEnumerateViewConfigurationViews(gXrInstance, gXrSystemId, viewType, 0, &viewConfigCount, nullptr));
 
 	gViewConfigs.resize(viewConfigCount);
 	for(int i = 0; i < viewConfigCount; i++) {
@@ -678,8 +687,6 @@ bool VRGraphics::SessionSetup() {
 }
 
 void VRGraphics::CreateActions() {
-	XrResult result;
-
 	VALIDATEXR(xrStringToPath(gXrInstance, "/user/hand/left", &handSubactionPath[Side::LEFT]));
 
 	VALIDATEXR(xrStringToPath(gXrInstance, "/user/hand/right", &handSubactionPath[Side::RIGHT]));
@@ -688,11 +695,11 @@ void VRGraphics::CreateActions() {
 	strcpy(actionSetInfo.actionSetName, "gameplay");
 	strcpy(actionSetInfo.localizedActionSetName, "Gameplay");
 	actionSetInfo.priority = 0;
-	result				   = xrCreateActionSet(gXrInstance, &actionSetInfo, &actionSet);
+	VALIDATEXR(xrCreateActionSet(gXrInstance, &actionSetInfo, &actionSet));
 
-	XrActionCreateInfo actionInfo  = {XR_TYPE_ACTION_CREATE_INFO};
+	XrActionCreateInfo actionInfo = {XR_TYPE_ACTION_CREATE_INFO};
 	actionInfo.countSubactionPaths = Side::COUNT;
-	actionInfo.subactionPaths	   = handSubactionPath;
+	actionInfo.subactionPaths = handSubactionPath;
 
 	actionInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
 	strcpy_s(actionInfo.actionName, "hand_pose");
@@ -704,15 +711,27 @@ void VRGraphics::CreateActions() {
 	strcpy_s(actionInfo.localizedActionName, "Grab Object");
 	VALIDATEXR(xrCreateAction(actionSet, &actionInfo, &grabAction));
 
+	actionInfo.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
+	strcpy_s(actionInfo.actionName, "menu_action");
+	strcpy_s(actionInfo.localizedActionName, "Menu Action");
+	VALIDATEXR(xrCreateAction(actionSet, &actionInfo, &menuAction));
+
 	actionInfo.actionType = XR_ACTION_TYPE_VIBRATION_OUTPUT;
 	strcpy_s(actionInfo.actionName, "vibrate_hand");
 	strcpy_s(actionInfo.localizedActionName, "Vibrate Hand");
 	VALIDATEXR(xrCreateAction(actionSet, &actionInfo, &vibrateAction));
 
-	actionInfo.actionType = XR_ACTION_TYPE_VIBRATION_OUTPUT;
-	strcpy_s(actionInfo.actionName, "quit_session");
-	strcpy_s(actionInfo.localizedActionName, "Quit Session");
-	VALIDATEXR(xrCreateAction(actionSet, &actionInfo, &quitAction));
+	actionInfo.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
+	strcpy_s(actionInfo.actionName, "trackpad_x");
+	strcpy_s(actionInfo.localizedActionName, "Trackpad X");
+	VALIDATEXR(xrCreateAction(actionSet, &actionInfo, &tackpadXAction));
+
+	actionInfo.actionType = XR_ACTION_TYPE_FLOAT_INPUT;
+	strcpy_s(actionInfo.actionName, "trackpad_y");
+	strcpy_s(actionInfo.localizedActionName, "Trackpad Y");
+	VALIDATEXR(xrCreateAction(actionSet, &actionInfo, &tackpadYAction));
+
+	//https://registry.khronos.org/OpenXR/specs/1.0/html/xrspec.html#semantic-path-interaction-profiles
 
 	XrPath selectPath[Side::COUNT];
 	XrPath squeezeValuePath[Side::COUNT];
@@ -723,6 +742,8 @@ void VRGraphics::CreateActions() {
 	XrPath menuClickPath[Side::COUNT];
 	XrPath bClickPath[Side::COUNT];
 	XrPath triggerValuePath[Side::COUNT];
+	XrPath trackpadXPath[Side::COUNT];
+	XrPath trackpadYPath[Side::COUNT];
 	VALIDATEXR(xrStringToPath(gXrInstance, "/user/hand/left/input/select/click", &selectPath[Side::LEFT]));
 
 	VALIDATEXR(xrStringToPath(gXrInstance, "/user/hand/right/input/select/click", &selectPath[Side::RIGHT]));
@@ -759,6 +780,14 @@ void VRGraphics::CreateActions() {
 
 	VALIDATEXR(xrStringToPath(gXrInstance, "/user/hand/right/input/trigger/value", &triggerValuePath[Side::RIGHT]));
 
+	VALIDATEXR(xrStringToPath(gXrInstance, "/user/hand/left/input/trackpad/x", &trackpadXPath[Side::LEFT]));
+
+	VALIDATEXR(xrStringToPath(gXrInstance, "/user/hand/right/input/trackpad/x", &trackpadXPath[Side::RIGHT]));
+
+	VALIDATEXR(xrStringToPath(gXrInstance, "/user/hand/left/input/trackpad/y", &trackpadYPath[Side::LEFT]));
+
+	VALIDATEXR(xrStringToPath(gXrInstance, "/user/hand/right/input/trackpad/y", &trackpadYPath[Side::RIGHT]));
+
 	// Suggest bindings for KHR Simple.
 	{
 		XrPath khrSimpleInteractionProfilePath;
@@ -769,15 +798,15 @@ void VRGraphics::CreateActions() {
 														 {grabAction, selectPath[Side::RIGHT]},
 														 {poseAction, posePath[Side::LEFT]},
 														 {poseAction, posePath[Side::RIGHT]},
-														 {quitAction, menuClickPath[Side::LEFT]},
-														 {quitAction, menuClickPath[Side::RIGHT]},
+														 {menuAction, menuClickPath[Side::LEFT]},
+														 {menuAction, menuClickPath[Side::RIGHT]},
 														 {vibrateAction, hapticPath[Side::LEFT]},
 														 {vibrateAction, hapticPath[Side::RIGHT]}}};
 		XrInteractionProfileSuggestedBinding suggestedBindings {XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
-		suggestedBindings.interactionProfile	 = khrSimpleInteractionProfilePath;
-		suggestedBindings.suggestedBindings		 = bindings.data();
+		suggestedBindings.interactionProfile = khrSimpleInteractionProfilePath;
+		suggestedBindings.suggestedBindings = bindings.data();
 		suggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
-		result									 = xrSuggestInteractionProfileBindings(gXrInstance, &suggestedBindings);
+		VALIDATEXR(xrSuggestInteractionProfileBindings(gXrInstance, &suggestedBindings));
 	}
 	// Suggest bindings for the Vive Controller.
 	{
@@ -788,31 +817,35 @@ void VRGraphics::CreateActions() {
 														 {grabAction, triggerValuePath[Side::RIGHT]},
 														 {poseAction, posePath[Side::LEFT]},
 														 {poseAction, posePath[Side::RIGHT]},
-														 {quitAction, menuClickPath[Side::LEFT]},
-														 {quitAction, menuClickPath[Side::RIGHT]},
+														 {menuAction, menuClickPath[Side::LEFT]},
+														 {menuAction, menuClickPath[Side::RIGHT]},
 														 {vibrateAction, hapticPath[Side::LEFT]},
-														 {vibrateAction, hapticPath[Side::RIGHT]}}};
+														 {vibrateAction, hapticPath[Side::RIGHT]},
+														 {tackpadXAction, trackpadXPath[Side::LEFT]},
+														 {tackpadXAction, trackpadXPath[Side::RIGHT]},
+														 {tackpadYAction, trackpadYPath[Side::LEFT]},
+														 {tackpadYAction, trackpadYPath[Side::RIGHT]}}};
 		XrInteractionProfileSuggestedBinding suggestedBindings {XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING};
-		suggestedBindings.interactionProfile	 = viveControllerInteractionProfilePath;
-		suggestedBindings.suggestedBindings		 = bindings.data();
+		suggestedBindings.interactionProfile = viveControllerInteractionProfilePath;
+		suggestedBindings.suggestedBindings = bindings.data();
 		suggestedBindings.countSuggestedBindings = (uint32_t)bindings.size();
-		result									 = xrSuggestInteractionProfileBindings(gXrInstance, &suggestedBindings);
+		VALIDATEXR(xrSuggestInteractionProfileBindings(gXrInstance, &suggestedBindings));
 	}
 
 	XrActionSpaceCreateInfo actionSpaceInfo {XR_TYPE_ACTION_SPACE_CREATE_INFO};
-	actionSpaceInfo.action							= poseAction;
+	actionSpaceInfo.action = poseAction;
 	actionSpaceInfo.poseInActionSpace.orientation.w = 1.f;
-	actionSpaceInfo.subactionPath					= handSubactionPath[Side::LEFT];
+	actionSpaceInfo.subactionPath = handSubactionPath[Side::LEFT];
 
 	VALIDATEXR(xrCreateActionSpace(gXrSession, &actionSpaceInfo, &handSpace[Side::LEFT]));
 
 	actionSpaceInfo.subactionPath = handSubactionPath[Side::RIGHT];
-	result						  = xrCreateActionSpace(gXrSession, &actionSpaceInfo, &handSpace[Side::RIGHT]);
+	VALIDATEXR(xrCreateActionSpace(gXrSession, &actionSpaceInfo, &handSpace[Side::RIGHT]));
 
 	XrSessionActionSetsAttachInfo attachInfo {XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO};
 	attachInfo.countActionSets = 1;
-	attachInfo.actionSets	   = &actionSet;
-	result					   = xrAttachSessionActionSets(gXrSession, &attachInfo);
+	attachInfo.actionSets = &actionSet;
+	VALIDATEXR(xrAttachSessionActionSets(gXrSession, &attachInfo));
 
 	//xrDestroyActionSet;
 	//xrDestroyAction;
@@ -820,28 +853,26 @@ void VRGraphics::CreateActions() {
 
 void VRGraphics::CreateSession() {
 	XrGraphicsBindingVulkanKHR vulkanInfo = {XR_TYPE_GRAPHICS_BINDING_VULKAN_KHR};
-	vulkanInfo.instance					  = gGraphics->GetVkInstance();
-	vulkanInfo.physicalDevice			  = gGraphics->GetVkPhysicalDevice();
-	vulkanInfo.device					  = gGraphics->GetVkDevice();
-	vulkanInfo.queueFamilyIndex			  = gGraphics->GetMainDevice()->GetPrimaryDeviceData().mQueue.mPresentQueue.mQueueFamily;
-	vulkanInfo.queueIndex				  = 0;
+	vulkanInfo.instance = gGraphics->GetVkInstance();
+	vulkanInfo.physicalDevice = gGraphics->GetVkPhysicalDevice();
+	vulkanInfo.device = gGraphics->GetVkDevice();
+	vulkanInfo.queueFamilyIndex = gGraphics->GetMainDevice()->GetPrimaryDeviceData().mQueue.mPresentQueue.mQueueFamily;
+	vulkanInfo.queueIndex = 0;
 	//vulkanInfo.queueFamilyIndex			  = 0;
 	//vulkanInfo.queueIndex				  = 0;
 
 	LOGGER::Log("Creating Xr Session\n");
 	XrSessionCreateInfo info = {XR_TYPE_SESSION_CREATE_INFO};
-	info.systemId			 = gXrSystemId;
-	info.next				 = &vulkanInfo;
+	info.systemId = gXrSystemId;
+	info.next = &vulkanInfo;
 	VALIDATEXR(xrCreateSession(gXrInstance, &info, &gXrSession));
 
 	LOGGER::Log("Created Xr Session\n");
 }
 
 void VRGraphics::CreateSpaces() {
-	XrResult result;
-
 	uint32_t spaceCount = 0;
-	result				= xrEnumerateReferenceSpaces(gXrSession, 0, &spaceCount, nullptr);
+	VALIDATEXR(xrEnumerateReferenceSpaces(gXrSession, 0, &spaceCount, nullptr));
 
 	std::vector<XrReferenceSpaceType> refSpaceTypes(spaceCount);
 	VALIDATEXR(xrEnumerateReferenceSpaces(gXrSession, spaceCount, &spaceCount, refSpaceTypes.data()));
@@ -849,15 +880,14 @@ void VRGraphics::CreateSpaces() {
 	//Head
 	ASSERT(spaceCount == NUM_SPACES);
 	XrReferenceSpaceCreateInfo refSpaceInfo = {XR_TYPE_REFERENCE_SPACE_CREATE_INFO};
-	XrPosef poseReference					= {};
-	poseReference.orientation.w				= 1.0f;
+	XrPosef poseReference = {};
+	poseReference.orientation.w = 1.0f;
 	for(int i = 0; i < NUM_SPACES; i++) {
-		const XrReferenceSpaceType type	  = XrReferenceSpaceType(refSpaceTypes[i]);
-		refSpaceInfo.referenceSpaceType	  = type;
+		const XrReferenceSpaceType type = XrReferenceSpaceType(refSpaceTypes[i]);
+		refSpaceInfo.referenceSpaceType = type;
 		refSpaceInfo.poseInReferenceSpace = poseReference;
-		result							  = xrCreateReferenceSpace(gXrSession, &refSpaceInfo, &gSpaces[i].mSpace);
+		VALIDATEXR(xrCreateReferenceSpace(gXrSession, &refSpaceInfo, &gSpaces[i].mSpace));
 
-		XrExtent2Df spaceBounds;
 		VALIDATEXR_SUCCEEDED(xrGetReferenceSpaceBoundsRect(gXrSession, type, &gSpaces[i].mBounds));
 	}
 
@@ -866,9 +896,8 @@ void VRGraphics::CreateSpaces() {
 }
 
 void VRGraphics::PrepareSwapchainData() {
-	XrResult result;
 	uint32_t formatCounts = 0;
-	result				  = xrEnumerateSwapchainFormats(gXrSession, 0, &formatCounts, nullptr);
+	VALIDATEXR(xrEnumerateSwapchainFormats(gXrSession, 0, &formatCounts, nullptr));
 
 	std::vector<int64_t> formats(formatCounts);
 	VALIDATEXR(xrEnumerateSwapchainFormats(gXrSession, formatCounts, &formatCounts, formats.data()));
@@ -885,7 +914,7 @@ void VRGraphics::PrepareSwapchainData() {
 	{
 		//got from debug list above
 		const VkFormat desiredFormats[] = {VK_FORMAT_R32G32B32A32_SFLOAT, VK_FORMAT_R8G8B8A8_SRGB};
-		const int count					= sizeof(desiredFormats) / sizeof(VkFormat);
+		const int count = sizeof(desiredFormats) / sizeof(VkFormat);
 		for(int i = 0; i < count && mSwapchainFormat == VK_FORMAT_UNDEFINED; i++) {
 			for(int q = 0; q < formatCounts; q++) {
 				if(formats[q] == desiredFormats[i]) {
@@ -903,14 +932,14 @@ void VRGraphics::PrepareSwapchainData() {
 
 	for(int i = 0; i < NUM_VIEWS; i++) {
 		XrSwapchainCreateInfo createInfo {XR_TYPE_SWAPCHAIN_CREATE_INFO};
-		createInfo.width	   = gViewConfigs[i].recommendedImageRectWidth;
-		createInfo.height	   = gViewConfigs[i].recommendedImageRectHeight;
-		createInfo.format	   = mSwapchainFormat;
-		createInfo.arraySize   = 1;
-		createInfo.faceCount   = 1;
-		createInfo.mipCount	   = 1;
+		createInfo.width = gViewConfigs[i].recommendedImageRectWidth;
+		createInfo.height = gViewConfigs[i].recommendedImageRectHeight;
+		createInfo.format = mSwapchainFormat;
+		createInfo.arraySize = 1;
+		createInfo.faceCount = 1;
+		createInfo.mipCount = 1;
 		createInfo.sampleCount = 1;
-		createInfo.usageFlags  = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
+		createInfo.usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT;
 		createInfo.createFlags = XR_SWAPCHAIN_CREATE_PROTECTED_CONTENT_BIT;
 
 		VALIDATEXR(xrCreateSwapchain(gXrSession, &createInfo, &gXrSwapchains[i].mSwapchain));
@@ -928,8 +957,8 @@ void VRGraphics::PrepareSwapchainData() {
 		for(int vkImage = 0; vkImage < imageCount; vkImage++) {
 			vkImages[vkImage].type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR;
 		}
-		result =
-			xrEnumerateSwapchainImages(swapchain.mSwapchain, imageCount, &imageCount, reinterpret_cast<XrSwapchainImageBaseHeader*>(&vkImages[0]));
+		VALIDATEXR(
+			xrEnumerateSwapchainImages(swapchain.mSwapchain, imageCount, &imageCount, reinterpret_cast<XrSwapchainImageBaseHeader*>(&vkImages[0])));
 
 		gXrSwapchains[i].mImages.resize(imageCount);
 

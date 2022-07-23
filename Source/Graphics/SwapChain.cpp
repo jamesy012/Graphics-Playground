@@ -195,7 +195,13 @@ void Swapchain::SubmitQueue(VkQueue aQueue, std::vector<VkCommandBuffer> aComman
 	VALIDATEVK(vkQueueSubmit(aQueue, 1, &submitInfo, VK_NULL_HANDLE));
 	{
 		ZoneScoped;
-		VALIDATEVK(vkQueueWaitIdle(aQueue));
+		VkResult result = (vkQueueWaitIdle(aQueue));
+		if(result == VK_ERROR_DEVICE_LOST) {
+			//XR seems to cause this to happen sometimes?
+			LOGGER::Log("\nvkQueueWaitIdle - VK_ERROR_DEVICE_LOST\n");
+		} else {
+			VALIDATEVK(result);
+		}
 	}
 }
 

@@ -77,6 +77,10 @@ void StateTest::Initalize() {
 	controllerTest1 = new Model();
 	controllerTest2 = new Model();
 	worldBase = new Model();
+
+#if defined(ENABLE_XR)
+	vrMirrorPass = new Screenspace();
+#endif
 }
 void StateTest::StartUp() {
 	//move to engine/graphics?
@@ -144,17 +148,17 @@ void StateTest::StartUp() {
 	//xr needs the array version
 	ssTest->Create("/Shaders/Screenspace/ImageSingleArray.frag.spv", "ScreenSpace ImageCopy");
 	//mirrors the left eye to the PC display
-	Screenspace vrMirrorPass;
-	vrMirrorPass.mAttachmentFormat = gGraphics->GetSwapchainFormat();
-	vrMirrorPass.AddMaterialBase(&ssTestBase);
-	vrMirrorPass.Create("/Shaders/Screenspace/ImageTwoArray.frag.spv", "ScreenSpace Mirror ImageCopy");
+
+	vrMirrorPass->mAttachmentFormat = gGraphics->GetSwapchainFormat();
+	vrMirrorPass->AddMaterialBase(&ssTestBase);
+	vrMirrorPass->Create("/Shaders/Screenspace/ImageTwoArray.frag.spv", "ScreenSpace Mirror ImageCopy");
 #else
 	//windows doesnt do multiview so just needs the non array version
 	ssTest->Create("/Shaders/Screenspace/ImageSingle.frag.spv", "ScreenSpace ImageCopy");
 #endif
 	auto SetupSSImages = [&]() {
 #if defined(ENABLE_XR)
-		vrMirrorPass.GetMaterial(0).SetImages(fbImage, 0, 0);
+		vrMirrorPass->GetMaterial(0).SetImages(*fbImage, 0, 0);
 #endif
 		ssTest->GetMaterial(0).SetImages(*fbImage, 0, 0);
 	};
@@ -332,7 +336,45 @@ void StateTest::Update() {
 			view = glm::inverse(view);
 			glm::mat4 frustum =
 				glm::frustum(tan(info.mFov.x) / 10, tan(info.mFov.y) / 10, tan(info.mFov.z) / 10, tan(info.mFov.w) / 10, 0.1f, 1000.0f);
-			proj = frustum;
+
+			glm::mat4 resultm {};
+			{
+				const auto& tanAngleLeft = tan(info.mFov.x);
+				const auto& tanAngleRight = tan(info.mFov.y);
+				const auto& tanAngleUp = tan(info.mFov.z);
+				const auto& tanAngleDown = tan(info.mFov.w);
+
+				const float tanAngleWidth = tanAngleRight - tanAngleLeft;
+				const float tanAngleHeight = (tanAngleDown - tanAngleUp);
+				const float offsetZ = 0;
+
+				float nearZ = 0.1f;
+				float farZ = 1000.0f;
+
+				float* result = &resultm[0][0];
+				// normal projection
+				result[0] = 2 / tanAngleWidth;
+				result[4] = 0;
+				result[8] = (tanAngleRight + tanAngleLeft) / tanAngleWidth;
+				result[12] = 0;
+
+				result[1] = 0;
+				result[5] = 2 / tanAngleHeight;
+				result[9] = (tanAngleUp + tanAngleDown) / tanAngleHeight;
+				result[13] = 0;
+
+				result[2] = 0;
+				result[6] = 0;
+				result[10] = -(farZ + offsetZ) / (farZ - nearZ);
+				result[14] = -(farZ * (nearZ + offsetZ)) / (farZ - nearZ);
+
+				result[3] = 0;
+				result[7] = 0;
+				result[11] = -1;
+				result[15] = 0;
+			}
+
+			proj = resultm;
 			proj[1][1] *= -1.0f;
 
 			sceneData.mPV[i] = proj * view;
@@ -355,20 +397,27 @@ void StateTest::Update() {
 		//}
 #if defined(ENABLE_XR)
 		if(updateControllers) {
-			Transform* controllerTransforms[2] = {&controllerTest1.mLocation, &controllerTest2.mLocation};
+			Transform* controllerTransforms[2] = {&controllerTest1->mLocation, &controllerTest2->mLocation};
 			for(int i = 0; i < VRGraphics::Side::COUNT; i++) {
 				VRGraphics::ControllerInfo info;
 				gVrGraphics->GetHandInfo((VRGraphics::Side)i, info);
-				glm::vec3 movement;
+
+				//rotate camera based on trackpad
+				camera.mTransform.RotateAxis(-info.mTrackpad.x, CONSTANTS::UP);
+
+				//move camera based on trigger
+				glm::vec3 cameraMovement = glm::vec3(0);
 				if(info.mTrigger > 0) {
-					glm::vec3 position = camera.mTransform.GetLocalPosition();
-					movement = (camera.mTransform.GetLocalRotation() * glm::vec4(info.mLinearVelocity, 1)) * info.mTrigger;
-					camera.mTransform.SetPosition(position - movement);
+					cameraMovement = glm::vec4(info.mLinearVelocity, 1) * -info.mTrigger;
+					camera.mTransform.TranslateLocal(cameraMovement);
 				}
+
+				//move controller
 				if(info.mActive) {
-					controllerTransforms[i]->SetPosition(info.mPose.mPos + movement);
+					controllerTransforms[i]->SetPosition(info.mPose.mPos + (-cameraMovement));
 					controllerTransforms[i]->SetRotation(info.mPose.mRot);
 					controllerTransforms[i]->SetScale(1.0f);
+
 				} else {
 					controllerTransforms[i]->SetScale(0.0f);
 				}

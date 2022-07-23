@@ -5,7 +5,7 @@
 #include "PlatformDebug.h"
 
 #pragma region conversions
-static glm::vec3 BulletoGlm(const btVector3& aOther) {
+static glm::vec3 BulletToGlm(const btVector3& aOther) {
 	return glm::vec3(aOther.getX(), aOther.getY(), aOther.getZ());
 }
 

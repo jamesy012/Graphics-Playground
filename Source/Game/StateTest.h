@@ -59,4 +59,9 @@ private:
 
 	SceneData sceneData;
 	int selectedMesh = 0;
+
+#if defined(ENABLE_XR)
+	Screenspace* vrMirrorPass;
+	bool updateControllers = true;
+#endif
 };

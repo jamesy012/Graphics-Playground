@@ -73,6 +73,13 @@ void Transform::TranslateLocal(const glm::vec3& aTranslation) {
 	SetDirty();
 }
 
+void Transform::RotateAxis(const float aAmount, const glm::vec3& aAxis) {
+	const float amount = glm::radians(aAmount);
+	mRot = mRot * glm::angleAxis(amount, aAxis);
+
+	SetDirty();
+}
+
 void Transform::RotateAxis(const glm::vec2& aEulerAxisRotation) {
 	const glm::vec2 axisRotation = glm::radians(aEulerAxisRotation);
 

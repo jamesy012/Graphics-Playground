@@ -61,6 +61,7 @@ public:
 		glm::vec3 mLinearVelocity;
 		glm::vec3 mAngularVelocity;
 		float mTrigger;
+		glm::vec2 mTrackpad;
 		bool mActive;
 	};
 
