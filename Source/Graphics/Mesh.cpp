@@ -19,7 +19,7 @@ Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
 	};
 	MeshLoaders selectedLoader = MeshLoaders::COUNT;
 
-	const LoaderMap loaderMap[(int)MeshLoaders::COUNT] = {{MeshLoaders::TINYGLTF, {".gltf"}}, {}};
+	const LoaderMap loaderMap[(int)MeshLoaders::COUNT] = {{MeshLoaders::TINYGLTF, {".gltf", ".glb"}}, {}};
 	for(int i = 0; i < (int)MeshLoaders::COUNT && selectedLoader == MeshLoaders::COUNT; i++) {
 		const LoaderMap& map = loaderMap[i];
 		for(int q = 0; q < map.extensions.size(); q++) {
@@ -44,7 +44,7 @@ Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
 			ASSERT(false);
 	}
 
-	if(mLoadingBase == nullptr){
+	if(mLoadingBase == nullptr) {
 		return Job::Work();
 	}
 
@@ -73,7 +73,7 @@ bool Mesh::LoadMesh(FileIO::Path aFilePath, FileIO::Path aImagePath /*= ""*/) {
 	mImagePath = aImagePath;
 
 	Job::Work asyncWork = GetWork(aFilePath);
-	mLoadingHandle		= Job::QueueWorkHandle(asyncWork);
+	mLoadingHandle = Job::QueueWorkHandle(asyncWork);
 
 	return true;
 }
@@ -93,7 +93,7 @@ void Mesh::Destroy() {
 		if(mMaterials[i].mMetallicRoughnessTexture) {
 			mMaterials[i].mMetallicRoughnessTexture->Destroy();
 			mMaterials[i].mMetallicRoughnessTexture = nullptr;
-		}	
+		}
 		if(mMaterials[i].mNormal) {
 			mMaterials[i].mNormal->Destroy();
 			mMaterials[i].mNormal = nullptr;

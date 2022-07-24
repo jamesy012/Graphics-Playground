@@ -4,8 +4,9 @@
 
 #include "btBulletDynamicsCommon.h"
 
+#include "Engine.h"
 #include "PlatformDebug.h"
-#include "PhysicsTransform.h"
+#include "Transform.h"
 
 Physics* gPhysics = nullptr;
 
@@ -13,31 +14,132 @@ void Physics::Startup() {
 	ASSERT(gPhysics == nullptr);
 	gPhysics = this;
 
-	int i;
+	mCollisionConfiguration = new btDefaultCollisionConfiguration();
 
-	///collision configuration contains default setup for memory, collision setup. Advanced users can create their own configuration.
-	btDefaultCollisionConfiguration* collisionConfiguration = new btDefaultCollisionConfiguration();
+	mDispatcher = new btCollisionDispatcher(mCollisionConfiguration);
 
-	///use the default collision dispatcher. For parallel processing you can use a diffent dispatcher (see Extras/BulletMultiThreaded)
-	btCollisionDispatcher* dispatcher = new btCollisionDispatcher(collisionConfiguration);
+	mOverlappingPairCache = new btDbvtBroadphase();
 
-	///btDbvtBroadphase is a good general purpose broadphase. You can also try out btAxis3Sweep.
-	btBroadphaseInterface* overlappingPairCache = new btDbvtBroadphase();
+	mSolver = new btSequentialImpulseConstraintSolver();
 
-	///the default constraint solver. For parallel processing you can use a different solver (see Extras/BulletMultiThreaded)
-	btSequentialImpulseConstraintSolver* solver = new btSequentialImpulseConstraintSolver;
+	mDynamicsWorld = new btDiscreteDynamicsWorld(mDispatcher, mOverlappingPairCache, mSolver, mCollisionConfiguration);
 
-	btDiscreteDynamicsWorld* dynamicsWorld = new btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
+	mDynamicsWorld->setGravity(btVector3(0, -10, 0));
+}
 
-	dynamicsWorld->setGravity(btVector3(0, -10, 0));
+void Physics::Shutdown() {
+	ASSERT(gPhysics != nullptr);
 
-	///-----initialization_end-----
+	delete mDynamicsWorld;
+
+	delete mSolver;
+
+	delete mOverlappingPairCache;
+
+	delete mDispatcher;
+
+	delete mCollisionConfiguration;
+
+	gPhysics = nullptr;
+}
+
+void Physics::Update() {
+	ASSERT(gPhysics != nullptr);
+
+	//for(int j = mDynamicsWorld->getNumCollisionObjects() - 1; j >= 0; j--) {
+	//	btCollisionObject* obj = mDynamicsWorld->getCollisionObjectArray()[j];
+	//	btRigidBody* body = btRigidBody::upcast(obj);
+	//	Transform* transform = ((Transform*)body->getUserPointer());
+	//	if(transform) {
+	//		transform->UpdateToPhysics();
+	//	}
+	//}
+
+	//
+	mDynamicsWorld->stepSimulation(gEngine->GetDeltaTime());
+
+	for(int j = mDynamicsWorld->getNumCollisionObjects() - 1; j >= 0; j--) {
+		btCollisionObject* obj = mDynamicsWorld->getCollisionObjectArray()[j];
+		btRigidBody* body = btRigidBody::upcast(obj);
+		if(body->isActive()) {
+			Transform* transform = ((Transform*)body->getUserPointer());
+			if(transform) {
+				transform->UpdateFromPhysics();
+			}
+		}
+	}
+}
+
+void Physics::AddingObjectsTestGround(Transform* aTargetTransform) {
+	btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.), btScalar(50.), btScalar(50.)));
+
+	mCollisionShapes.push_back(groundShape);
+
+	btTransform groundTransform;
+	groundTransform.setIdentity();
+	groundTransform.setOrigin(btVector3(0, -50, 0));
+
+	btScalar mass(0.);
+
+	//rigidbody is dynamic if and only if mass is non zero, otherwise static
+	bool isDynamic = (mass != 0.f);
+
+	btVector3 localInertia(0, 0, 0);
+	if(isDynamic)
+		groundShape->calculateLocalInertia(mass, localInertia);
+
+	//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, groundShape, localInertia);
+	btRigidBody* body = new btRigidBody(rbInfo);
+	body->setRollingFriction(0.5f);
+	body->setAngularFactor(0.5f);
+	body->setFriction(10.0f);
+	aTargetTransform->SetPhysicsLink(body);
+	aTargetTransform->UpdateToPhysics();
+
+	//add the body to the dynamics world
+	mDynamicsWorld->addRigidBody(body);
+}
+
+void Physics::AddingObjectsTestSphere(Transform* aTargetTransform) {
+	btCollisionShape* colShape = new btSphereShape(btScalar(aTargetTransform->GetLocalScale().x/2));
+	mCollisionShapes.push_back(colShape);
+
+	/// Create Dynamic Objects
+	btTransform startTransform;
+	startTransform.setIdentity();
+
+	btScalar mass(1.f);
+
+	//rigidbody is dynamic if and only if mass is non zero, otherwise static
+	bool isDynamic = (mass != 0.f);
+
+	btVector3 localInertia(0, 0, 0);
+	if(isDynamic)
+		colShape->calculateLocalInertia(mass, localInertia);
+
+
+	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+	btRigidBody* body = new btRigidBody(rbInfo);
+	body->setSpinningFriction(0.5f);
+
+	aTargetTransform->SetPhysicsLink(body);
+	aTargetTransform->UpdateToPhysics();
+
+	mDynamicsWorld->addRigidBody(body);
+}
+
+//from the example
+void Physics::Test() {
 
 	//keep track of the shapes, we release memory at exit.
 	//make sure to re-use collision shapes among rigid bodies whenever possible!
 	btAlignedObjectArray<btCollisionShape*> collisionShapes;
 
-	std::vector<PhysicsTransform> transforms(2);
+	std::vector<Transform> transforms(2);
 
 	///create a few basic rigid bodies
 
@@ -69,7 +171,7 @@ void Physics::Startup() {
 		transforms[0].SetPhysicsLink(body);
 
 		//add the body to the dynamics world
-		dynamicsWorld->addRigidBody(body);
+		mDynamicsWorld->addRigidBody(body);
 	}
 
 	{
@@ -99,36 +201,36 @@ void Physics::Startup() {
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
 		btRigidBody* body = new btRigidBody(rbInfo);
 
-        transforms[1].SetPhysicsLink(body);
+		transforms[1].SetPhysicsLink(body);
 
-		dynamicsWorld->addRigidBody(body);
+		mDynamicsWorld->addRigidBody(body);
 	}
 
 	/// Do some simulation
 
 	///-----stepsimulation_start-----
-	for(i = 0; i < 150; i++) {
+	for(int i = 0; i < 150; i++) {
 
-		for(int j = dynamicsWorld->getNumCollisionObjects() - 1; j >= 0; j--) {
-			btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[j];
+		for(int j = mDynamicsWorld->getNumCollisionObjects() - 1; j >= 0; j--) {
+			btCollisionObject* obj = mDynamicsWorld->getCollisionObjectArray()[j];
 			btRigidBody* body = btRigidBody::upcast(obj);
-            ((PhysicsTransform*)body->getUserPointer())->UpdateToPhysics();
-        }
+			((Transform*)body->getUserPointer())->UpdateToPhysics();
+		}
 
-		dynamicsWorld->stepSimulation(1.f / 60.f, 10);
+		mDynamicsWorld->stepSimulation(1.f / 60.f, 10);
 
 		//print positions of all objects
-		for(int j = dynamicsWorld->getNumCollisionObjects() - 1; j >= 0; j--) {
-			btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[j];
+		for(int j = mDynamicsWorld->getNumCollisionObjects() - 1; j >= 0; j--) {
+			btCollisionObject* obj = mDynamicsWorld->getCollisionObjectArray()[j];
 			btRigidBody* body = btRigidBody::upcast(obj);
 			btTransform trans;
 			if(body && body->getMotionState()) {
 				body->getMotionState()->getWorldTransform(trans);
 			} else {
 				trans = obj->getWorldTransform();
-                ASSERT(false);
+				ASSERT(false);
 			}
-            ((PhysicsTransform*)body->getUserPointer())->UpdateFromPhysics();
+			((Transform*)body->getUserPointer())->UpdateFromPhysics();
 
 			printf("world pos object %d = %f,%f,%f\n",
 				   j,
@@ -145,13 +247,13 @@ void Physics::Startup() {
 	///-----cleanup_start-----
 
 	//remove the rigidbodies from the dynamics world and delete them
-	for(i = dynamicsWorld->getNumCollisionObjects() - 1; i >= 0; i--) {
-		btCollisionObject* obj = dynamicsWorld->getCollisionObjectArray()[i];
+	for(int i = mDynamicsWorld->getNumCollisionObjects() - 1; i >= 0; i--) {
+		btCollisionObject* obj = mDynamicsWorld->getCollisionObjectArray()[i];
 		btRigidBody* body = btRigidBody::upcast(obj);
 		if(body && body->getMotionState()) {
 			delete body->getMotionState();
 		}
-		dynamicsWorld->removeCollisionObject(obj);
+		mDynamicsWorld->removeCollisionObject(obj);
 		delete obj;
 	}
 
@@ -162,24 +264,6 @@ void Physics::Startup() {
 		delete shape;
 	}
 
-	//delete dynamics world
-	delete dynamicsWorld;
-
-	//delete solver
-	delete solver;
-
-	//delete broadphase
-	delete overlappingPairCache;
-
-	//delete dispatcher
-	delete dispatcher;
-
-	delete collisionConfiguration;
-
 	//next line is optional: it will be cleared by the destructor when the array goes out of scope
 	collisionShapes.clear();
-}
-void Physics::Shutdown() {
-	ASSERT(gPhysics != nullptr);
-	gPhysics = nullptr;
 }

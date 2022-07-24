@@ -94,7 +94,7 @@ private:
 	LoaderBase* mLoadingBase;
 };
 
-namespace CONSTANT {
+namespace CONSTANTS {
 	namespace IMAGE {
 		extern Image* gWhite;
 		extern Image* gBlack;

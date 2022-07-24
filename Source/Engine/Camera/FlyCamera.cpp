@@ -8,7 +8,7 @@ void FlyCamera::Update() {
 
 	glm::vec3 movement = glm::vec3(0);
 	glm::vec3 rotation = glm::vec3(0);
-	const float dt = gEngine->GetDeltaTime();
+	const float dt = gEngine->GetDeltaTimeUnScaled();
 	const float speed = 5 * dt;
 	const float rotationSpeed = 100 * dt;
 	const float mouseRotationSpeed = 50 * dt;

@@ -7,8 +7,6 @@ set(ENGINE_FILES
     "AABB.h"
     "Transform.h"
     "Transform.cpp"
-    "PhysicsTransform.h"
-    "PhysicsTransform.cpp"
     "Window.h"
     "Window.cpp"
     "Engine.h"

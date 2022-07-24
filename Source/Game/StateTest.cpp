@@ -5,6 +5,7 @@
 #include <numbers>
 
 #include "Engine/Engine.h"
+#include "Engine/Physics.h"
 #include "Engine/Input.h"
 
 #include "Engine/Window.h"
@@ -44,6 +45,7 @@ struct MeshTestHolder {
 };
 // clang-format off
 const MeshTestHolder sceneMeshs[] = {
+    {"Nothing", "", ""},
     {"Sponza", "/Assets/Cauldron-Media/Sponza/glTF/Sponza.gltf", "/Assets/Cauldron-Media/Sponza/glTF/"},
     {"Sponza-New", "/Assets/Cauldron-Media/Sponza-New/scene.gltf", "/Assets/Cauldron-Media/Sponza-New/"},
     {"BistroInterior", "/Assets/Cauldron-Media/BistroInterior/scene.gltf", "/Assets/Cauldron-Media/BistroInterior/"},
@@ -70,6 +72,7 @@ void StateTest::Initalize() {
 	meshTest = new Mesh();
 	handMesh = new Mesh();
 	referenceMesh = new Mesh();
+	physicsMesh = new Mesh();
 
 	modelSceneTest = new Model();
 	modelTest1 = new Model();
@@ -77,7 +80,9 @@ void StateTest::Initalize() {
 	controllerTest1 = new Model();
 	controllerTest2 = new Model();
 	worldBase = new Model();
-
+	for(int i = 0; i < numPhysicsObjects; i++) {
+		physicsModels[i] = new Model();
+	}
 #if defined(ENABLE_XR)
 	vrMirrorPass = new Screenspace();
 #endif
@@ -173,6 +178,8 @@ void StateTest::StartUp() {
 
 	referenceMesh->LoadMesh(std::string(WORK_DIR_REL) + "/Assets/5m reference.fbx");
 
+	physicsMesh->LoadMesh(std::string(WORK_DIR_REL) + "/Assets/box.gltf");
+
 	//inital load
 	ChangeMesh(selectedMesh);
 
@@ -218,11 +225,17 @@ void StateTest::StartUp() {
 	controllerTest1->SetMesh(handMesh);
 	controllerTest2->SetMesh(handMesh);
 	worldBase->SetMesh(referenceMesh);
+	for(int i = 0; i < numPhysicsObjects; i++) {
+		physicsModels[i]->SetMesh(physicsMesh);
+		gPhysics->AddingObjectsTestSphere(&physicsModels[i]->mLocation);
+	}
+	SetupPhysicsObjects();
+
+	gPhysics->AddingObjectsTestGround(&mRootTransform);
 
 	modelSceneTest->SetMesh(meshSceneTest);
 
 	modelTest1->mLocation.Set(glm::vec3(0, 0, 0), 1.0f, &mRootTransform);
-	modelTest2->mLocation.Set(glm::vec3(-5, 1, 0), 1.0f, &mRootTransform);
 
 	gEngine->SetMainCamera(&camera);
 	camera.mTransform.SetPosition(glm::vec3(8.0f, 0.2f, 0.0f));
@@ -299,6 +312,10 @@ void StateTest::ImGuiRender() {
 		bool loaded = meshSceneTest->HasLoaded();
 		ImGui::Checkbox("Has Loaded", &loaded);
 		ImGui::EndDisabled();
+		ImGui::Checkbox("Render Trees?", &mRenderTrees);
+		if(ImGui::Button("Reset Physics Objects")) {
+			SetupPhysicsObjects();
+		}
 	}
 	ImGui::End();
 }
@@ -447,16 +464,21 @@ void StateTest::Render() {
 								0,
 								nullptr);
 	}
-	//tree 1
-	modelTest1->Render(buffer, meshPipeline->GetLayout());
-	//tree 2
-	modelTest2->Render(buffer, meshPipeline->GetLayout());
+	if(mRenderTrees) {
+		//tree 1
+		modelTest1->Render(buffer, meshPipeline->GetLayout());
+		//tree 2
+		modelTest2->Render(buffer, meshPipeline->GetLayout());
+	}
 	//Hand 1
 	controllerTest1->Render(buffer, meshPipeline->GetLayout());
 	//Hand 2
 	controllerTest2->Render(buffer, meshPipeline->GetLayout());
 	//world base reference
 	worldBase->Render(buffer, meshPipeline->GetLayout());
+	for(int i = 0; i < numPhysicsObjects; i++) {
+		physicsModels[i]->Render(buffer, meshPipeline->GetLayout());
+	}
 	modelSceneTest->Render(buffer, meshPipeline->GetLayout());
 	meshPipeline->End(buffer);
 	mainRenderPass->End(buffer);
@@ -504,10 +526,16 @@ void StateTest::Finish() {
 	delete controllerTest2;
 	worldBase->Destroy();
 	delete worldBase;
+	for(int i = 0; i < numPhysicsObjects; i++) {
+		physicsModels[i]->Destroy();
+		delete physicsModels[i];
+	}
 
 	meshPipeline->Destroy();
 	delete meshPipeline;
 
+	physicsMesh->Destroy();
+	delete physicsMesh;
 	referenceMesh->Destroy();
 	delete referenceMesh;
 	handMesh->Destroy();
@@ -544,4 +572,15 @@ void StateTest::ChangeMesh(int aIndex) {
 	meshSceneTest->Destroy();
 	meshSceneTest->LoadMesh(std::string(WORK_DIR_REL) + sceneMeshs[selectedMesh].mFilePath,
 							std::string(WORK_DIR_REL) + sceneMeshs[selectedMesh].mTexturePath);
+}
+
+void StateTest::SetupPhysicsObjects() {
+	float offset = 10.0f;
+	for(int i = 0; i < numPhysicsObjects; i++) {
+		float scale = 0.5f + rand() % 1000 / 2000.0f;
+		offset += ((rand() % 1000 / 1000.0f) * 0.5f) + scale/2;
+		physicsModels[i]->mLocation.SetPosition(glm::vec3((rand() % 1000 / 1000.0f) * 1.0f, offset, (rand() % 1000 / 1000.0f) * 1.0f));
+		physicsModels[i]->mLocation.SetScale(scale);
+		physicsModels[i]->mLocation.ResetPhysics();
+	}
 }

@@ -190,7 +190,7 @@ const VkDescriptorSet* MaterialManager::PerDrawFinializeTextureSet(std::vector<R
 			aTextureData[i].mTextureIDRef = group->AddGlobalTexture(aTextureData[i].mImage->GetImageView());
 		} else {
 			if(errorTexture == -1) {
-				errorTexture = group->AddGlobalTexture(CONSTANT::IMAGE::gWhite->GetImageView());
+				errorTexture = group->AddGlobalTexture(CONSTANTS::IMAGE::gWhite->GetImageView());
 			}
 			aTextureData[i].mTextureIDRef = errorTexture;
 		}

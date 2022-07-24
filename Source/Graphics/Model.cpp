@@ -44,7 +44,7 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 			MaterialManager* matManager = gGraphics->GetMaterialManager();
 			const Mesh::MeshMaterialData& material = mMesh->GetMaterial(mesh.mMaterialID);
 
-			const auto ApplyTexture = [&matManager](unsigned int& aIndex, Image* aImage, Image* aDefault = CONSTANT::IMAGE::gWhite) {
+			const auto ApplyTexture = [&matManager](unsigned int& aIndex, Image* aImage, Image* aDefault = CONSTANTS::IMAGE::gWhite) {
 				if(aImage && aImage->GetImageView()) {
 					matManager->PrepareTexture(aIndex, aImage);
 				} else {
@@ -53,8 +53,8 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 			};
 
 			ApplyTexture(modelPC.mAlbedoTexture, material.mImage);
-			ApplyTexture(modelPC.mNormalTexture, material.mNormal, CONSTANT::IMAGE::gChecker);
-			ApplyTexture(modelPC.mMetallicRoughnessTexture, material.mMetallicRoughnessTexture, CONSTANT::IMAGE::gBlack);
+			ApplyTexture(modelPC.mNormalTexture, material.mNormal, CONSTANTS::IMAGE::gChecker);
+			ApplyTexture(modelPC.mMetallicRoughnessTexture, material.mMetallicRoughnessTexture, CONSTANTS::IMAGE::gBlack);
 			modelPC.mColorFactor = material.mColorFactor;
 			modelPC.mMetallicRoughness = material.mMetallicRoughness;
 			modelPC.mNormalBC5 = material.mNormalBC5;
@@ -81,7 +81,7 @@ void Model::UpdateMaterials() {
 		ModelMaterial& material = mMaterials[i];
 		if(material.mMaterial.IsValid() == false) {
 			material.mMaterial = mMaterialBase->MakeMaterials()[0];
-			material.mMaterial.SetImages(*CONSTANT::IMAGE::gWhite, 0, 0);
+			material.mMaterial.SetImages(*CONSTANTS::IMAGE::gWhite, 0, 0);
 		}
 		if(mMaterials[i].mSet == false && mMesh->GetMaterial(i).mImage) {
 			material.mSet = true;

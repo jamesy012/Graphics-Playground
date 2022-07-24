@@ -8,7 +8,7 @@
 #include "Loaders/StbImageLoader.h"
 #include "Loaders/DDSLoader.h"
 
-namespace CONSTANT {
+namespace CONSTANTS {
 	namespace IMAGE {
 		Image* gWhite = nullptr;
 		Image* gBlack = nullptr;

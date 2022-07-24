@@ -28,6 +28,7 @@ public:
 
 private:
 	void ChangeMesh(int aIndex);
+	void SetupPhysicsObjects();
 
 	RenderPass* mainRenderPass;
 	Buffer* sceneDataBuffer;
@@ -41,6 +42,7 @@ private:
 	Mesh* meshTest;
 	Mesh* handMesh;
 	Mesh* referenceMesh;
+	Mesh* physicsMesh;
 
 	Model* modelSceneTest;
 	Model* modelTest1;
@@ -48,6 +50,8 @@ private:
 	Model* controllerTest1;
 	Model* controllerTest2;
 	Model* worldBase;
+	static const int numPhysicsObjects = 25;
+	Model* physicsModels[numPhysicsObjects];
 
 	MaterialBase meshTestBase;
 	Material meshMaterial;
@@ -59,6 +63,8 @@ private:
 
 	SceneData sceneData;
 	int selectedMesh = 0;
+
+	bool mRenderTrees = false;
 
 #if defined(ENABLE_XR)
 	Screenspace* vrMirrorPass;

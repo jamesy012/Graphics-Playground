@@ -292,18 +292,18 @@ bool VulkanGraphics::Initalize() {
 	}
 
 	{
-		CONSTANT::IMAGE::gWhite = new Image();
+		CONSTANTS::IMAGE::gWhite = new Image();
 		const unsigned char whiteData[] = {255, 255, 255, 255};
-		CONSTANT::IMAGE::gWhite->CreateFromData(whiteData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(1, 1), "Constant white Image");
-		CONSTANT::IMAGE::gBlack = new Image();
+		CONSTANTS::IMAGE::gWhite->CreateFromData(whiteData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(1, 1), "Constant white Image");
+		CONSTANTS::IMAGE::gBlack = new Image();
 		const unsigned char blackData[] = {0, 0, 0, 255};
-		CONSTANT::IMAGE::gBlack->CreateFromData(blackData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(1, 1), "Constant black Image");
-		CONSTANT::IMAGE::gChecker = new Image();
+		CONSTANTS::IMAGE::gBlack->CreateFromData(blackData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(1, 1), "Constant black Image");
+		CONSTANTS::IMAGE::gChecker = new Image();
 		// clang-format off
 		const unsigned char checkerData[]  = {255, 255, 255, 255, 0, 0, 0, 255, 
 									 		 0, 0, 0, 255, 255, 255, 255, 255};
 		// clang-format on
-		CONSTANT::IMAGE::gChecker->CreateFromData(checkerData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(2, 2), "Constant checker Image");
+		CONSTANTS::IMAGE::gChecker->CreateFromData(checkerData, VK_FORMAT_R8G8B8A8_SRGB, ImageSize(2, 2), "Constant checker Image");
 	}
 
 	// imgui
@@ -367,15 +367,15 @@ bool VulkanGraphics::Destroy() {
 	mRenderPass.Destroy();
 
 	{
-		CONSTANT::IMAGE::gWhite->Destroy();
-		delete CONSTANT::IMAGE::gWhite;
-		CONSTANT::IMAGE::gWhite = nullptr;
-		CONSTANT::IMAGE::gBlack->Destroy();
-		delete CONSTANT::IMAGE::gBlack;
-		CONSTANT::IMAGE::gBlack = nullptr;
-		CONSTANT::IMAGE::gChecker->Destroy();
-		delete CONSTANT::IMAGE::gChecker;
-		CONSTANT::IMAGE::gChecker = nullptr;
+		CONSTANTS::IMAGE::gWhite->Destroy();
+		delete CONSTANTS::IMAGE::gWhite;
+		CONSTANTS::IMAGE::gWhite = nullptr;
+		CONSTANTS::IMAGE::gBlack->Destroy();
+		delete CONSTANTS::IMAGE::gBlack;
+		CONSTANTS::IMAGE::gBlack = nullptr;
+		CONSTANTS::IMAGE::gChecker->Destroy();
+		delete CONSTANTS::IMAGE::gChecker;
+		CONSTANTS::IMAGE::gChecker = nullptr;
 	}
 
 	vmaDestroyAllocator(mAllocator);

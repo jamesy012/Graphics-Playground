@@ -50,6 +50,9 @@ bool Engine::GameLoop() {
 		GetWindow()->Update();
 		WorkManager::ProcessMainThreadWork();
 
+		//possibly async?
+		gPhysics->Update();
+
 		mGraphics->StartNewFrame();
 
 		gEngine->ImGuiWindow();

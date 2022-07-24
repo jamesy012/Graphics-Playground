@@ -271,17 +271,34 @@ void TinygltfLoader::ProcessPrimitive(tinygltf::Model& aModel, tinygltf::Primiti
 		const tinygltf::Accessor& accessor = aModel.accessors[aPrimitive.attributes["COLOR_0"]];
 		const tinygltf::BufferView& view = aModel.bufferViews[accessor.bufferView];
 		const tinygltf::Buffer& buffer = aModel.buffers[view.buffer];
-		const unsigned char* datastart = &buffer.data[accessor.byteOffset + view.byteOffset];
+		const unsigned char* dataStart = &buffer.data[accessor.byteOffset + view.byteOffset];
 		const int dataSize =
 			accessor.ByteStride(view); //tinygltf::GetComponentSizeInBytes(accessor.componentType) * tinygltf::GetNumComponentsInType(accessor.type);
 		const int count = accessor.count;
 
-		ASSERT(accessor.type == TINYGLTF_TYPE_VEC4 && accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+		ASSERT(accessor.type == TINYGLTF_TYPE_VEC4 &&
+			   (accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT || accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT));
 		SetOrValidateVertCount(count);
 
 		for(int i = 0; i < count; i++) {
 			glm::vec4 data = glm::vec4(0);
-			memcpy(&data, datastart + (dataSize * i), dataSize * sizeof(char));
+			switch(accessor.componentType) {
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+					unsigned short tempData[4];
+					memcpy(&tempData, dataStart + (dataSize * i), dataSize);
+					data[0] = (float)tempData[0] / USHRT_MAX;
+					data[1] = (float)tempData[1] / USHRT_MAX;
+					data[2] = (float)tempData[2] / USHRT_MAX;
+					data[3] = (float)tempData[3] / USHRT_MAX;
+					break;
+				case TINYGLTF_COMPONENT_TYPE_FLOAT:
+					memcpy(&data, dataStart + (dataSize * i), dataSize * sizeof(float));
+					break;
+				default:
+					ASSERT(false);
+					break;
+			}
+
 			vertices[i].mColors[0] = data;
 		}
 	} else {
@@ -303,19 +320,6 @@ void TinygltfLoader::ProcessPrimitive(tinygltf::Model& aModel, tinygltf::Primiti
 		const int count = accessor.count;
 
 		ASSERT(accessor.type == TINYGLTF_TYPE_SCALAR);
-		int indexTypeSize = 0;
-		switch(accessor.componentType) {
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-				indexTypeSize = sizeof(unsigned char);
-				break;
-			case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-				indexTypeSize = sizeof(unsigned int);
-				break;
-			default:
-				indexTypeSize = sizeof(unsigned char);
-				ASSERT(false);
-				break;
-		}
 		indices.resize(count);
 
 		for(int i = 0; i < count; i++) {
