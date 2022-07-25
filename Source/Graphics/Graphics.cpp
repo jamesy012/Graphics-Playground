@@ -550,14 +550,14 @@ AQUIRES_LOCK(mCommandPoolMutex) OneTimeCommandBuffer VulkanGraphics::AllocateGra
 		vkBeginCommandBuffer(buffer, &beginInfo);
 	}
 
-	VkFenceCreateInfo fenceInfo = {};
-	fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-
-	VkFence fence;
-	vkCreateFence(GetVkDevice(), &fenceInfo, GetAllocationCallback(), &fence);
+	//VkFenceCreateInfo fenceInfo = {};
+	//fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+	//
+	//VkFence fence;
+	//vkCreateFence(GetVkDevice(), &fenceInfo, GetAllocationCallback(), &fence);
 
 	SetVkName(VK_OBJECT_TYPE_COMMAND_BUFFER, buffer, "Graphics CommandBuffer");
-	SetVkName(VK_OBJECT_TYPE_FENCE, fence, "Graphics CommandBuffer Fence");
+	//SetVkName(VK_OBJECT_TYPE_FENCE, fence, "Graphics CommandBuffer Fence");
 
 	OneTimeCommandBuffer otcb;
 	otcb.mBuffer = buffer;

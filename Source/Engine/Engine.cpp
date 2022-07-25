@@ -57,6 +57,7 @@ bool Engine::GameLoop() {
 
 		gEngine->ImGuiWindow();
 		WorkManager::ImGuiTesting();
+		gPhysics->ImGuiWindow();
 
 		if(mMainCamera) {
 			mMainCamera->Update();

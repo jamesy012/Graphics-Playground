@@ -9,7 +9,7 @@ class btSequentialImpulseConstraintSolver;
 class btDiscreteDynamicsWorld;
 class btCollisionShape;
 
-class Transform;
+class PhysicsObject;
 
 class Physics {
 public:
@@ -18,8 +18,10 @@ public:
 
 	void Update();
 
-	void AddingObjectsTestGround(Transform* aTargetTransform);
-	void AddingObjectsTestSphere(Transform* aTargetTransform);
+    void ImGuiWindow();
+
+	void AddingObjectsTestGround(PhysicsObject* aObject);
+	void AddingObjectsTestSphere(PhysicsObject* aObject);
 
 	//testing the physics in a standalone update loop
 	void Test();
@@ -41,5 +43,7 @@ private:
 
 	//collisionShapes.push_back(groundShape);
 	std::vector<btCollisionShape*> mCollisionShapes;
+
+    int mActiveObjects = 0;
 };
 extern Physics* gPhysics;

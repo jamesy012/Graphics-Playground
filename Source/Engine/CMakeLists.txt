@@ -1,9 +1,11 @@
 set(ENGINE_FILES
     "IGraphicsBase.h"
-    "FileIO.cpp"
     "FileIO.h"
-    "Physics.cpp"
+    "FileIO.cpp"
     "Physics.h"
+    "Physics.cpp"
+    "PhysicsObject.h"
+    "PhysicsObject.cpp"
     "AABB.h"
     "Transform.h"
     "Transform.cpp"

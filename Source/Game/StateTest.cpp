@@ -227,11 +227,15 @@ void StateTest::StartUp() {
 	worldBase->SetMesh(referenceMesh);
 	for(int i = 0; i < numPhysicsObjects; i++) {
 		physicsModels[i]->SetMesh(physicsMesh);
-		gPhysics->AddingObjectsTestSphere(&physicsModels[i]->mLocation);
+		physicsObjects[i].AttachTransform(&physicsModels[i]->mLocation);
+		gPhysics->AddingObjectsTestSphere(&physicsObjects[i]);
 	}
 	SetupPhysicsObjects();
 
-	gPhysics->AddingObjectsTestGround(&mRootTransform);
+	mGroundTransform.SetPosition(glm::vec3(0, -50, 0));
+	mGroundTransform.SetScale(glm::vec3(50));
+	mGroundPlane.AttachTransform(&mGroundTransform);
+	gPhysics->AddingObjectsTestGround(&mGroundPlane);
 
 	modelSceneTest->SetMesh(meshSceneTest);
 
@@ -578,9 +582,9 @@ void StateTest::SetupPhysicsObjects() {
 	float offset = 10.0f;
 	for(int i = 0; i < numPhysicsObjects; i++) {
 		float scale = 0.5f + rand() % 1000 / 2000.0f;
-		offset += ((rand() % 1000 / 1000.0f) * 0.5f) + scale/2;
+		offset += ((rand() % 1000 / 1000.0f) * 0.5f) + scale / 2;
 		physicsModels[i]->mLocation.SetPosition(glm::vec3((rand() % 1000 / 1000.0f) * 1.0f, offset, (rand() % 1000 / 1000.0f) * 1.0f));
 		physicsModels[i]->mLocation.SetScale(scale);
-		physicsModels[i]->mLocation.ResetPhysics();
+		physicsObjects[i].ResetPhysics();
 	}
 }

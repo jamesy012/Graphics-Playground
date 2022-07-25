@@ -2,10 +2,12 @@
 
 #include <vector>
 
-#include "btBulletDynamicsCommon.h"
+#include <btBulletDynamicsCommon.h>
+#include <imgui.h>
 
 #include "Engine.h"
 #include "PlatformDebug.h"
+#include "PhysicsObject.h"
 #include "Transform.h"
 
 Physics* gPhysics = nullptr;
@@ -55,29 +57,43 @@ void Physics::Update() {
 	//	}
 	//}
 
+	mActiveObjects = 0;
+
 	//
-	mDynamicsWorld->stepSimulation(gEngine->GetDeltaTime());
+	int output = mDynamicsWorld->stepSimulation(gEngine->GetDeltaTime());
 
 	for(int j = mDynamicsWorld->getNumCollisionObjects() - 1; j >= 0; j--) {
-		btCollisionObject* obj = mDynamicsWorld->getCollisionObjectArray()[j];
-		btRigidBody* body = btRigidBody::upcast(obj);
-		if(body->isActive()) {
-			Transform* transform = ((Transform*)body->getUserPointer());
-			if(transform) {
-				transform->UpdateFromPhysics();
+		btCollisionObject* colObj = mDynamicsWorld->getCollisionObjectArray()[j];
+		if(colObj->isActive()) {
+			mActiveObjects++;
+			btRigidBody* body = btRigidBody::upcast(colObj);
+			PhysicsObject* object = ((PhysicsObject*)body->getUserPointer());
+			if(object) {
+				object->UpdateFromPhysics();
 			}
 		}
 	}
 }
 
-void Physics::AddingObjectsTestGround(Transform* aTargetTransform) {
-	btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(50.), btScalar(50.), btScalar(50.)));
+void Physics::ImGuiWindow() {
+	if(ImGui::Begin("Physics")) {
+		ImGui::Text("Num Collision Objects: %i", mDynamicsWorld->getNumCollisionObjects());
+		ImGui::Text("Num Active Objects: %i", mActiveObjects);
+		ImGui::Text("Num RigidBodies: %i", mDynamicsWorld->getNonStaticRigidBodies().size());
+	}
+	ImGui::End();
+}
+
+void Physics::AddingObjectsTestGround(PhysicsObject* aObject) {
+	glm::vec3 pos = aObject->GetTransform()->GetLocalPosition();
+	glm::vec3 scale = aObject->GetTransform()->GetLocalScale();
+	btCollisionShape* groundShape = new btBoxShape(btVector3(btScalar(scale.x), btScalar(scale.y), btScalar(scale.z)));
 
 	mCollisionShapes.push_back(groundShape);
 
 	btTransform groundTransform;
 	groundTransform.setIdentity();
-	groundTransform.setOrigin(btVector3(0, -50, 0));
+	groundTransform.setOrigin(btVector3(pos.x, pos.y, pos.z));
 
 	btScalar mass(0.);
 
@@ -95,15 +111,16 @@ void Physics::AddingObjectsTestGround(Transform* aTargetTransform) {
 	body->setRollingFriction(0.5f);
 	body->setAngularFactor(0.5f);
 	body->setFriction(10.0f);
-	aTargetTransform->SetPhysicsLink(body);
-	aTargetTransform->UpdateToPhysics();
+
+	aObject->AttachRigidBody(body);
+	aObject->UpdateToPhysics();
 
 	//add the body to the dynamics world
 	mDynamicsWorld->addRigidBody(body);
 }
 
-void Physics::AddingObjectsTestSphere(Transform* aTargetTransform) {
-	btCollisionShape* colShape = new btSphereShape(btScalar(aTargetTransform->GetLocalScale().x/2));
+void Physics::AddingObjectsTestSphere(PhysicsObject* aObject) {
+	btCollisionShape* colShape = new btSphereShape(btScalar(aObject->GetTransform()->GetLocalScale().x / 2));
 	mCollisionShapes.push_back(colShape);
 
 	/// Create Dynamic Objects
@@ -119,15 +136,14 @@ void Physics::AddingObjectsTestSphere(Transform* aTargetTransform) {
 	if(isDynamic)
 		colShape->calculateLocalInertia(mass, localInertia);
 
-
 	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 	btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
 	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
 	btRigidBody* body = new btRigidBody(rbInfo);
 	body->setSpinningFriction(0.5f);
 
-	aTargetTransform->SetPhysicsLink(body);
-	aTargetTransform->UpdateToPhysics();
+	aObject->AttachRigidBody(body);
+	aObject->UpdateToPhysics();
 
 	mDynamicsWorld->addRigidBody(body);
 }
@@ -140,6 +156,7 @@ void Physics::Test() {
 	btAlignedObjectArray<btCollisionShape*> collisionShapes;
 
 	std::vector<Transform> transforms(2);
+	std::vector<PhysicsObject> phyObjects(2);
 
 	///create a few basic rigid bodies
 
@@ -168,7 +185,8 @@ void Physics::Test() {
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, groundShape, localInertia);
 		btRigidBody* body = new btRigidBody(rbInfo);
 
-		transforms[0].SetPhysicsLink(body);
+		phyObjects[0].AttachTransform(&transforms[0]);
+		phyObjects[0].AttachRigidBody(body);
 
 		//add the body to the dynamics world
 		mDynamicsWorld->addRigidBody(body);
@@ -201,7 +219,8 @@ void Physics::Test() {
 		btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
 		btRigidBody* body = new btRigidBody(rbInfo);
 
-		transforms[1].SetPhysicsLink(body);
+		phyObjects[1].AttachTransform(&transforms[1]);
+		phyObjects[1].AttachRigidBody(body);
 
 		mDynamicsWorld->addRigidBody(body);
 	}
@@ -214,7 +233,7 @@ void Physics::Test() {
 		for(int j = mDynamicsWorld->getNumCollisionObjects() - 1; j >= 0; j--) {
 			btCollisionObject* obj = mDynamicsWorld->getCollisionObjectArray()[j];
 			btRigidBody* body = btRigidBody::upcast(obj);
-			((Transform*)body->getUserPointer())->UpdateToPhysics();
+			((PhysicsObject*)body->getUserPointer())->UpdateToPhysics();
 		}
 
 		mDynamicsWorld->stepSimulation(1.f / 60.f, 10);
@@ -230,7 +249,7 @@ void Physics::Test() {
 				trans = obj->getWorldTransform();
 				ASSERT(false);
 			}
-			((Transform*)body->getUserPointer())->UpdateFromPhysics();
+			((PhysicsObject*)body->getUserPointer())->UpdateFromPhysics();
 
 			printf("world pos object %d = %f,%f,%f\n",
 				   j,

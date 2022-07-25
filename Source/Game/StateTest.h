@@ -7,6 +7,7 @@
 #include "Graphics/Material.h"
 #include "Engine/Transform.h"
 #include "Engine/Camera/FlyCamera.h"
+#include "Engine/PhysicsObject.h"
 
 class RenderPass;
 class Mesh;
@@ -15,6 +16,7 @@ class Image;
 class Framebuffer;
 class Pipeline;
 class Model;
+class PhysicsObject;
 class Screenspace;
 
 class StateTest : public StateBase {
@@ -52,6 +54,7 @@ private:
 	Model* worldBase;
 	static const int numPhysicsObjects = 25;
 	Model* physicsModels[numPhysicsObjects];
+	PhysicsObject physicsObjects[numPhysicsObjects];
 
 	MaterialBase meshTestBase;
 	Material meshMaterial;
@@ -60,6 +63,9 @@ private:
 
 	Transform mRootTransform;
 	FlyCamera camera;
+
+    PhysicsObject mGroundPlane;
+    Transform mGroundTransform;
 
 	SceneData sceneData;
 	int selectedMesh = 0;

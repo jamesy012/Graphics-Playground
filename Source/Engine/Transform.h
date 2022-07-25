@@ -8,9 +8,6 @@
 
 #include "PlatformDebug.h"
 
-class btRigidBody;
-class btTransform;
-
 namespace CONSTANTS {
 	const glm::vec3 RIGHT = glm::vec3(1, 0, 0);
 	const glm::vec3 UP = glm::vec3(0, 1, 0);
@@ -199,13 +196,6 @@ public:
 		}
 	}
 
-	//physics
-	void UpdateFromPhysics();
-	void ResetPhysics() const;
-	void UpdateToPhysics() const;
-
-	void SetPhysicsLink(btRigidBody* aRigidBody);
-
 private:
 	bool IsDirty() const {
 		return mDirty;
@@ -216,10 +206,6 @@ private:
 
 	void AddChild(Transform* aChild);
 	void RemoveChild(Transform* aChild);
-
-	void GetPhysicsBtTransform(btTransform&) const;
-	const btTransform GetPhysicsBtTransform() const;
-	const btTransform CreateBtTransform() const;
 
 	glm::vec3 mPos = glm::vec3(0.0f);
 	glm::vec3 mScale = glm::vec3(1.0f);
@@ -235,6 +221,4 @@ private:
 	TransformUpdatecallback mUpdateCallback = nullptr;
 
 	bool mDirty = false;
-
-	btRigidBody* mLinkedRB = nullptr;
 };
