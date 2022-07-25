@@ -52,7 +52,8 @@ private:
 	Model* controllerTest1;
 	Model* controllerTest2;
 	Model* worldBase;
-	static const int numPhysicsObjects = 25;
+    PhysicsObject mWorldBasePhysicsTest;
+	static const int numPhysicsObjects = 100;
 	Model* physicsModels[numPhysicsObjects];
 	PhysicsObject physicsObjects[numPhysicsObjects];
 

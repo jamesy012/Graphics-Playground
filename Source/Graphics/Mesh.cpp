@@ -52,11 +52,13 @@ Job::Work Mesh::GetWork(FileIO::Path aFilePath) {
 	return mLoadingBase->GetWork(aFilePath);
 }
 
-bool Mesh::LoadMeshSync(FileIO::Path aFilePath) {
+bool Mesh::LoadMeshSync(FileIO::Path aFilePath, FileIO::Path aImagePath /*= ""*/) {
 	ZoneScoped;
 	ZoneText(aFilePath.String().c_str(), aFilePath.String().size());
 	LOGGER::Formated("Loading: {}\n", aFilePath.String());
 	LOGGER::Log("Mesh Loading should not load a mesh that is already loaded?\n");
+	
+	mImagePath = aImagePath;
 
 	Job::Work asyncWork = GetWork(aFilePath);
 	asyncWork.DoWork();

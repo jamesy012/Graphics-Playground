@@ -446,6 +446,11 @@ void StateTest::Update() {
 		}
 #endif
 	}
+
+	if(referenceMesh->HasLoaded() && mWorldBasePhysicsTest.GetRigidBody() == nullptr) {
+		mWorldBasePhysicsTest.AttachTransform(&worldBase->mLocation);
+		gPhysics->AddingObjectsTestMesh(&mWorldBasePhysicsTest, referenceMesh);
+	}
 }
 
 void StateTest::Render() {

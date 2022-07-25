@@ -9,6 +9,7 @@
 #include "PlatformDebug.h"
 #include "PhysicsObject.h"
 #include "Transform.h"
+#include "Graphics/Mesh.h"
 
 Physics* gPhysics = nullptr;
 
@@ -148,9 +149,60 @@ void Physics::AddingObjectsTestSphere(PhysicsObject* aObject) {
 	mDynamicsWorld->addRigidBody(body);
 }
 
+void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
+	btTriangleIndexVertexArray* meshInterface = new btTriangleIndexVertexArray();
+	btIndexedMesh part;
+
+	for(int i = 0; i < aMesh->GetNumMesh(); i++) {
+		part.m_vertexBase = (const unsigned char*)&aMesh->GetMesh(i).mVertices[0].mPos.x;
+		part.m_vertexStride = sizeof(MeshVert);
+		part.m_numVertices = aMesh->GetMesh(i).mVertices.size();
+		part.m_vertexType = PHY_FLOAT;
+
+		part.m_triangleIndexBase = (const unsigned char*)aMesh->GetMesh(i).mIndices.data();
+		part.m_triangleIndexStride = sizeof(MeshIndex) * 3;
+		part.m_numTriangles = aMesh->GetMesh(i).mIndices.size() / 3;
+		part.m_indexType = PHY_INTEGER;
+
+		meshInterface->addIndexedMesh(part, PHY_INTEGER);
+	}
+
+	bool useQuantizedAabbCompression = true;
+	btCollisionShape* colShape = new btBvhTriangleMeshShape(meshInterface, useQuantizedAabbCompression);
+
+	glm::vec3 pos = aObject->GetTransform()->GetLocalPosition();
+	glm::vec3 scale = aObject->GetTransform()->GetLocalScale();
+	colShape->setLocalScaling(btVector3(btScalar(scale.x), btScalar(scale.y), btScalar(scale.z)));
+
+	mCollisionShapes.push_back(colShape);
+
+	/// Create Dynamic Objects
+	btTransform startTransform;
+	startTransform.setIdentity();
+
+	btScalar mass(0.f);
+
+	//rigidbody is dynamic if and only if mass is non zero, otherwise static
+	bool isDynamic = (mass != 0.f);
+
+	btVector3 localInertia(0, 0, 0);
+	if(isDynamic)
+		colShape->calculateLocalInertia(mass, localInertia);
+
+	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
+	btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+	btRigidBody* body = new btRigidBody(rbInfo);
+	body->setSpinningFriction(0.5f);
+
+	aObject->AttachRigidBody(body);
+	aObject->UpdateToPhysics();
+
+	mDynamicsWorld->addRigidBody(body);
+}
+
 //from the example
 void Physics::Test() {
-
 	//keep track of the shapes, we release memory at exit.
 	//make sure to re-use collision shapes among rigid bodies whenever possible!
 	btAlignedObjectArray<btCollisionShape*> collisionShapes;

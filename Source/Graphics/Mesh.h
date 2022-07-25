@@ -37,7 +37,7 @@ public:
 	friend Model;
 	friend AssimpLoader;
 	friend TinygltfLoader;
-	bool LoadMeshSync(FileIO::Path aFilePath);
+	bool LoadMeshSync(FileIO::Path aFilePath, FileIO::Path aImagePath = "");
 	bool LoadMesh(FileIO::Path aFilePath, FileIO::Path aImagePath = "");
 	void Destroy();
 

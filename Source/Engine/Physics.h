@@ -10,6 +10,7 @@ class btDiscreteDynamicsWorld;
 class btCollisionShape;
 
 class PhysicsObject;
+class Mesh;
 
 class Physics {
 public:
@@ -22,6 +23,7 @@ public:
 
 	void AddingObjectsTestGround(PhysicsObject* aObject);
 	void AddingObjectsTestSphere(PhysicsObject* aObject);
+	void AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh);
 
 	//testing the physics in a standalone update loop
 	void Test();
