@@ -100,6 +100,7 @@ bool Mesh::LoadShape(Mesh::Shapes aShape) {
 	mesh.mIndexBuffer.CreateFromData(BufferType::INDEX, sizeof(MeshIndex) * mesh.mIndices.size(), mesh.mIndices.data(), "Mesh Index Data");
 	mesh.mVertexBuffer.Flush();
 	mesh.mIndexBuffer.Flush();
+	return false;
 }
 
 void Mesh::Destroy() {

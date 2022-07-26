@@ -43,11 +43,14 @@ void PhysicsObject::AttachRigidBody(btRigidBody* aRigidBody) {
 	mRigidBodyLink->setUserPointer(this);
 }
 
-void PhysicsObject::TranformUpdated(Transform* aTransform) {
-	//mViewMatrix = glm::inverse(mTransform.GetWorldMatrix());
-	////mViewMatrix = mTransform.GetWorldMatrix();
-	//
-	//mViewProjMatrix =  GetProjMatrix() * mViewMatrix;
+void PhysicsObject::SetMass(float aNewMass) {
+	ASSERT(IsValid());
+	mRigidBodyLink->setMassProps(aNewMass, btVector3(0.0f, 0.0f, 0.0f));
+	//if(aNewMass == 0) {
+	//	mRigidBodyLink->setCollisionFlags(mRigidBodyLink->getCollisionFlags() | CF_STATIC_OBJECT);
+	//} else {
+	//	mRigidBodyLink->setCollisionFlags(mRigidBodyLink->getCollisionFlags() & ~CF_STATIC_OBJECT);
+	//}
 }
 
 void PhysicsObject::UpdateFromPhysics() {
@@ -80,6 +83,13 @@ void PhysicsObject::UpdateToPhysics() const {
 
 	const btTransform trans = CreateBtTransform();
 	mRigidBodyLink->setWorldTransform(trans);
+}
+
+void PhysicsObject::TranformUpdated(Transform* aTransform) {
+	//mViewMatrix = glm::inverse(mTransform.GetWorldMatrix());
+	////mViewMatrix = mTransform.GetWorldMatrix();
+	//
+	//mViewProjMatrix =  GetProjMatrix() * mViewMatrix;
 }
 
 void PhysicsObject::GetPhysicsBtTransform(btTransform& aTransform) const {

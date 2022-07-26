@@ -152,7 +152,10 @@ void Physics::AddingObjectsTestSphere(PhysicsObject* aObject) {
 	btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
 	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
 	btRigidBody* body = new btRigidBody(rbInfo);
+	body->setFriction(1.0f);
 	body->setSpinningFriction(0.5f);
+	body->setRollingFriction(0.5f);
+	//body->setAngularFactor(btVector3(1, 0, 1));
 
 	aObject->AttachRigidBody(body);
 	aObject->UpdateToPhysics();
@@ -213,9 +216,12 @@ void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
 }
 
 void Physics::JoinTwoObject(const PhysicsObject* aObject1, const PhysicsObject* aObject2) {
-	btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*aObject1->GetRigidBody(), *aObject2->GetRigidBody(), btVector3(0, 0, 0), btVector3(0, 0, 0));
-	p2p->m_setting.m_damping = 0.0625;
-	p2p->m_setting.m_impulseClamp = 0.95;
+	btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*aObject1->GetRigidBody(),
+															   *aObject2->GetRigidBody(),
+															   btVector3(0, aObject1->GetTransform()->GetLocalScale().y/2.0f, 0),
+															   btVector3(0, -aObject2->GetTransform()->GetLocalScale().y/2.0f, 0));
+	//p2p->m_setting.m_damping = 0.0625;
+	//p2p->m_setting.m_impulseClamp = 0.95;
 	mDynamicsWorld->addConstraint(p2p);
 	//btTransform localA, localB;
 	//float scale = 1.0f;

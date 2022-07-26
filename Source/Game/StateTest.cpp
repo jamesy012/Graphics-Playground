@@ -229,10 +229,14 @@ void StateTest::StartUp() {
 		physicsModels[i]->SetMesh(physicsMesh);
 		physicsObjects[i].AttachTransform(&physicsModels[i]->mLocation);
 		gPhysics->AddingObjectsTestSphere(&physicsObjects[i]);
-		//if(i != 0) {
-		//	gPhysics->JoinTwoObject(&physicsObjects[i], &physicsObjects[i - 1]);
-		//}
+		if(i != 0) {
+			gPhysics->JoinTwoObject(&physicsObjects[i - 1], &physicsObjects[i]);
+		}
+		physicsModels[i]->mOverrideColor = true;
+		physicsModels[i]->mColorOverride = glm::vec4(glm::vec3(i / (float)numPhysicsObjects), 1.0f);
 	}
+	physicsObjects[numPhysicsObjects - 1].SetMass(0.01f);
+	physicsModels[numPhysicsObjects - 1]->mColorOverride = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
 	SetupPhysicsObjects();
 
 	mGroundTransform.SetPosition(glm::vec3(0, -50, 0));
@@ -595,8 +599,4 @@ void StateTest::SetupPhysicsObjects() {
 		physicsModels[i]->mLocation.SetScale(scale);
 		physicsObjects[i].ResetPhysics();
 	}
-	physicsModels[0]->mOverrideColor = true;
-	physicsModels[0]->mColorOverride = glm::vec4(1, 0, 0, 1);
-	physicsModels[1]->mOverrideColor = true;
-	physicsModels[1]->mColorOverride = glm::vec4(0, 1, 0, 1);
 }

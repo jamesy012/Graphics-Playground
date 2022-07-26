@@ -9,7 +9,8 @@ public:
 	void AttachTransform(Transform* aTransform);
 	void AttachRigidBody(btRigidBody* aRigidBody);
 
-	void TranformUpdated(Transform* aTransform);
+	void SetMass(float aNewMass);
+
 
 	void UpdateFromPhysics();
 	void ResetPhysics() const;
@@ -26,6 +27,8 @@ public:
 		return mTransformLink != nullptr && mRigidBodyLink != nullptr;
 	}
 private:
+	void TranformUpdated(Transform* aTransform);
+
 	void GetPhysicsBtTransform(btTransform&) const;
 	const btTransform GetPhysicsBtTransform() const;
 	const btTransform CreateBtTransform() const;
