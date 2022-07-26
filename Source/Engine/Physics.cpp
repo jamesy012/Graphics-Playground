@@ -78,11 +78,11 @@ void Physics::Update() {
 		btCollisionObject* colObj = mDynamicsWorld->getCollisionObjectArray()[j];
 		if(colObj->isActive()) {
 			mActiveObjects++;
-			btRigidBody* body = btRigidBody::upcast(colObj);
-			PhysicsObject* object = ((PhysicsObject*)body->getUserPointer());
-			if(object) {
-				object->UpdateFromPhysics();
-			}
+			//btRigidBody* body = btRigidBody::upcast(colObj);
+			//PhysicsObject* object = ((PhysicsObject*)body->getUserPointer());
+			//if(object) {
+			//	object->UpdateFromPhysics();
+			//}
 		}
 	}
 }
@@ -117,8 +117,8 @@ void Physics::AddingObjectsTestGround(PhysicsObject* aObject) {
 		groundShape->calculateLocalInertia(mass, localInertia);
 
 	//using motionstate is optional, it provides interpolation capabilities, and only synchronizes 'active' objects
-	btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
-	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, groundShape, localInertia);
+	//btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, aObject, groundShape, localInertia);
 	btRigidBody* body = new btRigidBody(rbInfo);
 	body->setRollingFriction(0.5f);
 	body->setAngularFactor(0.5f);
@@ -149,8 +149,8 @@ void Physics::AddingObjectsTestSphere(PhysicsObject* aObject) {
 		colShape->calculateLocalInertia(mass, localInertia);
 
 	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-	btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
-	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+	//btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, aObject, colShape, localInertia);
 	btRigidBody* body = new btRigidBody(rbInfo);
 	body->setFriction(1.0f);
 	body->setSpinningFriction(0.5f);
@@ -204,8 +204,8 @@ void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
 		colShape->calculateLocalInertia(mass, localInertia);
 
 	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-	btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
-	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, myMotionState, colShape, localInertia);
+	//btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, aObject, colShape, localInertia);
 	btRigidBody* body = new btRigidBody(rbInfo);
 	body->setSpinningFriction(0.5f);
 
@@ -215,14 +215,16 @@ void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
 	mDynamicsWorld->addRigidBody(body);
 }
 
-void Physics::JoinTwoObject(const PhysicsObject* aObject1, const PhysicsObject* aObject2) {
+void Physics::JoinTwoObject(PhysicsObject* aObject1, PhysicsObject* aObject2) {
 	btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*aObject1->GetRigidBody(),
 															   *aObject2->GetRigidBody(),
-															   btVector3(0, aObject1->GetTransform()->GetLocalScale().y/2.0f, 0),
-															   btVector3(0, -aObject2->GetTransform()->GetLocalScale().y/2.0f, 0));
+															   btVector3(0, aObject1->GetTransform()->GetLocalScale().y / 5.0f, 0),
+															   btVector3(0, -aObject2->GetTransform()->GetLocalScale().y / 5.0f, 0));
 	//p2p->m_setting.m_damping = 0.0625;
 	//p2p->m_setting.m_impulseClamp = 0.95;
-	mDynamicsWorld->addConstraint(p2p);
+	mDynamicsWorld->addConstraint(p2p, true);
+	aObject1->AddAttachment(p2p);
+	aObject2->AddAttachment(p2p);
 	//btTransform localA, localB;
 	//float scale = 1.0f;
 	//localA.setIdentity();

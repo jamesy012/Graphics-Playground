@@ -34,15 +34,6 @@ void PhysicsObject::AttachTransform(Transform* aTransform) {
 	mTransformLink->SetUpdateCallback(std::bind(&PhysicsObject::TranformUpdated, this, aTransform));
 }
 
-void PhysicsObject::AttachRigidBody(btRigidBody* aRigidBody) {
-	ASSERT(mRigidBodyLink == nullptr);
-	ASSERT(aRigidBody != nullptr);
-	mRigidBodyLink = aRigidBody;
-
-	ASSERT(mRigidBodyLink->getUserPointer() == nullptr);
-	mRigidBodyLink->setUserPointer(this);
-}
-
 void PhysicsObject::SetMass(float aNewMass) {
 	ASSERT(IsValid());
 	mRigidBodyLink->setMassProps(aNewMass, btVector3(0.0f, 0.0f, 0.0f));
@@ -55,9 +46,10 @@ void PhysicsObject::SetMass(float aNewMass) {
 
 void PhysicsObject::UpdateFromPhysics() {
 	ASSERT(IsValid());
+	ASSERT(false);
 
-	btTransform trans;
-	GetPhysicsBtTransform(trans);
+	btTransform trans = mRigidBodyLink->getWorldTransform();
+	//GetPhysicsBtTransform(trans);
 
 	mTransformLink->SetPosition(BulletToGlm(trans.getOrigin()));
 	mTransformLink->SetRotation(BulletToGlm(trans.getRotation()));
@@ -85,32 +77,41 @@ void PhysicsObject::UpdateToPhysics() const {
 	mRigidBodyLink->setWorldTransform(trans);
 }
 
+void PhysicsObject::AttachRigidBody(btRigidBody* aRigidBody) {
+	ASSERT(mRigidBodyLink == nullptr);
+	ASSERT(aRigidBody != nullptr);
+	mRigidBodyLink = aRigidBody;
+
+	ASSERT(mRigidBodyLink->getUserPointer() == nullptr);
+	mRigidBodyLink->setUserPointer(this);
+}
+
+void PhysicsObject::AddAttachment(btTypedConstraint* aNewAttachment) {
+	mAttachments.push_back(aNewAttachment);
+}
+
+#pragma region btMotionState overrides
+void PhysicsObject::getWorldTransform(btTransform& worldTrans) const {
+	worldTrans = CreateBtTransform();
+}
+
+//Bullet only calls the update of worldtransform for active objects
+void PhysicsObject::setWorldTransform(const btTransform& worldTrans) {
+	mTransformLink->SetPosition(BulletToGlm(worldTrans.getOrigin()));
+	mTransformLink->SetRotation(BulletToGlm(worldTrans.getRotation()));
+	switch(mRigidBodyLink->getCollisionShape()->getShapeType()) {
+		default:
+			//ASSERT(false);//new shape
+			break;
+	}
+}
+#pragma endregion
+
 void PhysicsObject::TranformUpdated(Transform* aTransform) {
 	//mViewMatrix = glm::inverse(mTransform.GetWorldMatrix());
 	////mViewMatrix = mTransform.GetWorldMatrix();
 	//
 	//mViewProjMatrix =  GetProjMatrix() * mViewMatrix;
-}
-
-void PhysicsObject::GetPhysicsBtTransform(btTransform& aTransform) const {
-	const btMotionState* motionState = mRigidBodyLink->getMotionState();
-	if(motionState) {
-		motionState->getWorldTransform(aTransform);
-	} else {
-		ASSERT(false);
-		aTransform = mRigidBodyLink->getWorldTransform();
-	}
-}
-const btTransform PhysicsObject::GetPhysicsBtTransform() const {
-	const btMotionState* motionState = mRigidBodyLink->getMotionState();
-	if(motionState) {
-		btTransform transform;
-		motionState->getWorldTransform(transform);
-		return transform;
-	} else {
-		return mRigidBodyLink->getWorldTransform();
-	}
-	return btTransform();
 }
 
 const btTransform PhysicsObject::CreateBtTransform() const {
