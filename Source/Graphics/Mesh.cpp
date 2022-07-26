@@ -57,7 +57,7 @@ bool Mesh::LoadMeshSync(FileIO::Path aFilePath, FileIO::Path aImagePath /*= ""*/
 	ZoneText(aFilePath.String().c_str(), aFilePath.String().size());
 	LOGGER::Formated("Loading: {}\n", aFilePath.String());
 	LOGGER::Log("Mesh Loading should not load a mesh that is already loaded?\n");
-	
+
 	mImagePath = aImagePath;
 
 	Job::Work asyncWork = GetWork(aFilePath);
@@ -78,6 +78,28 @@ bool Mesh::LoadMesh(FileIO::Path aFilePath, FileIO::Path aImagePath /*= ""*/) {
 	mLoadingHandle = Job::QueueWorkHandle(asyncWork);
 
 	return true;
+}
+
+bool Mesh::LoadShape(Mesh::Shapes aShape) {
+	ASSERT(aShape == Shapes::BOX);
+	ASSERT(mMesh.size() == 0);
+	ASSERT(false);
+
+	const MeshVert positions[8] {{glm::vec3(0)}};
+	const MeshIndex indices[36] {};
+
+	mMesh.push_back(SubMesh());
+	SubMesh& mesh = mMesh.back();
+
+	mesh.mVertices.resize(8);
+	mesh.mIndices.resize(36);
+	memcpy(mesh.mVertices.data(), positions, sizeof(positions));
+	memcpy(mesh.mIndices.data(), indices, sizeof(indices));
+
+	mesh.mVertexBuffer.CreateFromData(BufferType::VERTEX, sizeof(MeshVert) * mesh.mVertices.size(), mesh.mVertices.data(), "Mesh Vertex Data");
+	mesh.mIndexBuffer.CreateFromData(BufferType::INDEX, sizeof(MeshIndex) * mesh.mIndices.size(), mesh.mIndices.data(), "Mesh Index Data");
+	mesh.mVertexBuffer.Flush();
+	mesh.mIndexBuffer.Flush();
 }
 
 void Mesh::Destroy() {

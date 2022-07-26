@@ -24,6 +24,10 @@ public:
 
 	Transform mLocation;
 
+	//material override test
+	glm::vec4 mColorOverride;
+	bool mOverrideColor = false;
+
 private:
 	void UpdateMaterials();
 

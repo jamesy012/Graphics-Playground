@@ -1,7 +1,7 @@
 //move to another uniform?
 layout(push_constant) uniform uPushConstant {
-   mat4 mWorld;
-   uint mAlbedoTexture;
+	mat4 mWorld;
+	uint mAlbedoTexture;
 	uint mNormalTexture;
 	uint mMetallicRoughnessTexture;
 
@@ -19,15 +19,12 @@ struct DirLight {
 	vec4 mSpecular;
 };
 
-layout(set = 0, binding = 0) uniform SceneBuffer {   
-	mat4 mViewProj[2]; 
+layout(set = 0, binding = 0) uniform SceneBuffer {
+	mat4 mViewProj[2];
 	vec4 mViewPos[2]; //pad
 
 	DirLight mDirectionalLight;
 } sceneData;
 
-
-
 //testing constant_id/shader specialization
 layout(constant_id = 0) const int specializationTest = 0;
-

@@ -229,6 +229,9 @@ void StateTest::StartUp() {
 		physicsModels[i]->SetMesh(physicsMesh);
 		physicsObjects[i].AttachTransform(&physicsModels[i]->mLocation);
 		gPhysics->AddingObjectsTestSphere(&physicsObjects[i]);
+		//if(i != 0) {
+		//	gPhysics->JoinTwoObject(&physicsObjects[i], &physicsObjects[i - 1]);
+		//}
 	}
 	SetupPhysicsObjects();
 
@@ -592,4 +595,8 @@ void StateTest::SetupPhysicsObjects() {
 		physicsModels[i]->mLocation.SetScale(scale);
 		physicsObjects[i].ResetPhysics();
 	}
+	physicsModels[0]->mOverrideColor = true;
+	physicsModels[0]->mColorOverride = glm::vec4(1, 0, 0, 1);
+	physicsModels[1]->mOverrideColor = true;
+	physicsModels[1]->mColorOverride = glm::vec4(0, 1, 0, 1);
 }

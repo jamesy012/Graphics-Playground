@@ -39,6 +39,10 @@ public:
 	friend TinygltfLoader;
 	bool LoadMeshSync(FileIO::Path aFilePath, FileIO::Path aImagePath = "");
 	bool LoadMesh(FileIO::Path aFilePath, FileIO::Path aImagePath = "");
+	enum Shapes{
+		BOX
+	};
+	bool LoadShape(Shapes aShape);
 	void Destroy();
 
 	struct MeshMaterialData {

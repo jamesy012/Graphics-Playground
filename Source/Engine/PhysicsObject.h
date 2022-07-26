@@ -15,10 +15,10 @@ public:
 	void ResetPhysics() const;
 	void UpdateToPhysics() const;
 
-	Transform* GetTransform() {
+	Transform* GetTransform() const {
 		return mTransformLink;
 	};
-	btRigidBody* GetRigidBody() {
+	btRigidBody* GetRigidBody() const {
 		return mRigidBodyLink;
 	}
 

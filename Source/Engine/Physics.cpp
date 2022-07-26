@@ -11,11 +11,20 @@
 #include "Transform.h"
 #include "Graphics/Mesh.h"
 
+extern ContactStartedCallback gContactStartedCallback;
+
 Physics* gPhysics = nullptr;
+
+//callback on every collision
+void CollisionCallback(btPersistentManifold* const& manifold) {
+	//LOGGER::Log("Collision\n");
+}
 
 void Physics::Startup() {
 	ASSERT(gPhysics == nullptr);
 	gPhysics = this;
+
+	gContactStartedCallback = &CollisionCallback;
 
 	mCollisionConfiguration = new btDefaultCollisionConfiguration();
 
@@ -42,6 +51,8 @@ void Physics::Shutdown() {
 	delete mDispatcher;
 
 	delete mCollisionConfiguration;
+
+	gContactStartedCallback = 0;
 
 	gPhysics = nullptr;
 }
@@ -199,6 +210,24 @@ void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
 	aObject->UpdateToPhysics();
 
 	mDynamicsWorld->addRigidBody(body);
+}
+
+void Physics::JoinTwoObject(const PhysicsObject* aObject1, const PhysicsObject* aObject2) {
+	btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*aObject1->GetRigidBody(), *aObject2->GetRigidBody(), btVector3(0, 0, 0), btVector3(0, 0, 0));
+	p2p->m_setting.m_damping = 0.0625;
+	p2p->m_setting.m_impulseClamp = 0.95;
+	mDynamicsWorld->addConstraint(p2p);
+	//btTransform localA, localB;
+	//float scale = 1.0f;
+	//localA.setIdentity();
+	//localB.setIdentity();
+	//localA.getBasis().setEulerZYX(0, M_PI_2, 0);
+	//localA.setOrigin(scale * btVector3(btScalar(0.), btScalar(0.15), btScalar(0.)));
+	//localB.getBasis().setEulerZYX(0, M_PI_2, 0);
+	//localB.setOrigin(scale * btVector3(btScalar(0.), btScalar(-0.15), btScalar(0.)));
+	//btHingeConstraint* hinge = new btHingeConstraint(*aObject1->GetRigidBody(), *aObject2->GetRigidBody(), localA, localB);
+	//mDynamicsWorld->addConstraint(hinge);
+	//mDynamicsWorld->addAction();
 }
 
 //from the example

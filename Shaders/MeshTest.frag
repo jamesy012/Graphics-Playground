@@ -16,7 +16,7 @@ layout(location = 3) in vec3 inNormal;
 layout(location = 0) out vec4 outColor;
 
 void main() {
-    const vec4 albedoColor = texture(sTextures[pc.mAlbedoTexture], inUV.st) * inColor;
+    const vec4 albedoColor = texture(sTextures[pc.mAlbedoTexture], inUV.st) * inColor * pc.mColorFactor;
 
     if(albedoColor.a <= pc.mAlphaCutoff) {
         discard;
@@ -25,7 +25,6 @@ void main() {
     const vec2 metallicRoughnessColor = texture(sTextures[pc.mMetallicRoughnessTexture], inUV.st).rg;//ba is unused
     const float metallic = metallicRoughnessColor.r;
     const float roughness = metallicRoughnessColor.g;
-   
 
         //ATI texture does not come with blue channel?
     //if(normalTex.b == 0) {
@@ -41,7 +40,7 @@ void main() {
     float diff = max(dot(norm, lightDir), 0.0);
     // specular shading
     vec3 reflectDir = reflect(-lightDir, norm);
-    float spec = pow(max(dot(viewDir, reflectDir), 0.0), max(roughness,0.01f));
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), max(roughness, 0.01f));
 
     // combine results
     vec4 ambient = sceneData.mDirectionalLight.mAmbient * albedoColor;

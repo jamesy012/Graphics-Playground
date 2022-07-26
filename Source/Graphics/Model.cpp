@@ -55,7 +55,11 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 			ApplyTexture(modelPC.mAlbedoTexture, material.mImage);
 			ApplyTexture(modelPC.mNormalTexture, material.mNormal, CONSTANTS::IMAGE::gChecker);
 			ApplyTexture(modelPC.mMetallicRoughnessTexture, material.mMetallicRoughnessTexture, CONSTANTS::IMAGE::gBlack);
-			modelPC.mColorFactor = material.mColorFactor;
+			if(mOverrideColor) {
+				modelPC.mColorFactor = mColorOverride;
+			} else {
+				modelPC.mColorFactor = material.mColorFactor;
+			}
 			modelPC.mMetallicRoughness = material.mMetallicRoughness;
 			modelPC.mNormalBC5 = material.mNormalBC5;
 

@@ -25,6 +25,8 @@ public:
 	void AddingObjectsTestSphere(PhysicsObject* aObject);
 	void AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh);
 
+    void JoinTwoObject(const PhysicsObject* aObject1, const PhysicsObject* aObject2);
+
 	//testing the physics in a standalone update loop
 	void Test();
 

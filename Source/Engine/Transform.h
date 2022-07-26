@@ -8,6 +8,8 @@
 
 #include "PlatformDebug.h"
 
+#define DIRTY_CHECK_PARENT
+
 namespace CONSTANTS {
 	const glm::vec3 RIGHT = glm::vec3(1, 0, 0);
 	const glm::vec3 UP = glm::vec3(0, 1, 0);
@@ -198,7 +200,18 @@ public:
 
 private:
 	bool IsDirty() const {
+#if defined(DIRTY_CHECK_PARENT)
+		const Transform* parent = this;
+		while(parent != nullptr) {
+			if(parent->mDirty){
+				return true;
+			}
+			parent = parent->mParent;
+		}
+		return false;
+#else
 		return mDirty;
+#endif
 	}
 
 	//updates world and local matrix and sets dirty flag to false

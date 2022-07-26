@@ -160,10 +160,14 @@ bool Transform::IsChild(const Transform* aChild) const {
 void Transform::SetDirty() {
 	//parfor loop for setting dirty? with mutex for reading dirty if loop is active?
 	//is it better to look upwards when checking for a dirty parent or to set all children to be dirty each time anything changes?
+
+	//only set self as dirty when using parent check
+#if !defined(DIRTY_CHECK_PARENT)
 	const int childCount = mChildren.size();
 	for(int i = 0; i < childCount; ++i) {
 		mChildren[i]->SetDirty();
 	}
+#endif
 	mDirty = true;
 }
 
