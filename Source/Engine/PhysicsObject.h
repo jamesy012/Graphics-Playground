@@ -2,7 +2,8 @@
 
 #include <vector>
 
-#include "LinearMath/btMotionState.h"
+#include <LinearMath/btMotionState.h>
+#include <glm/glm.hpp>
 
 class Transform;
 class Physics;
@@ -17,7 +18,9 @@ class PhysicsObject : public btMotionState {
 public:
 	void AttachTransform(Transform* aTransform);
 
-	void SetMass(float aNewMass);
+	void SetMass(const float& aNewMass);
+	void SetVelocity(const glm::vec3& aNewVelocity);
+    void SetKinematic(bool aIsKinematic);
 
 	void UpdateFromPhysics();
 	void ResetPhysics() const;
@@ -36,14 +39,14 @@ public:
 
 protected:
 	void AttachRigidBody(btRigidBody* aRigidBody);
-    void AddAttachment(btTypedConstraint* aNewAttachment);
+	void AddAttachment(btTypedConstraint* aNewAttachment);
 
-	#pragma region btMotionState overrides
+#pragma region btMotionState overrides
 	void getWorldTransform(btTransform& worldTrans) const override;
 
 	//Bullet only calls the update of worldtransform for active objects
 	void setWorldTransform(const btTransform& worldTrans) override;
-    #pragma endregion
+#pragma endregion
 
 private:
 	//called whenever the transform is updated

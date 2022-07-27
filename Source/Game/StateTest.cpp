@@ -233,9 +233,11 @@ void StateTest::StartUp() {
 			gPhysics->JoinTwoObject(&physicsObjects[i - 1], &physicsObjects[i]);
 		}
 		physicsModels[i]->mOverrideColor = true;
-		physicsModels[i]->mColorOverride = glm::vec4(glm::vec3(i / (float)numPhysicsObjects), 1.0f);
+		physicsModels[i]->mColorOverride = glm::vec4(glm::vec3(1.0f - (i / (float)numPhysicsObjects)), 1.0f);
 	}
-	physicsObjects[numPhysicsObjects - 1].SetMass(0.01f);
+	physicsObjects[numPhysicsObjects - 1].SetMass(0.0f);
+	physicsObjects[numPhysicsObjects - 1].SetKinematic(true);
+	physicsObjects[0].SetKinematic(true);
 	physicsModels[numPhysicsObjects - 1]->mColorOverride = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
 	SetupPhysicsObjects();
 
@@ -458,6 +460,20 @@ void StateTest::Update() {
 		mWorldBasePhysicsTest.AttachTransform(&worldBase->mLocation);
 		gPhysics->AddingObjectsTestMesh(&mWorldBasePhysicsTest, referenceMesh);
 	}
+
+	if(gInput->WasKeyPressed(GLFW_KEY_SPACE)) {
+		mPhyBalls.push_back(new PhyBall());
+		PhyBall& pyobj = *mPhyBalls.back();
+		pyobj.model = new Model();
+		pyobj.model->SetMesh(physicsMesh);
+		pyobj.model->mLocation.CopyPosition(camera.mTransform);
+		pyobj.model->mLocation.SetScale(1.5f);
+		pyobj.pyObj.AttachTransform(&pyobj.model->mLocation);
+		gPhysics->AddingObjectsTestBox(&pyobj.pyObj);
+		pyobj.pyObj.SetVelocity(camera.mTransform.GetForward() * -50.0f);
+		pyobj.model->mOverrideColor = true;
+		pyobj.model->mColorOverride = glm::vec4(1.0f, 0, 0, 1);
+	}
 }
 
 void StateTest::Render() {
@@ -494,6 +510,9 @@ void StateTest::Render() {
 	worldBase->Render(buffer, meshPipeline->GetLayout());
 	for(int i = 0; i < numPhysicsObjects; i++) {
 		physicsModels[i]->Render(buffer, meshPipeline->GetLayout());
+	}
+	for(int i = 0; i < mPhyBalls.size(); i++) {
+		mPhyBalls[i]->model->Render(buffer, meshPipeline->GetLayout());
 	}
 	modelSceneTest->Render(buffer, meshPipeline->GetLayout());
 	meshPipeline->End(buffer);
@@ -594,6 +613,9 @@ void StateTest::SetupPhysicsObjects() {
 	float offset = 10.0f;
 	for(int i = 0; i < numPhysicsObjects; i++) {
 		float scale = 0.5f + rand() % 1000 / 2000.0f;
+		if(i == 0 || i == numPhysicsObjects - 1) {
+			scale = 0.1f;
+		}
 		offset += ((rand() % 1000 / 1000.0f) * 0.5f) + scale / 2;
 		physicsModels[i]->mLocation.SetPosition(glm::vec3((rand() % 1000 / 1000.0f) * 1.0f, offset, (rand() % 1000 / 1000.0f) * 1.0f));
 		physicsModels[i]->mLocation.SetScale(scale);

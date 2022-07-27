@@ -23,7 +23,9 @@ public:
 
 	void AddingObjectsTestGround(PhysicsObject* aObject);
 	void AddingObjectsTestSphere(PhysicsObject* aObject);
+	void AddingObjectsTestBox(PhysicsObject* aObject);
 	void AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh);
+    void AddRigidBody(PhysicsObject* aObject, btCollisionShape* aShape, float mass);
 
     void JoinTwoObject(PhysicsObject* aObject1, PhysicsObject* aObject2);
 

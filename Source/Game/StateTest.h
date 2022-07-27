@@ -73,6 +73,12 @@ private:
 
 	bool mRenderTrees = false;
 
+            struct PhyBall{
+            PhysicsObject pyObj;
+            Model* model;
+        };
+        std::vector<PhyBall*> mPhyBalls;
+
 #if defined(ENABLE_XR)
 	Screenspace* vrMirrorPass;
 	bool updateControllers = true;

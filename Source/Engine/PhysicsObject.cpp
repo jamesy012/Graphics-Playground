@@ -34,7 +34,7 @@ void PhysicsObject::AttachTransform(Transform* aTransform) {
 	mTransformLink->SetUpdateCallback(std::bind(&PhysicsObject::TranformUpdated, this, aTransform));
 }
 
-void PhysicsObject::SetMass(float aNewMass) {
+void PhysicsObject::SetMass(const float& aNewMass) {
 	ASSERT(IsValid());
 	mRigidBodyLink->setMassProps(aNewMass, btVector3(0.0f, 0.0f, 0.0f));
 	//if(aNewMass == 0) {
@@ -42,6 +42,22 @@ void PhysicsObject::SetMass(float aNewMass) {
 	//} else {
 	//	mRigidBodyLink->setCollisionFlags(mRigidBodyLink->getCollisionFlags() & ~CF_STATIC_OBJECT);
 	//}
+}
+
+void PhysicsObject::SetKinematic(bool aIsKinematic) {
+	ASSERT(IsValid());
+	int flags = mRigidBodyLink->getCollisionFlags();
+	if(aIsKinematic) {
+		flags |= btCollisionObject::CF_KINEMATIC_OBJECT | btCollisionObject::CF_STATIC_OBJECT;
+	} else {
+		flags &= ~(btCollisionObject::CF_KINEMATIC_OBJECT | btCollisionObject::CF_STATIC_OBJECT);
+	}
+	mRigidBodyLink->setCollisionFlags(flags);
+}
+
+void PhysicsObject::SetVelocity(const glm::vec3& aNewVelocity) {
+	ASSERT(IsValid());
+	mRigidBodyLink->setLinearVelocity(GlmToBullet(aNewVelocity));
 }
 
 void PhysicsObject::UpdateFromPhysics() {

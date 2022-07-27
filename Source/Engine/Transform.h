@@ -98,6 +98,8 @@ public:
 		SetWorldRotation(glm::quat(glm::radians(aRotation)));
 	}
 
+	void CopyPosition(const Transform& aOther);
+
 	void TranslateLocal(const glm::vec3& aTranslation);
 	void Rotate(const glm::quat& aRotation);
 	void RotateAxis(const float aAmount, const glm::vec3& aAxis);
@@ -151,6 +153,7 @@ public:
 	glm::vec3 GetUp() const {
 		return mRot * CONSTANTS::UP;
 	}
+	//towards screen
 	glm::vec3 GetForward() const {
 		return mRot * CONSTANTS::FORWARD;
 	}

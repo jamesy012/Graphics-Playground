@@ -120,9 +120,9 @@ void Physics::AddingObjectsTestGround(PhysicsObject* aObject) {
 	//btDefaultMotionState* myMotionState = new btDefaultMotionState(groundTransform);
 	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, aObject, groundShape, localInertia);
 	btRigidBody* body = new btRigidBody(rbInfo);
-	body->setRollingFriction(0.5f);
-	body->setAngularFactor(0.5f);
-	body->setFriction(10.0f);
+	//body->setRollingFriction(0.5f);
+	//body->setAngularFactor(0.5f);
+	body->setFriction(1.0f);
 
 	aObject->AttachRigidBody(body);
 	aObject->UpdateToPhysics();
@@ -135,32 +135,15 @@ void Physics::AddingObjectsTestSphere(PhysicsObject* aObject) {
 	btCollisionShape* colShape = new btSphereShape(btScalar(aObject->GetTransform()->GetLocalScale().x / 2));
 	mCollisionShapes.push_back(colShape);
 
-	/// Create Dynamic Objects
-	btTransform startTransform;
-	startTransform.setIdentity();
+	AddRigidBody(aObject, colShape, 1.0f);
+}
 
-	btScalar mass(1.f);
+void Physics::AddingObjectsTestBox(PhysicsObject* aObject) {
+	const glm::vec3 scale = aObject->GetTransform()->GetLocalScale() / 2.0f;
+	btCollisionShape* colShape = new btBoxShape(btVector3(scale.x, scale.y, scale.z));
+	mCollisionShapes.push_back(colShape);
 
-	//rigidbody is dynamic if and only if mass is non zero, otherwise static
-	bool isDynamic = (mass != 0.f);
-
-	btVector3 localInertia(0, 0, 0);
-	if(isDynamic)
-		colShape->calculateLocalInertia(mass, localInertia);
-
-	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
-	//btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
-	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, aObject, colShape, localInertia);
-	btRigidBody* body = new btRigidBody(rbInfo);
-	body->setFriction(1.0f);
-	body->setSpinningFriction(0.5f);
-	body->setRollingFriction(0.5f);
-	//body->setAngularFactor(btVector3(1, 0, 1));
-
-	aObject->AttachRigidBody(body);
-	aObject->UpdateToPhysics();
-
-	mDynamicsWorld->addRigidBody(body);
+	AddRigidBody(aObject, colShape, 1.0f);
 }
 
 void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
@@ -190,24 +173,30 @@ void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
 
 	mCollisionShapes.push_back(colShape);
 
+	AddRigidBody(aObject, colShape, 0.0f);
+}
+
+void Physics::AddRigidBody(PhysicsObject* aObject, btCollisionShape* aShape, float mass) {
 	/// Create Dynamic Objects
 	btTransform startTransform;
 	startTransform.setIdentity();
-
-	btScalar mass(0.f);
 
 	//rigidbody is dynamic if and only if mass is non zero, otherwise static
 	bool isDynamic = (mass != 0.f);
 
 	btVector3 localInertia(0, 0, 0);
 	if(isDynamic)
-		colShape->calculateLocalInertia(mass, localInertia);
+		aShape->calculateLocalInertia(mass, localInertia);
 
 	//using motionstate is recommended, it provides interpolation capabilities, and only synchronizes 'active' objects
 	//btDefaultMotionState* myMotionState = new btDefaultMotionState(startTransform);
-	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, aObject, colShape, localInertia);
+	btRigidBody::btRigidBodyConstructionInfo rbInfo(mass, aObject, aShape, localInertia);
 	btRigidBody* body = new btRigidBody(rbInfo);
-	body->setSpinningFriction(0.5f);
+	body->setFriction(0.5f);
+	body->setSpinningFriction(0.1f);
+	body->setRollingFriction(0.1f);
+	//body->setAngularFactor(btVector3(1, 0, 1));
+	body->setDamping(0.0f, 0.2f);
 
 	aObject->AttachRigidBody(body);
 	aObject->UpdateToPhysics();
@@ -218,10 +207,12 @@ void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
 void Physics::JoinTwoObject(PhysicsObject* aObject1, PhysicsObject* aObject2) {
 	btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*aObject1->GetRigidBody(),
 															   *aObject2->GetRigidBody(),
-															   btVector3(0, aObject1->GetTransform()->GetLocalScale().y / 5.0f, 0),
-															   btVector3(0, -aObject2->GetTransform()->GetLocalScale().y / 5.0f, 0));
+															   btVector3(0, aObject1->GetTransform()->GetLocalScale().y / 2.0f, 0),
+															   btVector3(0, -aObject2->GetTransform()->GetLocalScale().y / 2.0f, 0));
 	//p2p->m_setting.m_damping = 0.0625;
 	//p2p->m_setting.m_impulseClamp = 0.95;
+	//p2p->m_setting.m_tau = 0.5f;
+	//p2p->m_setting.m_damping = 0.5f;
 	mDynamicsWorld->addConstraint(p2p, true);
 	aObject1->AddAttachment(p2p);
 	aObject2->AddAttachment(p2p);

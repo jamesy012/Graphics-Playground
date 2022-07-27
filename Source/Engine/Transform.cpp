@@ -68,6 +68,10 @@ void Transform::SetWorldRotation(const glm::quat& aRot) {
 	}
 }
 
+void Transform::CopyPosition(const Transform& aOther) {
+	SetPosition(aOther.GetLocalPosition());
+}
+
 void Transform::TranslateLocal(const glm::vec3& aTranslation) {
 	mPos += mRot * aTranslation;
 	SetDirty();
