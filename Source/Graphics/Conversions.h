@@ -18,6 +18,10 @@ static glm::vec4 AssimpToGlm(const aiColor4D& aAssimp) {
 	return glm::vec4(aAssimp.r, aAssimp.g, aAssimp.b, aAssimp.a);
 }
 
+static glm::vec2 VulkanToGlm(const VkExtent2D& aVulkan){
+	return glm::vec2(aVulkan.width, aVulkan.height);
+}
+
 #pragma endregion
 
 #pragma region std::Format

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vector>
+#include <glm/glm.hpp>
 
 class btDefaultCollisionConfiguration;
 class btCollisionDispatcher;
@@ -19,15 +20,17 @@ public:
 
 	void Update();
 
-    void ImGuiWindow();
+	void ImGuiWindow();
 
 	void AddingObjectsTestGround(PhysicsObject* aObject);
 	void AddingObjectsTestSphere(PhysicsObject* aObject);
 	void AddingObjectsTestBox(PhysicsObject* aObject);
 	void AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh);
-    void AddRigidBody(PhysicsObject* aObject, btCollisionShape* aShape, float mass);
+	void AddRigidBody(PhysicsObject* aObject, btCollisionShape* aShape, float mass);
 
-    void JoinTwoObject(PhysicsObject* aObject1, PhysicsObject* aObject2);
+	void JoinTwoObject(PhysicsObject* aObject1, PhysicsObject* aObject2);
+
+	PhysicsObject* Raycast(const glm::vec3& aPosition, const glm::vec3& aDirection, const float aLength) const;
 
 	//testing the physics in a standalone update loop
 	void Test();
@@ -50,6 +53,7 @@ private:
 	//collisionShapes.push_back(groundShape);
 	std::vector<btCollisionShape*> mCollisionShapes;
 
-    int mActiveObjects = 0;
+	int mActiveObjects = 0;
+	int mCollisionsLastFrame = 0;
 };
 extern Physics* gPhysics;

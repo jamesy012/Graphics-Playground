@@ -17,10 +17,13 @@ class PhysicsObject : public btMotionState {
 
 public:
 	void AttachTransform(Transform* aTransform);
+	void AttachOther(void* aOther) {
+		mOtherLink = aOther;
+	}
 
 	void SetMass(const float& aNewMass);
 	void SetVelocity(const glm::vec3& aNewVelocity);
-    void SetKinematic(bool aIsKinematic);
+	void SetKinematic(bool aIsKinematic);
 
 	void UpdateFromPhysics();
 	void ResetPhysics() const;
@@ -31,6 +34,9 @@ public:
 	};
 	btRigidBody* GetRigidBody() const {
 		return mRigidBodyLink;
+	}
+	void* GetOther() {
+		return mOtherLink;
 	}
 
 	const bool IsValid() const {
@@ -57,6 +63,7 @@ private:
 
 	Transform* mTransformLink = nullptr;
 	btRigidBody* mRigidBodyLink = nullptr;
+	void* mOtherLink = nullptr;
 
 	std::vector<btTypedConstraint*> mAttachments;
 };

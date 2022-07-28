@@ -6,7 +6,9 @@ set(GLSL_SOURCE_FILES
     "/Screenspace/ImageSingleArray.frag"
     "/Screenspace/ImageTwoArray.frag"
     "/MeshTest.vert"
-    "/MeshTest.frag")
+    "/MeshTest.frag"
+    "/MeshSelect.vert"
+    )
 set(GLSL_INCLUDE_FILES 
 "${CMAKE_CURRENT_SOURCE_DIR}/Include/test.inc"
 "${CMAKE_CURRENT_SOURCE_DIR}/Include/Color.inc"

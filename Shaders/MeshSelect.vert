@@ -24,7 +24,11 @@ void main() {
     vec4 fragPos = pc.mWorld * vec4(inPos, 1.0f);
     outFragPos = vec3(fragPos);
     outNormal = mat3(transpose(inverse(pc.mWorld))) * inNormal;
-    outColor = inColor;
+    outColor = inColor * 10;
     outUV = inUV;
     gl_Position = sceneData.mViewProj[gl_ViewIndex] * fragPos;
+    //gl_Position *= vec4(vec2(1.4f), 1.0f, 1.0f);
+    //gl_Position -= vec4(vec2(0.2f), 0.0f, 0.0f);
+    //gl_Position *= vec4(1.4f, 1.0f, 1.4f, 1.0f);
+    //gl_Position -= vec4(0.2f, 0.0f, 0.2f, 0.0f);
 }

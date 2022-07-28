@@ -60,6 +60,11 @@ const int numMesh = sizeof(sceneMeshs) / sizeof(MeshTestHolder);
 // clang-format on
 
 void StateTest::Initalize() {
+	mSelectMeshRenderPass = new RenderPass();
+	mSelectMeshFramebuffer = new Framebuffer();
+	mSelectMeshPipeline = new Pipeline();
+	mSelectMeshDepthImage = new Image();
+
 	mainRenderPass = new RenderPass();
 	sceneDataBuffer = new Buffer();
 	fbImage = new Image();
@@ -91,10 +96,15 @@ void StateTest::StartUp() {
 	//move to engine/graphics?
 #if defined(ENABLE_XR)
 	mainRenderPass->SetMultiViewSupport(true);
+	mSelectMeshRenderPass->SetMultiViewSupport(true);
 #endif
 	mainRenderPass->AddColorAttachment(Graphics::GetDeafultColorFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
 	mainRenderPass->AddDepthAttachment(Graphics::GetDeafultDepthFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
 	mainRenderPass->Create("Main Render RP");
+
+	mSelectMeshRenderPass->AddColorAttachment(Graphics::GetDeafultColorFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
+	mSelectMeshRenderPass->AddDepthAttachment(Graphics::GetDeafultDepthFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
+	mSelectMeshRenderPass->Create("Select Model Render Pass");
 
 	{
 		std::vector<VkClearValue> mainPassClear(2);
@@ -106,11 +116,19 @@ void StateTest::StartUp() {
 		mainPassClear[1].depthStencil.stencil = 0;
 		mainRenderPass->SetClearColors(mainPassClear);
 	}
+	{
+		std::vector<VkClearValue> selectModelClear(2);
+		selectModelClear[1].depthStencil.depth = 1.0f;
+		selectModelClear[1].depthStencil.stencil = 0;
+		mSelectMeshRenderPass->SetClearColors(selectModelClear);
+	}
 
 	//FRAMEBUFFER TEST
 
 	auto CreateSizeDependentRenderObjects = [&]() {
 		fb->Destroy();
+		mSelectMeshFramebuffer->Destroy();
+
 		fbDepthImage->Destroy();
 		fbImage->Destroy();
 		fbImage->SetArrayLayers(gGraphics->GetNumActiveViews());
@@ -118,11 +136,16 @@ void StateTest::StartUp() {
 		fbImage->CreateVkImage(Graphics::GetDeafultColorFormat(), gGraphics->GetDesiredSize(), true, "Main FB Image");
 		fbDepthImage->CreateVkImage(Graphics::GetDeafultDepthFormat(), gGraphics->GetDesiredSize(), true, "Main FB Depth Image");
 
+		mSelectMeshDepthImage->Destroy();
+		mSelectMeshDepthImage->SetArrayLayers(gGraphics->GetNumActiveViews());
+		mSelectMeshDepthImage->CreateVkImage(Graphics::GetDeafultDepthFormat(), gGraphics->GetDesiredSize(), true, "Selected Mesh FB Depth Image");
+
 		//convert to correct layout
 		{
 			auto buffer = gGraphics->AllocateGraphicsCommandBuffer();
 			fbImage->SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 			fbDepthImage->SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			mSelectMeshDepthImage->SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			gGraphics->EndGraphicsCommandBuffer(buffer);
 		}
 
@@ -130,6 +153,9 @@ void StateTest::StartUp() {
 		fb->AddImage(fbImage);
 		fb->AddImage(fbDepthImage);
 		fb->Create(*mainRenderPass, "Main Render FB");
+		mSelectMeshFramebuffer->AddImage(fbImage);
+		mSelectMeshFramebuffer->AddImage(mSelectMeshDepthImage);
+		mSelectMeshFramebuffer->Create(*mSelectMeshRenderPass, "Select Mesh FB");
 	};
 	CreateSizeDependentRenderObjects();
 	gGraphics->mResizeMessage.push_back(CreateSizeDependentRenderObjects);
@@ -185,6 +211,8 @@ void StateTest::StartUp() {
 
 	meshPipeline->AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	meshPipeline->AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	mSelectMeshPipeline->AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshSelect.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	mSelectMeshPipeline->AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	{
 		meshPipeline->vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
@@ -202,12 +230,15 @@ void StateTest::StartUp() {
 		meshPipeline->vertexAttribute[3].location = 3;
 		meshPipeline->vertexAttribute[3].format = VK_FORMAT_R32G32_SFLOAT; //12
 		meshPipeline->vertexAttribute[3].offset = offsetof(MeshVert, mUVs[0]);
+		mSelectMeshPipeline->vertexBinding = meshPipeline->vertexBinding;
+		mSelectMeshPipeline->vertexAttribute = meshPipeline->vertexAttribute;
 	}
 
 	VkPushConstantRange meshPCRange {};
 	meshPCRange.size = sizeof(MeshPCTest);
 	meshPCRange.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
 	meshPipeline->AddPushConstant(meshPCRange);
+	mSelectMeshPipeline->AddPushConstant(meshPCRange);
 
 	sceneDataBuffer->Create(BufferType::UNIFORM, sizeof(SceneData), "Mesh Scene Uniform");
 
@@ -216,6 +247,9 @@ void StateTest::StartUp() {
 	meshPipeline->AddMaterialBase(&meshTestBase);
 	meshPipeline->AddBindlessTexture();
 	meshPipeline->Create(mainRenderPass->GetRenderPass(), "Mesh");
+	mSelectMeshPipeline->AddMaterialBase(&meshTestBase);
+	mSelectMeshPipeline->AddBindlessTexture();
+	mSelectMeshPipeline->Create(mSelectMeshRenderPass->GetRenderPass(), "Select Mesh");
 
 	meshMaterial = meshTestBase.MakeMaterials()[0];
 	meshMaterial.SetBuffers(*sceneDataBuffer, 0, 0);
@@ -228,6 +262,7 @@ void StateTest::StartUp() {
 	for(int i = 0; i < numPhysicsObjects; i++) {
 		physicsModels[i]->SetMesh(physicsMesh);
 		physicsObjects[i].AttachTransform(&physicsModels[i]->mLocation);
+		physicsObjects[i].AttachOther(physicsModels[i]);
 		gPhysics->AddingObjectsTestSphere(&physicsObjects[i]);
 		if(i != 0) {
 			gPhysics->JoinTwoObject(&physicsObjects[i - 1], &physicsObjects[i]);
@@ -458,6 +493,7 @@ void StateTest::Update() {
 
 	if(referenceMesh->HasLoaded() && mWorldBasePhysicsTest.GetRigidBody() == nullptr) {
 		mWorldBasePhysicsTest.AttachTransform(&worldBase->mLocation);
+		mWorldBasePhysicsTest.AttachOther(worldBase);
 		gPhysics->AddingObjectsTestMesh(&mWorldBasePhysicsTest, referenceMesh);
 	}
 
@@ -469,20 +505,34 @@ void StateTest::Update() {
 		pyobj.model->mLocation.CopyPosition(camera.mTransform);
 		pyobj.model->mLocation.SetScale(1.5f);
 		pyobj.pyObj.AttachTransform(&pyobj.model->mLocation);
+		pyobj.pyObj.AttachOther(pyobj.model);
 		gPhysics->AddingObjectsTestBox(&pyobj.pyObj);
 		pyobj.pyObj.SetVelocity(camera.mTransform.GetForward() * -50.0f);
 		pyobj.model->mOverrideColor = true;
 		pyobj.model->mColorOverride = glm::vec4(1.0f, 0, 0, 1);
+	}
+
+	{
+
+		int width, height;
+		gEngine->GetWindow()->GetSize(&width, &height);
+
+		const glm::vec3 viewDir = camera.GetWorldDirFromScreen(gInput->GetMousePos(), glm::vec2(width, height));
+
+		PhysicsObject* obj = gPhysics->Raycast(camera.mTransform.GetWorldPosition(), viewDir, 1000.0f);
+		if(obj) {
+			mSelectedModel = (Model*)obj->GetOther();
+		} else {
+			mSelectedModel = nullptr;
+		}
 	}
 }
 
 void StateTest::Render() {
 	VkCommandBuffer buffer = gGraphics->GetCurrentGraphicsCommandBuffer();
 
-	const Framebuffer& framebuffer = *fb;
-
 	//mesh render test
-	mainRenderPass->Begin(buffer, framebuffer);
+	mainRenderPass->Begin(buffer, *fb);
 	meshPipeline->Begin(buffer);
 	//bind camera data
 	vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline->GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
@@ -517,6 +567,21 @@ void StateTest::Render() {
 	modelSceneTest->Render(buffer, meshPipeline->GetLayout());
 	meshPipeline->End(buffer);
 	mainRenderPass->End(buffer);
+
+	if(mSelectedModel != 0) {
+		mSelectMeshRenderPass->Begin(buffer, *mSelectMeshFramebuffer);
+		mSelectMeshPipeline->Begin(buffer);
+
+		//glm::vec2 viewportMin = VulkanToGlm(mSelectMeshFramebuffer->GetSize()) * -0.2f;
+		//glm::vec2 viewportMax = VulkanToGlm(mSelectMeshFramebuffer->GetSize()) * 1.4f;
+		//VkViewport viewport = {viewportMin.x, viewportMin.y, viewportMax.x, viewportMax.y, 0.0f, 1.0f};
+		//vkCmdSetViewport(buffer, 0, 1, &viewport);
+
+		mSelectedModel->Render(buffer, mSelectMeshPipeline->GetLayout());
+
+		mSelectMeshPipeline->End(buffer);
+		mSelectMeshRenderPass->End(buffer);
+	}
 
 	fbImage->SetImageLayout(buffer,
 							VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
@@ -565,6 +630,11 @@ void StateTest::Finish() {
 		physicsModels[i]->Destroy();
 		delete physicsModels[i];
 	}
+	for(int i = 0; i < mPhyBalls.size(); i++) {
+		mPhyBalls[i]->model->Destroy();
+		mPhyBalls[i]->model = nullptr;
+	}
+	mPhyBalls.clear();
 
 	meshPipeline->Destroy();
 	delete meshPipeline;
@@ -581,6 +651,15 @@ void StateTest::Finish() {
 	delete meshTest;
 	sceneDataBuffer->Destroy();
 	delete sceneDataBuffer;
+
+	mSelectMeshDepthImage->Destroy();
+	delete mSelectMeshDepthImage;
+	mSelectMeshPipeline->Destroy();
+	delete mSelectMeshPipeline;
+	mSelectMeshFramebuffer->Destroy();
+	delete mSelectMeshFramebuffer;
+	mSelectMeshRenderPass->Destroy();
+	delete mSelectMeshRenderPass;
 
 	mainRenderPass->Destroy();
 	delete mainRenderPass;

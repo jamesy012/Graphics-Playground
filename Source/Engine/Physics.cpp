@@ -74,6 +74,13 @@ void Physics::Update() {
 	//
 	int output = mDynamicsWorld->stepSimulation(gEngine->GetDeltaTime());
 
+	mCollisionsLastFrame = mDispatcher->getNumManifolds();
+	for(int j = mCollisionsLastFrame - 1; j >= 0; j--) {
+		const btPersistentManifold* manifold = mDispatcher->getManifoldByIndexInternal(j);
+		const btManifoldPoint& collisionPoint = manifold->getContactPoint(0);
+		const btVector3 position = collisionPoint.getPositionWorldOnB();
+	}
+
 	for(int j = mDynamicsWorld->getNumCollisionObjects() - 1; j >= 0; j--) {
 		btCollisionObject* colObj = mDynamicsWorld->getCollisionObjectArray()[j];
 		if(colObj->isActive()) {
@@ -91,6 +98,7 @@ void Physics::ImGuiWindow() {
 	if(ImGui::Begin("Physics")) {
 		ImGui::Text("Num Collision Objects: %i", mDynamicsWorld->getNumCollisionObjects());
 		ImGui::Text("Num Active Objects: %i", mActiveObjects);
+		ImGui::Text("Num Collisions: %i", mCollisionsLastFrame);
 		ImGui::Text("Num RigidBodies: %i", mDynamicsWorld->getNonStaticRigidBodies().size());
 	}
 	ImGui::End();
@@ -227,6 +235,18 @@ void Physics::JoinTwoObject(PhysicsObject* aObject1, PhysicsObject* aObject2) {
 	//btHingeConstraint* hinge = new btHingeConstraint(*aObject1->GetRigidBody(), *aObject2->GetRigidBody(), localA, localB);
 	//mDynamicsWorld->addConstraint(hinge);
 	//mDynamicsWorld->addAction();
+}
+
+PhysicsObject* Physics::Raycast(const glm::vec3& aPosition, const glm::vec3& aDirection, const float aLength) const {
+	const btVector3 rayFromWorld = btVector3(aPosition.x, aPosition.y, aPosition.z);
+	const btVector3 rayToWorld = rayFromWorld + btVector3(aDirection.x, aDirection.y, aDirection.z) * aLength;
+	btCollisionWorld::ClosestRayResultCallback result(rayFromWorld, rayToWorld);
+	mDynamicsWorld->rayTest(rayFromWorld, rayToWorld, result);
+	if(result.hasHit()) {
+		const btRigidBody* body = btRigidBody::upcast(result.m_collisionObject);
+		return (PhysicsObject*)body->getUserPointer();
+	}
+	return nullptr;
 }
 
 //from the example

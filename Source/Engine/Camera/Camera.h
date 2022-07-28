@@ -23,6 +23,8 @@ public:
 		mProjDirty = true;
 	}
 
+	glm::vec3 GetWorldDirFromScreen(const glm::vec2& aScreenpos, const glm::vec2& aScreenSize);
+
 	float GetFovDegrees() {
 		//todo get degrees of uneven fov?
 		ASSERT(mFov.z == 0 && mFov.w == 0);

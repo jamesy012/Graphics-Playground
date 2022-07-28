@@ -35,6 +35,12 @@ private:
 	RenderPass* mainRenderPass;
 	Buffer* sceneDataBuffer;
 
+	Framebuffer* mSelectMeshFramebuffer = nullptr;
+	RenderPass* mSelectMeshRenderPass = nullptr;
+	Pipeline* mSelectMeshPipeline = nullptr;
+	Image* mSelectMeshDepthImage = nullptr;
+	Model* mSelectedModel = nullptr;
+
 	Image* fbImage;
 	Image* fbDepthImage;
 	Framebuffer* fb;
@@ -52,7 +58,7 @@ private:
 	Model* controllerTest1;
 	Model* controllerTest2;
 	Model* worldBase;
-    PhysicsObject mWorldBasePhysicsTest;
+	PhysicsObject mWorldBasePhysicsTest;
 	static const int numPhysicsObjects = 100;
 	Model* physicsModels[numPhysicsObjects];
 	PhysicsObject physicsObjects[numPhysicsObjects];
@@ -65,19 +71,19 @@ private:
 	Transform mRootTransform;
 	FlyCamera camera;
 
-    PhysicsObject mGroundPlane;
-    Transform mGroundTransform;
+	PhysicsObject mGroundPlane;
+	Transform mGroundTransform;
 
 	SceneData sceneData;
 	int selectedMesh = 0;
 
 	bool mRenderTrees = false;
 
-            struct PhyBall{
-            PhysicsObject pyObj;
-            Model* model;
-        };
-        std::vector<PhyBall*> mPhyBalls;
+	struct PhyBall {
+		PhysicsObject pyObj;
+		Model* model;
+	};
+	std::vector<PhyBall*> mPhyBalls;
 
 #if defined(ENABLE_XR)
 	Screenspace* vrMirrorPass;
