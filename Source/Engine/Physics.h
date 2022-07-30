@@ -3,6 +3,8 @@
 #include <vector>
 #include <glm/glm.hpp>
 
+#include "Engine/Transform.h"
+
 class btDefaultCollisionConfiguration;
 class btCollisionDispatcher;
 class btBroadphaseInterface;
@@ -22,7 +24,11 @@ public:
 
 	void ImGuiWindow();
 
+	//todo need to work out a good method of setting these up
+	//without letting everything know about btCollisionShape's
+
 	void AddingObjectsTestGround(PhysicsObject* aObject);
+	void AddingObjectsTestCompoundBoxs(PhysicsObject* aObject, const std::vector<SimpleTransform>& aObjects);
 	void AddingObjectsTestSphere(PhysicsObject* aObject);
 	void AddingObjectsTestBox(PhysicsObject* aObject);
 	void AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh);

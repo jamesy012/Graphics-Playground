@@ -8,8 +8,6 @@
 
 #include "PlatformDebug.h"
 
-#define DIRTY_CHECK_PARENT
-
 namespace CONSTANTS {
 	const glm::vec3 RIGHT = glm::vec3(1, 0, 0);
 	const glm::vec3 UP = glm::vec3(0, 1, 0);
@@ -17,60 +15,49 @@ namespace CONSTANTS {
 	const glm::vec3 FORWARD = glm::vec3(0, 0, 1);
 } // namespace CONSTANTS
 
-class Transform {
-	typedef std::function<void(Transform*)> TransformUpdatecallback;
+class SimpleTransform {
+protected:
+	typedef std::function<void(SimpleTransform*)> TransformUpdatecallback;
 
 public:
-	Transform(Transform* mParent = nullptr) {
-		SetParent(mParent);
+	SimpleTransform() {};
+	SimpleTransform(const SimpleTransform& aOther) {
+		SetPosition(aOther.mPos);
+		SetScale(aOther.mScale);
+		SetRotation(aOther.mRot);
 	};
 	template<typename POS>
-	Transform(const POS& aPos, Transform* aParent = nullptr) {
-		Set(aPos, aParent);
+	SimpleTransform(const POS& aPos) {
+		SetPosition(aPos);
 	};
 	template<typename POS, typename SCALE>
-	Transform(const POS& aPos, const SCALE& aScale, Transform* aParent = nullptr) {
-		Set(aPos, aScale, aParent);
+	SimpleTransform(const POS& aPos, const SCALE& aScale) {
+		Set(aPos, aScale);
 	};
 	template<typename POS, typename SCALE, typename QUAT>
-	Transform(const POS& aPos, const SCALE& aScale, const QUAT& aRot, Transform* aParent = nullptr) {
-		Set(aPos, aScale, aRot, aParent);
+	SimpleTransform(const POS& aPos, const SCALE& aScale, const QUAT& aRot) {
+		Set(aPos, aScale, aRot);
 	};
-	~Transform();
+	~SimpleTransform() {};
 
 	template<typename POS, typename SCALE>
 	void Set(const POS& aPos, const SCALE& aScale) {
 		SetPosition(aPos);
 		SetScale(aScale);
 	}
-	template<typename POS, typename SCALE>
-	void Set(const POS& aPos, const SCALE& aScale, Transform* aParent) {
-		Set(aPos, aScale);
-		SetParent(aParent);
-	}
-
-	//template<typename POS, typename SCALE, typename QUAT>
-	//void Set(const POS& aPos, const SCALE& aScale, const QUAT& aRot) {
-	//	SetPosition(aPos);
-	//	SetScale(aScale);
-	//	SetRotation(aRot);
-	//}
 
 	template<typename POS, typename SCALE, typename QUAT>
-	void Set(const POS& aPos, const SCALE& aScale, const QUAT& aRot, Transform* aParent) {
-		Set(aPos, aScale, aRot);
-		SetParent(aParent);
+	void Set(const POS& aPos, const SCALE& aScale, const QUAT& aRot) {
+		SetPosition(aPos);
+		SetScale(aScale);
+		SetRotation(aRot);
 	}
-
-	//clears all references to this Transform
-	//should it reparent the children to our parent?
-	//or make their parents nullptr
-	void Clear(bool aReparent = true);
 
 	void SetPosition(const glm::vec3& aPos) {
 		mPos = aPos;
 		SetDirty();
 	}
+
 	void SetScale(const glm::vec3& aScale) {
 		mScale = aScale;
 		SetDirty();
@@ -90,15 +77,7 @@ public:
 	}
 	void SetMatrix(const glm::mat4& aMat);
 
-	void SetWorldPosition(const glm::vec3& aPos);
-	void SetWorldScale(const glm::vec3& aScale);
-	void SetWorldRotation(const glm::quat& aRotation);
-	//degrees
-	void SetWorldRotation(const glm::vec3& aRotation) {
-		SetWorldRotation(glm::quat(glm::radians(aRotation)));
-	}
-
-	void CopyPosition(const Transform& aOther);
+	void CopyPosition(const SimpleTransform& aOther);
 
 	void TranslateLocal(const glm::vec3& aTranslation);
 	void Rotate(const glm::quat& aRotation);
@@ -124,27 +103,11 @@ public:
 		return glm::degrees(glm::eulerAngles(mRot));
 	}
 
-	//Updates matrixies
-	glm::vec3 GetWorldPosition();
-	//Updates matrixies
-	glm::vec3 GetWorldScale();
-	//Updates matrixies
-	glm::quat GetWorldRotation();
-	//Updates matrixies, converts quat to euler degrees
-	glm::quat GetWorldRotationEuler() {
-		return glm::degrees(glm::eulerAngles(GetWorldRotation()));
-	}
-
 	//updates matrixies/parents
 	glm::mat4 GetLocalMatrix() {
 		//update only local??
 		CheckUpdate();
 		return mLocalMatrix;
-	}
-	//updates matrixies/parents
-	glm::mat4 GetWorldMatrix() {
-		CheckUpdate();
-		return mWorldMatrix;
 	}
 
 	glm::vec3 GetRight() const {
@@ -160,6 +123,138 @@ public:
 
 	bool IsUp() const {
 		return glm::dot(GetUp(), CONSTANTS::UP) > 0;
+	}
+
+	void SetDirty();
+
+	//calls the callback after global matrix is set
+	void SetUpdateCallback(TransformUpdatecallback aCallback) {
+		ASSERT(mUpdateCallback == nullptr);
+		mUpdateCallback = aCallback;
+	}
+
+	//updates our world and local matrix if we are dirty
+	void CheckUpdate() {
+		if(IsDirty()) {
+			UpdateMatrix();
+		}
+	}
+
+protected:
+	virtual bool IsDirty() const {
+		return mDirty;
+	}
+
+	void UpdateLocalMatrix();
+
+	//updates world and local matrix and sets dirty flag to false
+	virtual void UpdateMatrix();
+
+	glm::vec3 mPos = glm::vec3(0.0f);
+	glm::vec3 mScale = glm::vec3(1.0f);
+	glm::quat mRot = glm::identity<glm::quat>();
+
+	glm::mat4 mLocalMatrix = glm::identity<glm::mat4>();
+
+	//callback for when the matrix's are updated, so another system can respond to it
+	TransformUpdatecallback mUpdateCallback = nullptr;
+
+	bool mDirty = false;
+};
+
+class Transform : public SimpleTransform {
+public:
+	Transform() : SimpleTransform() {};
+	Transform(const SimpleTransform& aOther) :
+		SimpleTransform(aOther) {
+			//
+		};
+	Transform(Transform* aParent) : SimpleTransform() {
+		SetParent(aParent);
+	};
+	Transform(const SimpleTransform& aOther, Transform* aParent) : SimpleTransform(aOther) {
+		SetParent(aParent);
+	};
+	template<typename POS>
+	Transform(const POS& aPos, Transform* aParent) : SimpleTransform(aPos) {
+		SetParent(aParent);
+	};
+	template<typename POS, typename SCALE>
+	Transform(const POS& aPos, const SCALE& aScale, Transform* aParent) : SimpleTransform(aPos, aScale) {
+		SetParent(aParent);
+	};
+	template<typename POS, typename SCALE, typename QUAT>
+	Transform(const POS& aPos, const SCALE& aScale, const QUAT& aRot, Transform* aParent) : SimpleTransform(aPos, aScale, aRot) {
+		SetParent(aParent);
+	};
+	//Transform(const glm::vec3& aPos, Transform* aParent) {
+	//	Set(aPos, aParent);
+	//};
+	//Transform(const glm::vec3& aPos, const glm::vec3& aScale, Transform* aParent) {
+	//	Set(aPos, aScale, aParent);
+	//};
+	//Transform(const glm::vec3& aPos, const float& aScale, Transform* aParent) {
+	//	Set(aPos, aScale, aParent);
+	//};
+	//Transform(const glm::vec3& aPos, const glm::vec3& aScale, const glm::quat& aRot, Transform* aParent) {
+	//	Set(aPos, aScale, aRot, aParent);
+	//};
+	//Transform(const glm::vec3& aPos, const float& aScale, const glm::quat& aRot, Transform* aParent) {
+	//	Set(aPos, aScale, aRot, aParent);
+	//};
+	//Transform(const glm::vec3& aPos, const glm::vec3& aScale, const glm::vec3& aRot, Transform* aParent) {
+	//	Set(aPos, aScale, aRot, aParent);
+	//};
+	//Transform(const glm::vec3& aPos, const float& aScale, const glm::vec3& aRot, Transform* aParent) {
+	//	Set(aPos, aScale, aRot, aParent);
+	//};
+	~Transform();
+
+	template<typename POS>
+	void Set(const POS& aPos, Transform* aParent) {
+		SetPosition(aPos);
+		SetParent(aParent);
+	}
+	template<typename POS, typename SCALE>
+	void Set(const POS& aPos, const SCALE& aScale, Transform* aParent) {
+		SimpleTransform::Set(aPos, aScale);
+		SetParent(aParent);
+	}
+
+	template<typename POS, typename SCALE, typename QUAT>
+	void Set(const POS& aPos, const SCALE& aScale, const QUAT& aRot, Transform* aParent) {
+		SimpleTransform::Set(aPos, aScale, aRot);
+		SetParent(aParent);
+	}
+
+	//clears all references to this Transform
+	//should it reparent the children to our parent?
+	//or make their parents nullptr
+	void Clear(bool aReparent = true);
+
+	void SetWorldPosition(const glm::vec3& aPos);
+	void SetWorldScale(const glm::vec3& aScale);
+	void SetWorldRotation(const glm::quat& aRotation);
+	//degrees
+	void SetWorldRotation(const glm::vec3& aRotation) {
+		SetWorldRotation(glm::quat(glm::radians(aRotation)));
+	}
+
+	//Updates matrixies
+	glm::vec3 GetWorldPosition();
+	//Updates matrixies
+	glm::vec3 GetWorldScale();
+	//Updates matrixies
+	glm::quat GetWorldRotation();
+	//Updates matrixies, converts quat to euler degrees
+	glm::quat GetWorldRotationEuler() {
+		return glm::degrees(glm::eulerAngles(GetWorldRotation()));
+	}
+
+	//updates matrixies/parents
+	glm::mat4 GetWorldMatrix() {
+		CheckUpdate();
+		return mWorldMatrix;
 	}
 
 	//todo give option to keep world position
@@ -186,55 +281,26 @@ public:
 	}
 	bool IsChild(const Transform* aChild) const;
 
-	void SetDirty();
-
-	//calls the callback after global matrix is set
-	void SetUpdateCallback(TransformUpdatecallback aCallback) {
-		ASSERT(mUpdateCallback == nullptr);
-		mUpdateCallback = aCallback;
-	}
-
-	//updates our world and local matrix if we are dirty
-	void CheckUpdate() {
-		if(IsDirty()) {
-			UpdateMatrix();
-		}
-	}
-
 private:
-	bool IsDirty() const {
-#if defined(DIRTY_CHECK_PARENT)
+	virtual bool IsDirty() const override {
 		const Transform* parent = this;
 		while(parent != nullptr) {
-			if(parent->mDirty){
+			if(parent->mDirty) {
 				return true;
 			}
 			parent = parent->mParent;
 		}
 		return false;
-#else
-		return mDirty;
-#endif
 	}
 
 	//updates world and local matrix and sets dirty flag to false
-	void UpdateMatrix();
+	virtual void UpdateMatrix() override;
 
 	void AddChild(Transform* aChild);
 	void RemoveChild(Transform* aChild);
 
-	glm::vec3 mPos = glm::vec3(0.0f);
-	glm::vec3 mScale = glm::vec3(1.0f);
-	glm::quat mRot = glm::identity<glm::quat>();
-
-	glm::mat4 mLocalMatrix = glm::identity<glm::mat4>();
 	glm::mat4 mWorldMatrix = glm::identity<glm::mat4>();
 
 	Transform* mParent = nullptr;
 	std::vector<Transform*> mChildren;
-
-	//callback for when the matrix's are updated, so another system can respond to it
-	TransformUpdatecallback mUpdateCallback = nullptr;
-
-	bool mDirty = false;
 };

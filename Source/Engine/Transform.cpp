@@ -4,6 +4,89 @@
 
 #include "PlatformDebug.h"
 
+
+void SimpleTransform::SetMatrix(const glm::mat4& aMat) {
+	glm::vec3 scale;
+	glm::quat rotation;
+	glm::vec3 translation;
+	glm::vec3 skew;
+	glm::vec4 perspective;
+	glm::decompose(aMat, scale, rotation, translation, skew, perspective);
+	SetPosition(translation);
+	SetScale(scale);
+	SetRotation(glm::conjugate(rotation));
+}
+
+void SimpleTransform::CopyPosition(const SimpleTransform& aOther) {
+	SetPosition(aOther.GetLocalPosition());
+}
+
+void SimpleTransform::TranslateLocal(const glm::vec3& aTranslation) {
+	mPos += mRot * aTranslation;
+	SetDirty();
+}
+
+void SimpleTransform::RotateAxis(const float aAmount, const glm::vec3& aAxis) {
+	const float amount = glm::radians(aAmount);
+	mRot = mRot * glm::angleAxis(amount, aAxis);
+
+	SetDirty();
+}
+
+void SimpleTransform::RotateAxis(const glm::vec2& aEulerAxisRotation) {
+	const glm::vec2 axisRotation = glm::radians(aEulerAxisRotation);
+
+	mRot = mRot * glm::angleAxis(axisRotation.x, glm::vec3(1, 0, 0));
+	mRot = glm::angleAxis(axisRotation.y, glm::vec3(0, 1, 0)) * mRot;
+
+	SetDirty();
+}
+
+void SimpleTransform::RotateAxis(const glm::vec3& aEulerAxisRotation) {
+	const glm::vec3 axisRotation = glm::radians(aEulerAxisRotation);
+
+	mRot = mRot * glm::angleAxis(axisRotation.x, glm::vec3(1, 0, 0));
+	mRot = glm::angleAxis(axisRotation.y, glm::vec3(0, 1, 0)) * mRot;
+	mRot = mRot * glm::angleAxis(axisRotation.z, glm::vec3(0, 0, 1));
+
+	SetDirty();
+}
+
+void SimpleTransform::SetLookAt(const glm::vec3& aPos, const glm::vec3& aLookAt, const glm::vec3& aUp) {
+	glm::mat4 lookAt = glm::lookAt(aPos, aLookAt, aUp);
+
+	SetRotation(glm::quat(glm::inverse(lookAt)));
+	SetPosition(aPos);
+}
+
+void SimpleTransform::Rotate(const glm::quat& aRotation) {
+	mRot *= aRotation;
+	SetDirty();
+}
+
+void SimpleTransform::SetDirty() {
+	mDirty = true;
+}
+
+void SimpleTransform::UpdateLocalMatrix() {
+	mLocalMatrix = glm::identity<glm::mat4>();
+
+	mLocalMatrix = glm::translate(mLocalMatrix, mPos);
+	mLocalMatrix *= glm::mat4_cast(mRot);
+	mLocalMatrix = glm::scale(mLocalMatrix, mScale);
+}
+
+void SimpleTransform::UpdateMatrix() {
+	UpdateLocalMatrix();
+
+	mDirty = false;
+
+	if(mUpdateCallback) {
+		mUpdateCallback(this);
+	}
+}
+
+
 Transform::~Transform() {
 	//reparent?
 	ASSERT(mChildren.size() == 0);
@@ -26,18 +109,6 @@ void Transform::Clear(bool aReparent /* = true*/) {
 		mParent->RemoveChild(this);
 		mParent = nullptr;
 	}
-}
-
-void Transform::SetMatrix(const glm::mat4& aMat) {
-	glm::vec3 scale;
-	glm::quat rotation;
-	glm::vec3 translation;
-	glm::vec3 skew;
-	glm::vec4 perspective;
-	glm::decompose(aMat, scale, rotation, translation, skew, perspective);
-	SetPosition(translation);
-	SetScale(scale);
-	SetRotation(glm::conjugate(rotation));
 }
 
 void Transform::SetWorldPosition(const glm::vec3& aPos) {
@@ -66,53 +137,6 @@ void Transform::SetWorldRotation(const glm::quat& aRot) {
 	} else {
 		SetRotation(aRot);
 	}
-}
-
-void Transform::CopyPosition(const Transform& aOther) {
-	SetPosition(aOther.GetLocalPosition());
-}
-
-void Transform::TranslateLocal(const glm::vec3& aTranslation) {
-	mPos += mRot * aTranslation;
-	SetDirty();
-}
-
-void Transform::RotateAxis(const float aAmount, const glm::vec3& aAxis) {
-	const float amount = glm::radians(aAmount);
-	mRot = mRot * glm::angleAxis(amount, aAxis);
-
-	SetDirty();
-}
-
-void Transform::RotateAxis(const glm::vec2& aEulerAxisRotation) {
-	const glm::vec2 axisRotation = glm::radians(aEulerAxisRotation);
-
-	mRot = mRot * glm::angleAxis(axisRotation.x, glm::vec3(1, 0, 0));
-	mRot = glm::angleAxis(axisRotation.y, glm::vec3(0, 1, 0)) * mRot;
-
-	SetDirty();
-}
-
-void Transform::RotateAxis(const glm::vec3& aEulerAxisRotation) {
-	const glm::vec3 axisRotation = glm::radians(aEulerAxisRotation);
-
-	mRot = mRot * glm::angleAxis(axisRotation.x, glm::vec3(1, 0, 0));
-	mRot = glm::angleAxis(axisRotation.y, glm::vec3(0, 1, 0)) * mRot;
-	mRot = mRot * glm::angleAxis(axisRotation.z, glm::vec3(0, 0, 1));
-
-	SetDirty();
-}
-
-void Transform::SetLookAt(const glm::vec3& aPos, const glm::vec3& aLookAt, const glm::vec3& aUp) {
-	glm::mat4 lookAt = glm::lookAt(aPos, aLookAt, aUp);
-
-	SetRotation(glm::quat(glm::inverse(lookAt)));
-	SetPosition(aPos);
-}
-
-void Transform::Rotate(const glm::quat& aRotation) {
-	mRot *= aRotation;
-	SetDirty();
 }
 
 glm::vec3 Transform::GetWorldPosition() {
@@ -161,26 +185,8 @@ bool Transform::IsChild(const Transform* aChild) const {
 	return false;
 }
 
-void Transform::SetDirty() {
-	//parfor loop for setting dirty? with mutex for reading dirty if loop is active?
-	//is it better to look upwards when checking for a dirty parent or to set all children to be dirty each time anything changes?
-
-	//only set self as dirty when using parent check
-#if !defined(DIRTY_CHECK_PARENT)
-	const int childCount = mChildren.size();
-	for(int i = 0; i < childCount; ++i) {
-		mChildren[i]->SetDirty();
-	}
-#endif
-	mDirty = true;
-}
-
 void Transform::UpdateMatrix() {
-	mLocalMatrix = glm::identity<glm::mat4>();
-
-	mLocalMatrix = glm::translate(mLocalMatrix, mPos);
-	mLocalMatrix *= glm::mat4_cast(mRot);
-	mLocalMatrix = glm::scale(mLocalMatrix, mScale);
+	UpdateLocalMatrix();
 
 	if(mParent != nullptr) {
 		//recursive Get world of parent till we reach the top

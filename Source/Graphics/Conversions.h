@@ -1,11 +1,12 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
+#include <Engine/Transform.h>
+
+#pragma region Assimp Conversions
 #include <assimp/types.h>
 
-#pragma region conversions
 static glm::vec2 AssimpToGlm(const aiVector2D& aAssimp) {
 	return glm::vec2(aAssimp.x, aAssimp.y);
 }
@@ -18,10 +19,52 @@ static glm::vec4 AssimpToGlm(const aiColor4D& aAssimp) {
 	return glm::vec4(aAssimp.r, aAssimp.g, aAssimp.b, aAssimp.a);
 }
 
-static glm::vec2 VulkanToGlm(const VkExtent2D& aVulkan){
-	return glm::vec2(aVulkan.width, aVulkan.height);
+#pragma endregion
+
+#pragma region Bullet3 Conversions
+#include <LinearMath/btTransform.h>
+#include <LinearMath/btVector3.h>
+#include <LinearMath/btQuaternion.h>
+
+static glm::vec3 BulletToGlm(const btVector3& aOther) {
+	return glm::vec3(aOther.getX(), aOther.getY(), aOther.getZ());
 }
 
+static glm::vec4 BulletToGlm(const btVector4& aOther) {
+	return glm::vec4(aOther.getX(), aOther.getY(), aOther.getZ(), aOther.getW());
+}
+
+static glm::quat BulletToGlm(const btQuaternion& aOther) {
+	return glm::quat(aOther.getW(), aOther.getX(), aOther.getY(), aOther.getZ());
+}
+
+static SimpleTransform BulletToGlm(const btTransform& aOther) {
+	const glm::vec3 position = BulletToGlm(aOther.getOrigin());
+	const glm::quat rotation = BulletToGlm(aOther.getRotation());
+	return SimpleTransform(position, glm::vec3(1.0f), rotation);
+}
+
+static btVector3 GlmToBullet(const glm::vec3& aOther) {
+	return btVector3(aOther.x, aOther.y, aOther.z);
+}
+
+static btQuaternion GlmToBullet(const glm::quat& aOther) {
+	return btQuaternion(aOther.x, aOther.y, aOther.z, aOther.w);
+}
+
+static btTransform GlmToBullet(const SimpleTransform& aOther) {
+	return btTransform(GlmToBullet(aOther.GetLocalRotation()), GlmToBullet(aOther.GetLocalPosition()));
+}
+
+
+#pragma endregion
+
+#pragma region Vulkan Conversions
+#include <vulkan/vulkan.h>
+
+static glm::vec2 VulkanToGlm(const VkExtent2D& aVulkan) {
+	return glm::vec2(aVulkan.width, aVulkan.height);
+}
 #pragma endregion
 
 #pragma region std::Format

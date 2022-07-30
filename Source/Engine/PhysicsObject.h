@@ -58,9 +58,6 @@ private:
 	//called whenever the transform is updated
 	void TranformUpdated(Transform* aTransform);
 
-	//creates a btTransform from the attached Transform class
-	const btTransform CreateBtTransform() const;
-
 	Transform* mTransformLink = nullptr;
 	btRigidBody* mRigidBodyLink = nullptr;
 	void* mOtherLink = nullptr;

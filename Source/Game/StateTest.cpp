@@ -259,6 +259,15 @@ void StateTest::StartUp() {
 	controllerTest1->SetMesh(handMesh);
 	controllerTest2->SetMesh(handMesh);
 	worldBase->SetMesh(referenceMesh);
+	{
+		//
+		mWorldBasePhysicsTest.AttachTransform(&worldBase->mLocation);
+		mWorldBasePhysicsTest.AttachOther(worldBase);
+		const float scale = 1.0f;
+		std::vector<SimpleTransform> transforms = {
+			SimpleTransform(glm::vec3(5, 0, 0), scale), SimpleTransform(glm::vec3(0, 5, 0), scale), SimpleTransform(glm::vec3(0, 0, -5), scale)};
+		gPhysics->AddingObjectsTestCompoundBoxs(&mWorldBasePhysicsTest, transforms);
+	}
 	for(int i = 0; i < numPhysicsObjects; i++) {
 		physicsModels[i]->SetMesh(physicsMesh);
 		physicsObjects[i].AttachTransform(&physicsModels[i]->mLocation);
@@ -489,12 +498,6 @@ void StateTest::Update() {
 			}
 		}
 #endif
-	}
-
-	if(referenceMesh->HasLoaded() && mWorldBasePhysicsTest.GetRigidBody() == nullptr) {
-		mWorldBasePhysicsTest.AttachTransform(&worldBase->mLocation);
-		mWorldBasePhysicsTest.AttachOther(worldBase);
-		gPhysics->AddingObjectsTestMesh(&mWorldBasePhysicsTest, referenceMesh);
 	}
 
 	if(gInput->WasKeyPressed(GLFW_KEY_SPACE)) {

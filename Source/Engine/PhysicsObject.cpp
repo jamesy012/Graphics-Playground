@@ -3,29 +3,7 @@
 #include <btBulletDynamicsCommon.h>
 
 #include "Transform.h"
-
-#pragma region conversions
-static glm::vec3 BulletToGlm(const btVector3& aOther) {
-	return glm::vec3(aOther.getX(), aOther.getY(), aOther.getZ());
-}
-
-static glm::vec4 BulletToGlm(const btVector4& aOther) {
-	return glm::vec4(aOther.getX(), aOther.getY(), aOther.getZ(), aOther.getW());
-}
-
-static glm::quat BulletToGlm(const btQuaternion& aOther) {
-	return glm::quat(aOther.getW(), aOther.getX(), aOther.getY(), aOther.getZ());
-}
-
-static btVector3 GlmToBullet(const glm::vec3& aOther) {
-	return btVector3(aOther.x, aOther.y, aOther.z);
-}
-
-static btQuaternion GlmToBullet(const glm::quat& aOther) {
-	return btQuaternion(aOther.x, aOther.y, aOther.z, aOther.w);
-}
-
-#pragma endregion
+#include "Graphics\Conversions.h"
 
 void PhysicsObject::AttachTransform(Transform* aTransform) {
 	ASSERT(mTransformLink == nullptr);
@@ -89,7 +67,7 @@ void PhysicsObject::ResetPhysics() const {
 void PhysicsObject::UpdateToPhysics() const {
 	ASSERT(IsValid());
 
-	const btTransform trans = CreateBtTransform();
+	const btTransform trans = GlmToBullet(*mTransformLink);
 	mRigidBodyLink->setWorldTransform(trans);
 }
 
@@ -108,7 +86,7 @@ void PhysicsObject::AddAttachment(btTypedConstraint* aNewAttachment) {
 
 #pragma region btMotionState overrides
 void PhysicsObject::getWorldTransform(btTransform& worldTrans) const {
-	worldTrans = CreateBtTransform();
+	worldTrans = GlmToBullet(*mTransformLink);
 }
 
 //Bullet only calls the update of worldtransform for active objects
@@ -128,11 +106,4 @@ void PhysicsObject::TranformUpdated(Transform* aTransform) {
 	////mViewMatrix = mTransform.GetWorldMatrix();
 	//
 	//mViewProjMatrix =  GetProjMatrix() * mViewMatrix;
-}
-
-const btTransform PhysicsObject::CreateBtTransform() const {
-	btTransform out;
-	out.setRotation(GlmToBullet(mTransformLink->GetLocalRotation()));
-	out.setOrigin(GlmToBullet(mTransformLink->GetLocalPosition()));
-	return out;
 }

@@ -10,6 +10,7 @@
 #include "PhysicsObject.h"
 #include "Transform.h"
 #include "Graphics/Mesh.h"
+#include "Graphics/Conversions.h"
 
 extern ContactStartedCallback gContactStartedCallback;
 
@@ -77,8 +78,11 @@ void Physics::Update() {
 	mCollisionsLastFrame = mDispatcher->getNumManifolds();
 	for(int j = mCollisionsLastFrame - 1; j >= 0; j--) {
 		const btPersistentManifold* manifold = mDispatcher->getManifoldByIndexInternal(j);
-		const btManifoldPoint& collisionPoint = manifold->getContactPoint(0);
-		const btVector3 position = collisionPoint.getPositionWorldOnB();
+		if(manifold->getNumContacts() != 0) {
+			const btManifoldPoint& collisionPoint = manifold->getContactPoint(0);
+			const btVector3 position = collisionPoint.getPositionWorldOnB();
+		}
+		//what does a manifold with 0 contacts mean??
 	}
 
 	for(int j = mDynamicsWorld->getNumCollisionObjects() - 1; j >= 0; j--) {
@@ -139,6 +143,42 @@ void Physics::AddingObjectsTestGround(PhysicsObject* aObject) {
 	mDynamicsWorld->addRigidBody(body);
 }
 
+class CompoundShapeHelper : public btCompoundShape {
+public:
+	explicit CompoundShapeHelper(bool enableDynamicAabbTree = true, const int initialChildCapacity = 0) :
+		btCompoundShape(enableDynamicAabbTree, initialChildCapacity) {};
+
+	~CompoundShapeHelper() override {
+		for(int i = 0; i < m_children.size(); i++) {
+			delete m_children[i].m_childShape;
+		}
+	};
+
+	void addChildShape(const SimpleTransform& localTransform, btCollisionShape* shape) {
+		btTransform transform = GlmToBullet(localTransform);
+		btCompoundShape::addChildShape(transform, shape);
+	}
+};
+
+void Physics::AddingObjectsTestCompoundBoxs(PhysicsObject* aObject, const std::vector<SimpleTransform>& aObjects) {
+	const size_t numObjects = aObjects.size();
+	//
+	CompoundShapeHelper* colShape = new CompoundShapeHelper(true, numObjects);
+
+	for(int i = 0; i < numObjects; i++) {
+		const SimpleTransform& object = aObjects[i];
+
+		const glm::vec3 scale = object.GetLocalScale() / 2.0f;
+		btCollisionShape* childShape = new btBoxShape(GlmToBullet(scale));
+		mCollisionShapes.push_back(childShape);
+
+		colShape->addChildShape(object, childShape);
+	}
+
+	mCollisionShapes.push_back(colShape);
+	AddRigidBody(aObject, colShape, 0.0f);
+}
+
 void Physics::AddingObjectsTestSphere(PhysicsObject* aObject) {
 	btCollisionShape* colShape = new btSphereShape(btScalar(aObject->GetTransform()->GetLocalScale().x / 2));
 	mCollisionShapes.push_back(colShape);
@@ -148,7 +188,7 @@ void Physics::AddingObjectsTestSphere(PhysicsObject* aObject) {
 
 void Physics::AddingObjectsTestBox(PhysicsObject* aObject) {
 	const glm::vec3 scale = aObject->GetTransform()->GetLocalScale() / 2.0f;
-	btCollisionShape* colShape = new btBoxShape(btVector3(scale.x, scale.y, scale.z));
+	btCollisionShape* colShape = new btBoxShape(GlmToBullet(scale));
 	mCollisionShapes.push_back(colShape);
 
 	AddRigidBody(aObject, colShape, 1.0f);
@@ -157,6 +197,7 @@ void Physics::AddingObjectsTestBox(PhysicsObject* aObject) {
 void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
 	btTriangleIndexVertexArray* meshInterface = new btTriangleIndexVertexArray();
 	btIndexedMesh part;
+	AABB aabb;
 
 	for(int i = 0; i < aMesh->GetNumMesh(); i++) {
 		part.m_vertexBase = (const unsigned char*)&aMesh->GetMesh(i).mVertices[0].mPos.x;
@@ -167,17 +208,22 @@ void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
 		part.m_triangleIndexBase = (const unsigned char*)aMesh->GetMesh(i).mIndices.data();
 		part.m_triangleIndexStride = sizeof(MeshIndex) * 3;
 		part.m_numTriangles = aMesh->GetMesh(i).mIndices.size() / 3;
-		part.m_indexType = PHY_INTEGER;
+		//part.m_indexType = PHY_INTEGER;
+		aabb.Expand(aMesh->GetMesh(i).mAABB);
 
-		meshInterface->addIndexedMesh(part, PHY_INTEGER);
+		meshInterface->addIndexedMesh(part, part.m_indexType);
 	}
-
+	meshInterface->setPremadeAabb(GlmToBullet(aabb.mMin), GlmToBullet(aabb.mMax));
 	bool useQuantizedAabbCompression = true;
 	btCollisionShape* colShape = new btBvhTriangleMeshShape(meshInterface, useQuantizedAabbCompression);
+	//btGImpactMeshShape;
+	//const Mesh::SubMesh& mesh = aMesh->GetMesh(0);
+	//const MeshVert* v = mesh.mVertices.data();
+	//btConvexHullShape* colShape = new btConvexHullShape((const btScalar*)v->mPos.x, mesh.mIndices.size(), sizeof(MeshVert));
 
 	glm::vec3 pos = aObject->GetTransform()->GetLocalPosition();
 	glm::vec3 scale = aObject->GetTransform()->GetLocalScale();
-	colShape->setLocalScaling(btVector3(btScalar(scale.x), btScalar(scale.y), btScalar(scale.z)));
+	colShape->setLocalScaling(GlmToBullet(scale));
 
 	mCollisionShapes.push_back(colShape);
 
@@ -238,8 +284,8 @@ void Physics::JoinTwoObject(PhysicsObject* aObject1, PhysicsObject* aObject2) {
 }
 
 PhysicsObject* Physics::Raycast(const glm::vec3& aPosition, const glm::vec3& aDirection, const float aLength) const {
-	const btVector3 rayFromWorld = btVector3(aPosition.x, aPosition.y, aPosition.z);
-	const btVector3 rayToWorld = rayFromWorld + btVector3(aDirection.x, aDirection.y, aDirection.z) * aLength;
+	const btVector3 rayFromWorld = GlmToBullet(aPosition);
+	const btVector3 rayToWorld = rayFromWorld + GlmToBullet(aDirection) * aLength;
 	btCollisionWorld::ClosestRayResultCallback result(rayFromWorld, rayToWorld);
 	mDynamicsWorld->rayTest(rayFromWorld, rayToWorld, result);
 	if(result.hasHit()) {
