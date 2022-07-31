@@ -116,7 +116,7 @@ void TinygltfLoader::ProcessScene(tinygltf::Model& aModel, tinygltf::Scene& aSce
 void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode, const glm::mat4& aMatrix) {
 
 	//also contains position information here
-	Transform nodeTransform;
+	SimpleTransform nodeTransform;
 	ASSERT(aNode.matrix.size() == 0 || aNode.matrix.size() == 16);
 	ASSERT(aNode.translation.size() == 3 || aNode.translation.size() == 0);
 	ASSERT(aNode.scale.size() == 3 || aNode.scale.size() == 0);
@@ -141,7 +141,7 @@ void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode,
 		// clang-format on
 		nodeTransform.SetMatrix(mat);
 	}
-	const glm::mat4 nodeMatrix = aMatrix * nodeTransform.GetWorldMatrix();
+	const glm::mat4 nodeMatrix = aMatrix * nodeTransform.GetLocalMatrix();
 
 	const int numChildren = aNode.children.size();
 	if(numChildren != 0) {

@@ -79,7 +79,7 @@ bool AssimpLoader::ProcessNode(const aiScene* aScene, const aiNode* aNode) {
 	transform.SetScale(glm::vec3(scale.x, scale.y, scale.z) / 100.0f);
 
 	for(uint16_t i = 0; i < aNode->mNumMeshes; i++) {
-		int meshId = aNode->mMeshes[aNode->mMeshes[i]];
+		int meshId = aNode->mMeshes[i];
 		//meshes_.push_back(this->processMesh(aScene, mesh));
 		this->ProcessMesh(aScene, aScene->mMeshes[meshId]);
 

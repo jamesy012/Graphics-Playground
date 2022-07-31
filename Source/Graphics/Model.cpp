@@ -40,34 +40,39 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 	for(int i = 0; i < numMesh; i++) {
 		const Mesh::SubMesh& mesh = mMesh->GetMesh(i);
 		MeshPCTest modelPC;
+		MaterialManager* matManager = gGraphics->GetMaterialManager();
+
+		//todo should be reference and not a copy
+		Mesh::MeshMaterialData material;
 		if(mesh.mMaterialID != -1) {
-			MaterialManager* matManager = gGraphics->GetMaterialManager();
-			const Mesh::MeshMaterialData& material = mMesh->GetMaterial(mesh.mMaterialID);
+			material = mMesh->GetMaterial(mesh.mMaterialID);
+		} else {
+			//material = Mesh::MeshMaterialData();
+		}
 
-			const auto ApplyTexture = [&matManager](unsigned int& aIndex, Image* aImage, Image* aDefault = CONSTANTS::IMAGE::gWhite) {
-				if(aImage && aImage->GetImageView()) {
-					matManager->PrepareTexture(aIndex, aImage);
-				} else {
-					matManager->PrepareTexture(aIndex, aDefault);
-				}
-			};
-
-			ApplyTexture(modelPC.mAlbedoTexture, material.mImage);
-			ApplyTexture(modelPC.mNormalTexture, material.mNormal, CONSTANTS::IMAGE::gChecker);
-			ApplyTexture(modelPC.mMetallicRoughnessTexture, material.mMetallicRoughnessTexture, CONSTANTS::IMAGE::gBlack);
-			if(mOverrideColor) {
-				modelPC.mColorFactor = mColorOverride;
+		const auto ApplyTexture = [&matManager](unsigned int& aIndex, Image* aImage, Image* aDefault = CONSTANTS::IMAGE::gWhite) {
+			if(aImage && aImage->GetImageView()) {
+				matManager->PrepareTexture(aIndex, aImage);
 			} else {
-				modelPC.mColorFactor = material.mColorFactor;
+				matManager->PrepareTexture(aIndex, aDefault);
 			}
-			modelPC.mMetallicRoughness = material.mMetallicRoughness;
-			modelPC.mNormalBC5 = material.mNormalBC5;
+		};
 
-			//
-			const VkDescriptorSet* textureSet = matManager->FinializeTextureSet();
-			if(textureSet) {
-				vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aLayout, 1, 1, textureSet, 0, nullptr);
-			}
+		ApplyTexture(modelPC.mAlbedoTexture, material.mImage);
+		ApplyTexture(modelPC.mNormalTexture, material.mNormal, CONSTANTS::IMAGE::gChecker);
+		ApplyTexture(modelPC.mMetallicRoughnessTexture, material.mMetallicRoughnessTexture, CONSTANTS::IMAGE::gBlack);
+		if(mOverrideColor) {
+			modelPC.mColorFactor = mColorOverride;
+		} else {
+			modelPC.mColorFactor = material.mColorFactor;
+		}
+		modelPC.mMetallicRoughness = material.mMetallicRoughness;
+		modelPC.mNormalBC5 = material.mNormalBC5;
+
+		//
+		const VkDescriptorSet* textureSet = matManager->FinializeTextureSet();
+		if(textureSet) {
+			vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aLayout, 1, 1, textureSet, 0, nullptr);
 		}
 		modelPC.mWorld = mLocation.GetWorldMatrix() * mesh.mMatrix;
 		vkCmdPushConstants(aBuffer, aLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(MeshPCTest), &modelPC);
