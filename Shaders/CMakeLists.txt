@@ -22,7 +22,7 @@ message("setting up shader compiling")
 message(STATUS "GLSL exe ${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE}")
 
 foreach(SHADER ${GLSL_SOURCE_FILES})
-  message(STATUS "SHADER -  ${SHADER}")
+  #message(STATUS "SHADER -  ${SHADER}")
   get_filename_component(FILE_NAME ${SHADER} NAME)
   get_filename_component(rel2 ${SHADER} ABSOLUTE)
   file(TO_CMAKE_PATH ${SHADER} rel)
@@ -32,14 +32,14 @@ foreach(SHADER ${GLSL_SOURCE_FILES})
 
   set(SPIRV_OUTPUT ${WORK_DIR_FOLDER}/${WORK_DIR_FOLDER_REL}/Shaders${SHADER_FOLDER})
 
-  message(STATUS "Input ${CMAKE_CURRENT_SOURCE_DIR}${SHADER}")
-  message(STATUS "SHADER_NAME ${SHADER_NAME}")
-  message(STATUS "SHADER_FOLDER ${SHADER_FOLDER}")
-  message(STATUS "SPIRV_OUTPUT ${SPIRV_OUTPUT}")
+  #message(STATUS "Input ${CMAKE_CURRENT_SOURCE_DIR}${SHADER}")
+  #message(STATUS "SHADER_NAME ${SHADER_NAME}")
+  #message(STATUS "SHADER_FOLDER ${SHADER_FOLDER}")
+  #message(STATUS "SPIRV_OUTPUT ${SPIRV_OUTPUT}")
 
   # set(SPIRV "${WORK_DIR_FOLDER}/${WORK_DIR_FOLDER_REL}/Shaders/${FILE_NAME}.spv")
   set(SPIRV "${WORK_DIR_FOLDER}/${WORK_DIR_FOLDER_REL}/Shaders${SHADER}.spv")
-  message(STATUS "compiling ${CMAKE_CURRENT_SOURCE_DIR}${SHADER} to ${SPIRV}")
+  #message(STATUS "Adding Shader Build ${CMAKE_CURRENT_SOURCE_DIR}${SHADER} to ${SPIRV}")
 
   file(MAKE_DIRECTORY "${WORK_DIR_FOLDER}/${WORK_DIR_FOLDER_REL}/Shaders${SHADER_FOLDER}")
 
@@ -66,10 +66,10 @@ foreach(SHADER ${GLSL_SOURCE_FILES})
                                     # happens, is there a better way for this?
   )
 
-  message(
-    STATUS
-      "${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V ${CMAKE_CURRENT_SOURCE_DIR}${SHADER} -o ${SPIRV} -g"
-  )
+  #message(
+  #  STATUS
+  #    "${Vulkan_GLSLANG_VALIDATOR_EXECUTABLE} -V ${CMAKE_CURRENT_SOURCE_DIR}${SHADER} -o ${SPIRV} -g"
+  #)
   list(APPEND SPIRV_BINARY_FILES ${SPIRV})
   list(APPEND GLSL_ABSO_BINARY_FILES ${CMAKE_CURRENT_SOURCE_DIR}${SHADER})
 endforeach()

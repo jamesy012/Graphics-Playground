@@ -265,7 +265,7 @@ void StateTest::StartUp() {
 		mWorldBasePhysicsTest.AttachOther(worldBase);
 		const float scale = 1.0f;
 		std::vector<SimpleTransform> transforms = {
-			SimpleTransform(glm::vec3(5, 0, 0), scale), SimpleTransform(glm::vec3(0, 5, 0), scale), SimpleTransform(glm::vec3(0, 0, -5), scale)};
+			SimpleTransform(glm::vec3(5, 0, 0), scale), SimpleTransform(glm::vec3(0, 5, 0), scale), SimpleTransform(glm::vec3(0, 0, 5), scale)};
 		gPhysics->AddingObjectsTestCompoundBoxs(&mWorldBasePhysicsTest, transforms);
 	}
 	for(int i = 0; i < numPhysicsObjects; i++) {
