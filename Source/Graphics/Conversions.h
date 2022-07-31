@@ -52,11 +52,13 @@ static btQuaternion GlmToBullet(const glm::quat& aOther) {
 	return btQuaternion(aOther.x, aOther.y, aOther.z, aOther.w);
 }
 
-static btTransform GlmToBullet(const SimpleTransform& aOther) {
+static btTransform TransformLocalToBullet(const SimpleTransform& aOther) {
 	return btTransform(GlmToBullet(aOther.GetLocalRotation()), GlmToBullet(aOther.GetLocalPosition()));
 }
 
-
+static btTransform TransformWorldToBullet(Transform& aOther) {
+	return btTransform(GlmToBullet(aOther.GetWorldRotation()), GlmToBullet(aOther.GetWorldPosition()));
+}
 #pragma endregion
 
 #pragma region Vulkan Conversions

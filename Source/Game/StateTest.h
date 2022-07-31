@@ -55,13 +55,14 @@ private:
 	Model* modelSceneTest;
 	Model* modelTest1;
 	Model* modelTest2;
-	Model* controllerTest1;
-	Model* controllerTest2;
+	Model* mControllerTest[2];
+	PhysicsObject mControllerPhysObj[2];
 	Model* worldBase;
 	PhysicsObject mWorldBasePhysicsTest;
 	static const int numPhysicsObjects = 100;
 	Model* physicsModels[numPhysicsObjects];
 	PhysicsObject physicsObjects[numPhysicsObjects];
+	class btTypedConstraint* mPhysicsLinks[numPhysicsObjects] = {nullptr};
 
 	MaterialBase meshTestBase;
 	Material meshMaterial;
@@ -86,6 +87,7 @@ private:
 	std::vector<PhyBall*> mPhyBalls;
 
 #if defined(ENABLE_XR)
+	Transform mVrCharacter;
 	Screenspace* vrMirrorPass;
 	bool updateControllers = true;
 #endif

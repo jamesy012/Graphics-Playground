@@ -163,17 +163,17 @@ glm::vec3 Transform::GetWorldScale() {
 
 glm::quat Transform::GetWorldRotation() {
 	CheckUpdate();
-	glm::vec3 scale;
-	glm::quat rotation;
-	glm::vec3 translation;
-	glm::vec3 skew;
-	glm::vec4 perspective;
-	glm::decompose(mWorldMatrix, scale, rotation, translation, skew, perspective);
-	return glm::conjugate(rotation);
+	//glm::vec3 scale;
+	//glm::quat rotation;
+	//glm::vec3 translation;
+	//glm::vec3 skew;
+	//glm::vec4 perspective;
+	//glm::decompose(mWorldMatrix, scale, rotation, translation, skew, perspective);
+	//return glm::conjugate(rotation);
 	//https://stackoverflow.com/a/68323550
-	//const glm::vec3 scale = GetWorldScale();
-	//const glm::mat3 rotMtx(glm::vec3(mWorldMatrix[0]) / scale[0], glm::vec3(mWorldMatrix[1]) / scale[1], glm::vec3(mWorldMatrix[2]) / scale[2]);
-	//return glm::quat_cast(rotMtx);
+	const glm::vec3 scale = GetWorldScale();
+	const glm::mat3 rotMtx(glm::vec3(mWorldMatrix[0]) / scale[0], glm::vec3(mWorldMatrix[1]) / scale[1], glm::vec3(mWorldMatrix[2]) / scale[2]);
+	return glm::quat_cast(rotMtx);
 }
 
 bool Transform::IsChild(const Transform* aChild) const {

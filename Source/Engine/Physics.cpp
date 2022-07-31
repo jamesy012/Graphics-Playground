@@ -155,7 +155,7 @@ public:
 	};
 
 	void addChildShape(const SimpleTransform& localTransform, btCollisionShape* shape) {
-		btTransform transform = GlmToBullet(localTransform);
+		btTransform transform = TransformLocalToBullet(localTransform);
 		btCompoundShape::addChildShape(transform, shape);
 	}
 };
@@ -256,14 +256,15 @@ void Physics::AddRigidBody(PhysicsObject* aObject, btCollisionShape* aShape, flo
 	aObject->UpdateToPhysics();
 
 	mDynamicsWorld->addRigidBody(body);
+	body->getBroadphaseProxy()->m_collisionFilterGroup;
 }
 
-void Physics::JoinTwoObject(PhysicsObject* aObject1, PhysicsObject* aObject2) {
+btTypedConstraint* Physics::JoinTwoObject(PhysicsObject* aObject1, PhysicsObject* aObject2) {
 	btPoint2PointConstraint* p2p = new btPoint2PointConstraint(*aObject1->GetRigidBody(),
 															   *aObject2->GetRigidBody(),
-															   btVector3(0, aObject1->GetTransform()->GetLocalScale().y / 2.0f, 0),
-															   btVector3(0, -aObject2->GetTransform()->GetLocalScale().y / 2.0f, 0));
-	//p2p->m_setting.m_damping = 0.0625;
+															   btVector3(0, aObject1->GetTransform()->GetLocalScale().y / 1.5f, 0),
+															   btVector3(0, -aObject2->GetTransform()->GetLocalScale().y / 1.5f, 0));
+	p2p->m_setting.m_damping = 0.0625;
 	//p2p->m_setting.m_impulseClamp = 0.95;
 	//p2p->m_setting.m_tau = 0.5f;
 	//p2p->m_setting.m_damping = 0.5f;
@@ -281,12 +282,20 @@ void Physics::JoinTwoObject(PhysicsObject* aObject1, PhysicsObject* aObject2) {
 	//btHingeConstraint* hinge = new btHingeConstraint(*aObject1->GetRigidBody(), *aObject2->GetRigidBody(), localA, localB);
 	//mDynamicsWorld->addConstraint(hinge);
 	//mDynamicsWorld->addAction();
+	return p2p;
+}
+
+void Physics::RemoveContraintTemp(btTypedConstraint* aConstraint) {
+	mDynamicsWorld->removeConstraint(aConstraint);
+	delete aConstraint;
 }
 
 PhysicsObject* Physics::Raycast(const glm::vec3& aPosition, const glm::vec3& aDirection, const float aLength) const {
 	const btVector3 rayFromWorld = GlmToBullet(aPosition);
 	const btVector3 rayToWorld = rayFromWorld + GlmToBullet(aDirection) * aLength;
 	btCollisionWorld::ClosestRayResultCallback result(rayFromWorld, rayToWorld);
+	result.m_collisionFilterGroup = (PhysicsFlags::Raycastable);
+	//result.m_collisionFilterMask &= ~(PhysicsFlags::Raycastable);
 	mDynamicsWorld->rayTest(rayFromWorld, rayToWorld, result);
 	if(result.hasHit()) {
 		const btRigidBody* body = btRigidBody::upcast(result.m_collisionObject);

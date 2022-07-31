@@ -247,7 +247,7 @@ public:
 	//Updates matrixies
 	glm::quat GetWorldRotation();
 	//Updates matrixies, converts quat to euler degrees
-	glm::quat GetWorldRotationEuler() {
+	glm::vec3 GetWorldRotationEuler() {
 		return glm::degrees(glm::eulerAngles(GetWorldRotation()));
 	}
 
@@ -255,6 +255,18 @@ public:
 	glm::mat4 GetWorldMatrix() {
 		CheckUpdate();
 		return mWorldMatrix;
+	}
+
+	
+	glm::vec3 GetWorldRight() {
+		return GetWorldRotation() * CONSTANTS::RIGHT;
+	}
+	glm::vec3 GetWorldUp() {
+		return GetWorldRotation() * CONSTANTS::UP;
+	}
+	//towards screen
+	glm::vec3 GetWorldForward() {
+		return GetWorldRotation() * CONSTANTS::FORWARD;
 	}
 
 	//todo give option to keep world position

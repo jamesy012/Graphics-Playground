@@ -22,6 +22,11 @@ void PhysicsObject::SetMass(const float& aNewMass) {
 	//}
 }
 
+void PhysicsObject::SetVelocity(const glm::vec3& aNewVelocity) {
+	ASSERT(IsValid());
+	mRigidBodyLink->setLinearVelocity(GlmToBullet(aNewVelocity));
+}
+
 void PhysicsObject::SetKinematic(bool aIsKinematic) {
 	ASSERT(IsValid());
 	int flags = mRigidBodyLink->getCollisionFlags();
@@ -33,9 +38,11 @@ void PhysicsObject::SetKinematic(bool aIsKinematic) {
 	mRigidBodyLink->setCollisionFlags(flags);
 }
 
-void PhysicsObject::SetVelocity(const glm::vec3& aNewVelocity) {
-	ASSERT(IsValid());
-	mRigidBodyLink->setLinearVelocity(GlmToBullet(aNewVelocity));
+void PhysicsObject::AddCollisionFlags(uint32_t aFlag) {
+	mRigidBodyLink->getBroadphaseProxy()->m_collisionFilterMask |= aFlag;
+}
+void PhysicsObject::RemoveCollisionFlags(uint32_t aFlag) {
+	mRigidBodyLink->getBroadphaseProxy()->m_collisionFilterMask &= ~(aFlag);
 }
 
 void PhysicsObject::UpdateFromPhysics() {
@@ -67,8 +74,44 @@ void PhysicsObject::ResetPhysics() const {
 void PhysicsObject::UpdateToPhysics() const {
 	ASSERT(IsValid());
 
-	const btTransform trans = GlmToBullet(*mTransformLink);
+	const btTransform trans = TransformWorldToBullet(*mTransformLink);
 	mRigidBodyLink->setWorldTransform(trans);
+
+	auto type = mRigidBodyLink->getCollisionShape()->getShapeType();
+	switch(type) {
+		case BOX_SHAPE_PROXYTYPE: {
+			btBoxShape* shape = (btBoxShape*)mRigidBodyLink->getCollisionShape();
+			const btVector3 scale = GlmToBullet(mTransformLink->GetLocalScale() / 2.0f);
+			//const btScalar margin = shape->getMargin();
+			//const btVector3 currMargin = (shape->getImplicitShapeDimensions() + btVector3(margin, margin, margin))*2;
+			//const btVector3 currScale = shape->getLocalScaling();
+			//shape->setLocalScaling(scale / (currScale * currMargin));
+			//shape->setLocalScaling(scale);
+			// 
+			//m_implicitShapeDimensions = (boxHalfExtents * m_localScaling) - margin;
+			shape->setImplicitShapeDimensions(scale);
+			shape->setSafeMargin(scale);
+			break;
+		}
+		case SPHERE_SHAPE_PROXYTYPE: {
+			btSphereShape* shape = (btSphereShape*)mRigidBodyLink->getCollisionShape();
+			const float scale = mTransformLink->GetLocalScale().x / 2.0f;
+			shape->setUnscaledRadius(scale);
+			break;
+		}
+		case COMPOUND_SHAPE_PROXYTYPE: {
+			btCompoundShape* shape = (btCompoundShape*)mRigidBodyLink->getCollisionShape();
+			const btVector3 scale = GlmToBullet(mTransformLink->GetLocalScale());
+			const btVector3 currScale = shape->getLocalScaling();
+			shape->setLocalScaling(scale / currScale);
+			break;
+		}
+		default:
+			ASSERT(false);
+			break;
+	}
+	//mRigidBodyLink->getCollisionShape()->setLocalScaling(GlmToBullet(mTransformLink->GetLocalScale()));
+	//mRigidBodyLink->getCollisionShape()->setLocalScaling(GlmToBullet(glm::vec3(0.9f)));
 }
 
 void PhysicsObject::AttachRigidBody(btRigidBody* aRigidBody) {
@@ -86,7 +129,7 @@ void PhysicsObject::AddAttachment(btTypedConstraint* aNewAttachment) {
 
 #pragma region btMotionState overrides
 void PhysicsObject::getWorldTransform(btTransform& worldTrans) const {
-	worldTrans = GlmToBullet(*mTransformLink);
+	worldTrans = TransformWorldToBullet(*mTransformLink);
 }
 
 //Bullet only calls the update of worldtransform for active objects

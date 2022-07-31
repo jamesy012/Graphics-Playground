@@ -361,10 +361,10 @@ void VRGraphics::FrameBegin(VkCommandBuffer aBuffer) {
 			ControllerInfo& handInfo = gHandInfo[i];
 			handInfo.mTrackpad = glm::vec2(trackpadXValue.currentState, trackpadYValue.currentState);
 			handInfo.mTrigger = grabValue.currentState;
-			handInfo.mActive = poseState.isActive;
 			PoseConvert(handLocation[i].pose, handInfo.mPose);
 			PositionConvert(handVeloity[i].linearVelocity, handInfo.mLinearVelocity);
 			PositionConvert(handVeloity[i].angularVelocity, handInfo.mAngularVelocity);
+			handInfo.mActive = glm::length(handInfo.mPose.mPos);
 		}
 	}
 }

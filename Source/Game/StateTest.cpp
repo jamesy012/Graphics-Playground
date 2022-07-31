@@ -82,8 +82,8 @@ void StateTest::Initalize() {
 	modelSceneTest = new Model();
 	modelTest1 = new Model();
 	modelTest2 = new Model();
-	controllerTest1 = new Model();
-	controllerTest2 = new Model();
+	mControllerTest[0] = new Model();
+	mControllerTest[1] = new Model();
 	worldBase = new Model();
 	for(int i = 0; i < numPhysicsObjects; i++) {
 		physicsModels[i] = new Model();
@@ -256,8 +256,8 @@ void StateTest::StartUp() {
 
 	modelTest1->SetMesh(meshTest);
 	modelTest2->SetMesh(meshTest);
-	controllerTest1->SetMesh(handMesh);
-	controllerTest2->SetMesh(handMesh);
+	mControllerTest[0]->SetMesh(handMesh);
+	mControllerTest[1]->SetMesh(handMesh);
 	worldBase->SetMesh(referenceMesh);
 	{
 		//
@@ -270,14 +270,12 @@ void StateTest::StartUp() {
 	}
 	for(int i = 0; i < numPhysicsObjects; i++) {
 		physicsModels[i]->SetMesh(physicsMesh);
-		physicsObjects[i].AttachTransform(&physicsModels[i]->mLocation);
-		physicsObjects[i].AttachOther(physicsModels[i]);
-		gPhysics->AddingObjectsTestSphere(&physicsObjects[i]);
-		if(i != 0) {
-			gPhysics->JoinTwoObject(&physicsObjects[i - 1], &physicsObjects[i]);
-		}
 		physicsModels[i]->mOverrideColor = true;
 		physicsModels[i]->mColorOverride = glm::vec4(glm::vec3(1.0f - (i / (float)numPhysicsObjects)), 1.0f);
+
+		physicsObjects[i].AttachTransform(&physicsModels[i]->mLocation);
+		physicsObjects[i].AttachOther(physicsModels[i]);
+		gPhysics->AddingObjectsTestBox(&physicsObjects[i]);
 	}
 	physicsObjects[numPhysicsObjects - 1].SetMass(0.0f);
 	physicsObjects[numPhysicsObjects - 1].SetKinematic(true);
@@ -289,17 +287,31 @@ void StateTest::StartUp() {
 	mGroundTransform.SetScale(glm::vec3(50));
 	mGroundPlane.AttachTransform(&mGroundTransform);
 	gPhysics->AddingObjectsTestGround(&mGroundPlane);
+	mGroundPlane.RemoveCollisionFlags(PhysicsFlags::Raycastable);
 
 	modelSceneTest->SetMesh(meshSceneTest);
 
 	modelTest1->mLocation.Set(glm::vec3(0, 0, 0), 1.0f, &mRootTransform);
 
 	gEngine->SetMainCamera(&camera);
-	camera.mTransform.SetPosition(glm::vec3(8.0f, 0.2f, 0.0f));
-	controllerTest1->mLocation.SetParent(&camera.mTransform);
-	controllerTest2->mLocation.SetParent(&camera.mTransform);
-	controllerTest1->mLocation.SetScale(0);
-	controllerTest2->mLocation.SetScale(0);
+#if defined(ENABLE_XR)
+	mVrCharacter.SetPosition(glm::vec3(8.0f, 0.2f, 0.0f));
+	camera.mTransform.SetParent(&mVrCharacter);
+	mControllerTest[0]->mLocation.SetParent(&mVrCharacter);
+	mControllerTest[0]->mLocation.SetScale(0);
+	mControllerTest[1]->mLocation.SetParent(&mVrCharacter);
+	mControllerTest[1]->mLocation.SetScale(0);
+	{
+		//SimpleTransform offset = SimpleTransform(glm::vec3(0, 0, -5), 10.0f);
+		//mControllerPhysObj[0].AttachTransform(&mControllerTest[0]->mLocation);
+		//gPhysics->AddingObjectsTestCompoundBoxs(&mControllerPhysObj[0], {offset});
+		//mControllerPhysObj[0].SetMass(0.0f);
+		//mControllerPhysObj[1].AttachTransform(&mControllerTest[1]->mLocation);
+		//gPhysics->AddingObjectsTestCompoundBoxs(&mControllerPhysObj[1], {offset});
+		//mControllerPhysObj[1].SetMass(0.0f);
+	}
+#endif
+
 	//Xr does not need to respond to resize messages
 	//it's fov comes from XR land
 #if !defined(ENABLE_XR)
@@ -471,36 +483,39 @@ void StateTest::Update() {
 		//}
 #if defined(ENABLE_XR)
 		if(updateControllers) {
-			Transform* controllerTransforms[2] = {&controllerTest1->mLocation, &controllerTest2->mLocation};
 			for(int i = 0; i < VRGraphics::Side::COUNT; i++) {
 				VRGraphics::ControllerInfo info;
 				gVrGraphics->GetHandInfo((VRGraphics::Side)i, info);
 
 				//rotate camera based on trackpad
-				camera.mTransform.RotateAxis(-info.mTrackpad.x, CONSTANTS::UP);
+				mVrCharacter.RotateAxis(-info.mTrackpad.x, CONSTANTS::UP);
 
 				//move camera based on trigger
 				glm::vec3 cameraMovement = glm::vec3(0);
 				if(info.mTrigger > 0) {
 					cameraMovement = glm::vec4(info.mLinearVelocity, 1) * -info.mTrigger;
-					camera.mTransform.TranslateLocal(cameraMovement);
+					mVrCharacter.TranslateLocal(cameraMovement);
 				}
 
 				//move controller
 				if(info.mActive) {
-					controllerTransforms[i]->SetPosition(info.mPose.mPos + (-cameraMovement));
-					controllerTransforms[i]->SetRotation(info.mPose.mRot);
-					controllerTransforms[i]->SetScale(1.0f);
-
+					mControllerTest[i]->mLocation.SetPosition(info.mPose.mPos + (-cameraMovement));
+					mControllerTest[i]->mLocation.SetRotation(info.mPose.mRot);
+					if(i == 0) {
+						mControllerTest[i]->mLocation.SetScale(glm::vec3(-1.0f, 1.0f, 1.0f));
+					} else {
+						mControllerTest[i]->mLocation.SetScale(1.0f);
+					}
+					//mControllerPhysObj[i].UpdateToPhysics();
 				} else {
-					controllerTransforms[i]->SetScale(0.0f);
+					mControllerTest[i]->mLocation.SetScale(0.0f);
 				}
 			}
 		}
 #endif
 	}
 
-	if(gInput->WasKeyPressed(GLFW_KEY_SPACE)) {
+	if(gInput->WasKeyPressed(GLFW_KEY_SPACE) || gInput->WasMouseButtonPressed(GLFW_MOUSE_BUTTON_1)) {
 		mPhyBalls.push_back(new PhyBall());
 		PhyBall& pyobj = *mPhyBalls.back();
 		pyobj.model = new Model();
@@ -510,19 +525,41 @@ void StateTest::Update() {
 		pyobj.pyObj.AttachTransform(&pyobj.model->mLocation);
 		pyobj.pyObj.AttachOther(pyobj.model);
 		gPhysics->AddingObjectsTestBox(&pyobj.pyObj);
-		pyobj.pyObj.SetVelocity(camera.mTransform.GetForward() * -50.0f);
+		if(gInput->WasMouseButtonPressed(GLFW_MOUSE_BUTTON_1)) {
+			int width, height;
+			gEngine->GetWindow()->GetSize(&width, &height);
+			const glm::vec3 dir = camera.GetWorldDirFromScreen(gInput->GetMousePos(), glm::vec2(width, height));
+			pyobj.pyObj.SetVelocity(dir * 50.0f);
+		} else {
+			pyobj.pyObj.SetVelocity(camera.mTransform.GetForward() * -50.0f);
+		}
 		pyobj.model->mOverrideColor = true;
 		pyobj.model->mColorOverride = glm::vec4(1.0f, 0, 0, 1);
 	}
 
 	{
-
+		PhysicsObject* obj = nullptr;
+#if defined(ENABLE_XR)
+		VRGraphics::ControllerInfo info;
+		for(int i = 0; i < VRGraphics::Side::COUNT; i++) {
+			gVrGraphics->GetHandInfo((VRGraphics::Side)i, info);
+			if(info.mActive) {
+				obj = gPhysics->Raycast(mControllerTest[i]->mLocation.GetWorldPosition(), -mControllerTest[i]->mLocation.GetWorldForward(), 1000.0f);
+				mControllerTest[(i + 1) % 2]->mLocation.SetWorldPosition(mControllerTest[i]->mLocation.GetWorldPosition() +
+																		 -mControllerTest[i]->mLocation.GetWorldForward());
+				//mControllerTest[(i + 1) % 2]->mLocation.SetWorldRotation(-mControllerTest[i]->mLocation.GetWorldForward());
+				mControllerTest[(i + 1) % 2]->mLocation.SetScale(0.5f);
+				break;
+			}
+		}
+#else
 		int width, height;
 		gEngine->GetWindow()->GetSize(&width, &height);
 
 		const glm::vec3 viewDir = camera.GetWorldDirFromScreen(gInput->GetMousePos(), glm::vec2(width, height));
 
-		PhysicsObject* obj = gPhysics->Raycast(camera.mTransform.GetWorldPosition(), viewDir, 1000.0f);
+		obj = gPhysics->Raycast(camera.mTransform.GetWorldPosition(), viewDir, 1000.0f);
+#endif
 		if(obj) {
 			mSelectedModel = (Model*)obj->GetOther();
 		} else {
@@ -556,9 +593,9 @@ void StateTest::Render() {
 		modelTest2->Render(buffer, meshPipeline->GetLayout());
 	}
 	//Hand 1
-	controllerTest1->Render(buffer, meshPipeline->GetLayout());
+	mControllerTest[0]->Render(buffer, meshPipeline->GetLayout());
 	//Hand 2
-	controllerTest2->Render(buffer, meshPipeline->GetLayout());
+	mControllerTest[1]->Render(buffer, meshPipeline->GetLayout());
 	//world base reference
 	worldBase->Render(buffer, meshPipeline->GetLayout());
 	for(int i = 0; i < numPhysicsObjects; i++) {
@@ -574,6 +611,18 @@ void StateTest::Render() {
 	if(mSelectedModel != 0) {
 		mSelectMeshRenderPass->Begin(buffer, *mSelectMeshFramebuffer);
 		mSelectMeshPipeline->Begin(buffer);
+
+		vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mSelectMeshPipeline->GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
+		if(gGraphics->GetMaterialManager()->IsInLargeArrayMode()) {
+			vkCmdBindDescriptorSets(buffer,
+									VK_PIPELINE_BIND_POINT_GRAPHICS,
+									mSelectMeshPipeline->GetLayout(),
+									1,
+									1,
+									gGraphics->GetMaterialManager()->GetMainTextureSet(),
+									0,
+									nullptr);
+		}
 
 		//glm::vec2 viewportMin = VulkanToGlm(mSelectMeshFramebuffer->GetSize()) * -0.2f;
 		//glm::vec2 viewportMax = VulkanToGlm(mSelectMeshFramebuffer->GetSize()) * 1.4f;
@@ -623,10 +672,10 @@ void StateTest::Finish() {
 	delete modelTest1;
 	modelTest2->Destroy();
 	delete modelTest2;
-	controllerTest1->Destroy();
-	delete controllerTest1;
-	controllerTest2->Destroy();
-	delete controllerTest2;
+	mControllerTest[0]->Destroy();
+	delete mControllerTest[0];
+	mControllerTest[1]->Destroy();
+	delete mControllerTest[1];
 	worldBase->Destroy();
 	delete worldBase;
 	for(int i = 0; i < numPhysicsObjects; i++) {
@@ -674,6 +723,7 @@ void StateTest::Finish() {
 	delete fbImage;
 
 #if defined(ENABLE_XR)
+	mVrCharacter.Clear(true);
 	vrMirrorPass->Destroy();
 	delete vrMirrorPass;
 #endif
@@ -694,13 +744,23 @@ void StateTest::ChangeMesh(int aIndex) {
 void StateTest::SetupPhysicsObjects() {
 	float offset = 10.0f;
 	for(int i = 0; i < numPhysicsObjects; i++) {
+		if(mPhysicsLinks[i]) {
+			gPhysics->RemoveContraintTemp(mPhysicsLinks[i]);
+			mPhysicsLinks[i] = nullptr;
+		}
+		physicsObjects[i].RemoveAttachmentsTemp();
+	}
+	for(int i = 0; i < numPhysicsObjects; i++) {
 		float scale = 0.5f + rand() % 1000 / 2000.0f;
 		if(i == 0 || i == numPhysicsObjects - 1) {
 			scale = 0.1f;
 		}
-		offset += ((rand() % 1000 / 1000.0f) * 0.5f) + scale / 2;
+		offset += ((rand() % 1000 / 1000.0f) * 0.5f) + scale;
 		physicsModels[i]->mLocation.SetPosition(glm::vec3((rand() % 1000 / 1000.0f) * 1.0f, offset, (rand() % 1000 / 1000.0f) * 1.0f));
 		physicsModels[i]->mLocation.SetScale(scale);
+		if(i != 0) {
+			mPhysicsLinks[i] = gPhysics->JoinTwoObject(&physicsObjects[i - 1], &physicsObjects[i]);
+		}
 		physicsObjects[i].ResetPhysics();
 	}
 }
