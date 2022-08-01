@@ -75,6 +75,7 @@ void Model::Render(VkCommandBuffer aBuffer, VkPipelineLayout aLayout) {
 			vkCmdBindDescriptorSets(aBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, aLayout, 1, 1, textureSet, 0, nullptr);
 		}
 		modelPC.mWorld = mLocation.GetWorldMatrix() * mesh.mMatrix;
+		//modelPC.mWorld = mLocation.GetWorldMatrix() * mesh.mTransform.GetLocalMatrixSlow();
 		vkCmdPushConstants(aBuffer, aLayout, VK_SHADER_STAGE_ALL_GRAPHICS, 0, sizeof(MeshPCTest), &modelPC);
 		mMesh->QuickTempRender(aBuffer, i);
 	}

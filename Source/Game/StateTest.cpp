@@ -92,6 +92,7 @@ void StateTest::Initalize() {
 	vrMirrorPass = new Screenspace();
 #endif
 }
+
 void StateTest::StartUp() {
 	//move to engine/graphics?
 #if defined(ENABLE_XR)
@@ -158,7 +159,7 @@ void StateTest::StartUp() {
 		mSelectMeshFramebuffer->Create(*mSelectMeshRenderPass, "Select Mesh FB");
 	};
 	CreateSizeDependentRenderObjects();
-	gGraphics->mResizeMessage.push_back(CreateSizeDependentRenderObjects);
+	gGraphics->mResizeMessage.AddCallback(CreateSizeDependentRenderObjects);
 
 	//SCREEN SPACE TEST
 	//used to copy fbImage to backbuffer
@@ -194,7 +195,7 @@ void StateTest::StartUp() {
 		ssTest->GetMaterial(0).SetImages(*fbImage, 0, 0);
 	};
 	SetupSSImages();
-	gGraphics->mResizeMessage.push_back(SetupSSImages);
+	gGraphics->mResizeMessage.AddCallback(SetupSSImages);
 
 	//Mesh Test
 	meshTest->LoadMesh(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_5.fbx",
@@ -321,7 +322,7 @@ void StateTest::StartUp() {
 		camera.SetFov(camera.GetFovDegrees(), aspect);
 	};
 	SetupCameraAspect();
-	gGraphics->mResizeMessage.push_back(SetupCameraAspect);
+	gGraphics->mResizeMessage.AddCallback(SetupCameraAspect);
 #endif
 
 	//lighting test
@@ -515,23 +516,44 @@ void StateTest::Update() {
 #endif
 	}
 
+	static bool scenePhysicsTest = false;
+	if(meshSceneTest->HasLoaded() && meshSceneTest->GetNumMesh() != 0) {
+		if(scenePhysicsTest == false) {
+	        scenePhysicsTest = true;
+			if(modelScenePhysicsObj.GetTransform() == nullptr) {
+				modelScenePhysicsObj.AttachTransform(&modelSceneTest->mLocation);
+				modelScenePhysicsObj.AttachOther(modelSceneTest);
+			}
+
+            //modelSceneTest->SetMesh(physicsMesh);
+			//gPhysics->AddingObjectsTestMesh(&modelScenePhysicsObj, physicsMesh);
+			gPhysics->AddingObjectsTestMesh(&modelScenePhysicsObj, meshSceneTest);
+		}
+	} else {
+		if(modelScenePhysicsObj.GetRigidBody() != nullptr) {
+			gPhysics->RemovePhysicsObject(&modelScenePhysicsObj);
+		}
+		scenePhysicsTest = false;
+	}
+
 	if(gInput->WasKeyPressed(GLFW_KEY_SPACE) || gInput->WasMouseButtonPressed(GLFW_MOUSE_BUTTON_1)) {
 		mPhyBalls.push_back(new PhyBall());
 		PhyBall& pyobj = *mPhyBalls.back();
 		pyobj.model = new Model();
 		pyobj.model->SetMesh(physicsMesh);
-		pyobj.model->mLocation.CopyPosition(camera.mTransform);
-		pyobj.model->mLocation.SetScale(1.5f);
+		pyobj.model->mLocation.CopyTransform(camera.mTransform, Transform::POSITION);
+		pyobj.model->mLocation.SetScale(0.2f);
 		pyobj.pyObj.AttachTransform(&pyobj.model->mLocation);
 		pyobj.pyObj.AttachOther(pyobj.model);
 		gPhysics->AddingObjectsTestBox(&pyobj.pyObj);
+        const float speed = 5.0f;
 		if(gInput->WasMouseButtonPressed(GLFW_MOUSE_BUTTON_1)) {
 			int width, height;
 			gEngine->GetWindow()->GetSize(&width, &height);
 			const glm::vec3 dir = camera.GetWorldDirFromScreen(gInput->GetMousePos(), glm::vec2(width, height));
-			pyobj.pyObj.SetVelocity(dir * 50.0f);
+			pyobj.pyObj.SetVelocity(dir * speed);
 		} else {
-			pyobj.pyObj.SetVelocity(camera.mTransform.GetForward() * -50.0f);
+			pyobj.pyObj.SetVelocity(camera.mTransform.GetForward() * -speed);
 		}
 		pyobj.model->mOverrideColor = true;
 		pyobj.model->mColorOverride = glm::vec4(1.0f, 0, 0, 1);
@@ -561,7 +583,7 @@ void StateTest::Update() {
 		obj = gPhysics->Raycast(camera.mTransform.GetWorldPosition(), viewDir, 1000.0f);
 #endif
 		if(obj) {
-			mSelectedModel = (Model*)obj->GetOther();
+			//mSelectedModel = (Model*)obj->GetOther();
 		} else {
 			mSelectedModel = nullptr;
 		}
@@ -761,6 +783,7 @@ void StateTest::SetupPhysicsObjects() {
 		if(i != 0) {
 			mPhysicsLinks[i] = gPhysics->JoinTwoObject(&physicsObjects[i - 1], &physicsObjects[i]);
 		}
+        physicsObjects[i].SetMass(0.0f);
 		physicsObjects[i].ResetPhysics();
 	}
 }

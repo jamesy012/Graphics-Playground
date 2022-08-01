@@ -157,6 +157,7 @@ void TinygltfLoader::ProcessNode(tinygltf::Model& aModel, tinygltf::Node& aNode,
 	const int numMeshs = mMesh->mMesh.size();
 	for(size_t i = numMeshBefore; i < numMeshs; i++) {
 		mMesh->mMesh[i].mMatrix = nodeMatrix;
+		//mMesh->mMesh[i].mTransform.SetMatrix(nodeMatrix);
 	}
 }
 void TinygltfLoader::ProcessMesh(tinygltf::Model& aModel, tinygltf::Mesh& aMesh) {

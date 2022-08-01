@@ -1,11 +1,13 @@
 #pragma once
 
-#include <vector>
-#include <functional>
+//for Transform name
+//if splitting SimpleTransform can remove this
+#include <string>
 
 #include <glm/glm.hpp>
 #include <glm/ext.hpp>
 
+#include "Callback.h"
 #include "PlatformDebug.h"
 
 namespace CONSTANTS {
@@ -16,10 +18,16 @@ namespace CONSTANTS {
 } // namespace CONSTANTS
 
 class SimpleTransform {
-protected:
-	typedef std::function<void(SimpleTransform*)> TransformUpdatecallback;
-
 public:
+	enum Types
+	{
+		POSITION = 1 << 0,
+		SCALE = 1 << 1,
+		ROTATION = 1 << 2,
+		ALL = POSITION | SCALE | ROTATION,
+		//parents?
+	};
+
 	SimpleTransform() {};
 	SimpleTransform(const SimpleTransform& aOther) {
 		SetPosition(aOther.mPos);
@@ -77,7 +85,17 @@ public:
 	}
 	void SetMatrix(const glm::mat4& aMat);
 
-	void CopyPosition(const SimpleTransform& aOther);
+	void CopyTransform(const SimpleTransform& aOther, const Types aTypes = Types::ALL) {
+		if(Types::POSITION & aTypes) {
+			SetPosition(aOther.GetLocalPosition());
+		}
+		if(Types::SCALE & aTypes) {
+			SetScale(aOther.GetLocalScale());
+		}
+		if(Types::ROTATION & aTypes) {
+			SetRotation(aOther.GetLocalRotation());
+		}
+	}
 
 	void TranslateLocal(const glm::vec3& aTranslation);
 	void Rotate(const glm::quat& aRotation);
@@ -110,6 +128,13 @@ public:
 		return mLocalMatrix;
 	}
 
+	//does not use or set the cached Value
+	glm::mat4 GetLocalMatrixSlow() const {
+		glm::mat4 result;
+		CreateLocalMatrix(result);
+		return result;
+	}
+
 	glm::vec3 GetRight() const {
 		return mRot * CONSTANTS::RIGHT;
 	}
@@ -125,12 +150,8 @@ public:
 		return glm::dot(GetUp(), CONSTANTS::UP) > 0;
 	}
 
-	void SetDirty();
-
-	//calls the callback after global matrix is set
-	void SetUpdateCallback(TransformUpdatecallback aCallback) {
-		ASSERT(mUpdateCallback == nullptr);
-		mUpdateCallback = aCallback;
+	void SetDirty() {
+		mDirty = true;
 	}
 
 	//updates our world and local matrix if we are dirty
@@ -140,12 +161,16 @@ public:
 		}
 	}
 
+	//typedef std::function<void(SimpleTransform*)> TransformUpdatecallback;
+	//callback for when the matrix's are updated, so another system can respond to it
+	Callback<void(SimpleTransform*)> mUpdateCallback;
+
 protected:
 	virtual bool IsDirty() const {
 		return mDirty;
 	}
 
-	void UpdateLocalMatrix();
+	void CreateLocalMatrix(glm::mat4& aMatrix) const;
 
 	//updates world and local matrix and sets dirty flag to false
 	virtual void UpdateMatrix();
@@ -155,9 +180,6 @@ protected:
 	glm::quat mRot = glm::identity<glm::quat>();
 
 	glm::mat4 mLocalMatrix = glm::identity<glm::mat4>();
-
-	//callback for when the matrix's are updated, so another system can respond to it
-	TransformUpdatecallback mUpdateCallback = nullptr;
 
 	bool mDirty = false;
 };
@@ -257,7 +279,6 @@ public:
 		return mWorldMatrix;
 	}
 
-	
 	glm::vec3 GetWorldRight() {
 		return GetWorldRotation() * CONSTANTS::RIGHT;
 	}
@@ -267,6 +288,14 @@ public:
 	//towards screen
 	glm::vec3 GetWorldForward() {
 		return GetWorldRotation() * CONSTANTS::FORWARD;
+	}
+
+	SimpleTransform WorldToSimple() {
+		SimpleTransform st;
+		st.SetPosition(GetWorldPosition());
+		st.SetScale(GetWorldScale());
+		st.SetRotation(GetWorldRotation());
+		return st;
 	}
 
 	//todo give option to keep world position

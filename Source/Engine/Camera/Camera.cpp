@@ -1,7 +1,7 @@
 #include "Camera.h"
 
 Camera::Camera() {
-	mTransform.SetUpdateCallback(std::bind(&Camera::TranformUpdated, this, &mTransform));
+	mTransform.mUpdateCallback.AddCallback(std::bind(&Camera::TranformUpdated, this, &mTransform));
 	SetNearFar(0.1f, 10000.0f);
 	SetFov(60, 1.0f);
 }

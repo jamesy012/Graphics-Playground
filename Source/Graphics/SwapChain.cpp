@@ -297,5 +297,5 @@ void Swapchain::ResizeWindow() {
 	SetupImages();
 	SetupSyncObjects();
 
-	gGraphics->ResizeEvent();
+	gGraphics->mResizeMessage.Call();
 }

@@ -53,6 +53,8 @@ private:
 	Mesh* physicsMesh;
 
 	Model* modelSceneTest;
+    PhysicsObject modelScenePhysicsObj;
+
 	Model* modelTest1;
 	Model* modelTest2;
 	Model* mControllerTest[2];

@@ -7,6 +7,7 @@
 
 #include "Engine/FileIO.h"
 #include "Engine/AABB.h"
+//#include "Engine/Transform.h"
 
 #include "Buffer.h"
 #include "Engine/Job.h"
@@ -61,6 +62,7 @@ public:
 		AABB mAABB;
 
 		glm::mat4 mMatrix = glm::mat4(1);
+		//SimpleTransform mTransform;//should this be a normal Transform?
 
 		Buffer mVertexBuffer;
 		Buffer mIndexBuffer;

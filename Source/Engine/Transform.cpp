@@ -4,8 +4,8 @@
 
 #include "PlatformDebug.h"
 
-
 void SimpleTransform::SetMatrix(const glm::mat4& aMat) {
+	//possibly wrong?
 	glm::vec3 scale;
 	glm::quat rotation;
 	glm::vec3 translation;
@@ -14,11 +14,8 @@ void SimpleTransform::SetMatrix(const glm::mat4& aMat) {
 	glm::decompose(aMat, scale, rotation, translation, skew, perspective);
 	SetPosition(translation);
 	SetScale(scale);
-	SetRotation(glm::conjugate(rotation));
-}
-
-void SimpleTransform::CopyPosition(const SimpleTransform& aOther) {
-	SetPosition(aOther.GetLocalPosition());
+	//SetRotation(glm::conjugate(rotation));
+	SetRotation(rotation);
 }
 
 void SimpleTransform::TranslateLocal(const glm::vec3& aTranslation) {
@@ -64,28 +61,21 @@ void SimpleTransform::Rotate(const glm::quat& aRotation) {
 	SetDirty();
 }
 
-void SimpleTransform::SetDirty() {
-	mDirty = true;
-}
+void SimpleTransform::CreateLocalMatrix(glm::mat4& aMatrix) const {
+	aMatrix = glm::identity<glm::mat4>();
 
-void SimpleTransform::UpdateLocalMatrix() {
-	mLocalMatrix = glm::identity<glm::mat4>();
-
-	mLocalMatrix = glm::translate(mLocalMatrix, mPos);
-	mLocalMatrix *= glm::mat4_cast(mRot);
-	mLocalMatrix = glm::scale(mLocalMatrix, mScale);
+	aMatrix = glm::translate(mLocalMatrix, mPos);
+	aMatrix *= glm::mat4_cast(mRot);
+	aMatrix = glm::scale(mLocalMatrix, mScale);
 }
 
 void SimpleTransform::UpdateMatrix() {
-	UpdateLocalMatrix();
+	CreateLocalMatrix(mLocalMatrix);
 
 	mDirty = false;
 
-	if(mUpdateCallback) {
-		mUpdateCallback(this);
-	}
+	mUpdateCallback.Call(this);
 }
-
 
 Transform::~Transform() {
 	//reparent?
@@ -186,7 +176,7 @@ bool Transform::IsChild(const Transform* aChild) const {
 }
 
 void Transform::UpdateMatrix() {
-	UpdateLocalMatrix();
+	CreateLocalMatrix(mLocalMatrix);
 
 	if(mParent != nullptr) {
 		//recursive Get world of parent till we reach the top
@@ -197,9 +187,7 @@ void Transform::UpdateMatrix() {
 
 	mDirty = false;
 
-	if(mUpdateCallback) {
-		mUpdateCallback(this);
-	}
+	mUpdateCallback.Call(this);
 }
 
 void Transform::AddChild(Transform* aChild) {

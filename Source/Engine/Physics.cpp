@@ -195,11 +195,39 @@ void Physics::AddingObjectsTestBox(PhysicsObject* aObject) {
 }
 
 void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
-	btTriangleIndexVertexArray* meshInterface = new btTriangleIndexVertexArray();
-	btIndexedMesh part;
-	AABB aabb;
+	//btTriangleIndexVertexArray* meshInterface = new btTriangleIndexVertexArray();
+	//btIndexedMesh part;
+	//AABB aabb;
+	//
+	//for(int i = 0; i < aMesh->GetNumMesh(); i++) {
+	//	part.m_vertexBase = (const unsigned char*)&aMesh->GetMesh(i).mVertices[0].mPos.x;
+	//	part.m_vertexStride = sizeof(MeshVert);
+	//	part.m_numVertices = aMesh->GetMesh(i).mVertices.size();
+	//	part.m_vertexType = PHY_FLOAT;
+	//
+	//	part.m_triangleIndexBase = (const unsigned char*)aMesh->GetMesh(i).mIndices.data();
+	//	part.m_triangleIndexStride = sizeof(MeshIndex) * 3;
+	//	part.m_numTriangles = aMesh->GetMesh(i).mIndices.size() / 3;
+	//	//part.m_indexType = PHY_INTEGER;
+	//	aabb.Expand(aMesh->GetMesh(i).mAABB);
+	//
+	//	meshInterface->addIndexedMesh(part, part.m_indexType);
+	//}
+	//meshInterface->setPremadeAabb(GlmToBullet(aabb.mMin), GlmToBullet(aabb.mMax));
+	//bool useQuantizedAabbCompression = true;
+	//btCollisionShape* colShape = new btBvhTriangleMeshShape(meshInterface, useQuantizedAabbCompression);
 
-	for(int i = 0; i < aMesh->GetNumMesh(); i++) {
+	//btGImpactMeshShape;
+	//const Mesh::SubMesh& mesh = aMesh->GetMesh(0);
+	//const MeshVert* v = mesh.mVertices.data();
+	//btConvexHullShape* colShape = new btConvexHullShape((const btScalar*)v->mPos.x, mesh.mIndices.size(), sizeof(MeshVert));
+
+	int numObjects = aMesh->GetNumMesh();
+	CompoundShapeHelper* colShape = new CompoundShapeHelper(true, numObjects);
+	for(int i = 0; i < numObjects; i++) {
+		const Mesh::SubMesh& mesh = aMesh->GetMesh(i);
+
+		btIndexedMesh part;
 		part.m_vertexBase = (const unsigned char*)&aMesh->GetMesh(i).mVertices[0].mPos.x;
 		part.m_vertexStride = sizeof(MeshVert);
 		part.m_numVertices = aMesh->GetMesh(i).mVertices.size();
@@ -209,17 +237,32 @@ void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
 		part.m_triangleIndexStride = sizeof(MeshIndex) * 3;
 		part.m_numTriangles = aMesh->GetMesh(i).mIndices.size() / 3;
 		//part.m_indexType = PHY_INTEGER;
-		aabb.Expand(aMesh->GetMesh(i).mAABB);
+		//aabb.Expand(aMesh->GetMesh(i).mAABB);
 
+		btTriangleIndexVertexArray* meshInterface = new btTriangleIndexVertexArray();
 		meshInterface->addIndexedMesh(part, part.m_indexType);
+
+		SimpleTransform transform;
+		transform.SetMatrix(mesh.mMatrix);
+
+		const glm::vec3 scale = transform.GetLocalScale();
+		meshInterface->setScaling(GlmToBullet(scale));
+
+		meshInterface->setPremadeAabb(GlmToBullet(mesh.mAABB.mMin * scale), GlmToBullet(mesh.mAABB.mMax * scale));
+
+		//btScaledBvhTriangleMeshShape* scaledShape = new btScaledBvhTriangleMeshShape(meshInterface, GlmToBullet(scale));
+		//btCollisionShape* childShape = new btBoxShape(GlmToBullet(scale));
+		bool useQuantizedAabbCompression = true;
+		btCollisionShape* meshShape = new btBvhTriangleMeshShape(meshInterface, useQuantizedAabbCompression);
+
+		mCollisionShapes.push_back(meshShape);
+		colShape->addChildShape(transform, meshShape);
+		//btRigidBody* rb = AddRigidBody(nullptr, meshShape, 0.0f);
+		//const btTransform btTrans = TransformLocalToBullet(transform);
+		//rb->setWorldTransform(btTrans);
 	}
-	meshInterface->setPremadeAabb(GlmToBullet(aabb.mMin), GlmToBullet(aabb.mMax));
-	bool useQuantizedAabbCompression = true;
-	btCollisionShape* colShape = new btBvhTriangleMeshShape(meshInterface, useQuantizedAabbCompression);
-	//btGImpactMeshShape;
-	//const Mesh::SubMesh& mesh = aMesh->GetMesh(0);
-	//const MeshVert* v = mesh.mVertices.data();
-	//btConvexHullShape* colShape = new btConvexHullShape((const btScalar*)v->mPos.x, mesh.mIndices.size(), sizeof(MeshVert));
+
+	mCollisionShapes.push_back(colShape);
 
 	glm::vec3 pos = aObject->GetTransform()->GetLocalPosition();
 	glm::vec3 scale = aObject->GetTransform()->GetLocalScale();
@@ -230,7 +273,7 @@ void Physics::AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh) {
 	AddRigidBody(aObject, colShape, 0.0f);
 }
 
-void Physics::AddRigidBody(PhysicsObject* aObject, btCollisionShape* aShape, float mass) {
+btRigidBody* Physics::AddRigidBody(PhysicsObject* aObject, btCollisionShape* aShape, float mass) {
 	/// Create Dynamic Objects
 	btTransform startTransform;
 	startTransform.setIdentity();
@@ -252,11 +295,14 @@ void Physics::AddRigidBody(PhysicsObject* aObject, btCollisionShape* aShape, flo
 	//body->setAngularFactor(btVector3(1, 0, 1));
 	body->setDamping(0.0f, 0.2f);
 
-	aObject->AttachRigidBody(body);
-	aObject->UpdateToPhysics();
+	if(aObject) {
+		aObject->AttachRigidBody(body);
+		aObject->UpdateToPhysics();
+	}
 
 	mDynamicsWorld->addRigidBody(body);
-	body->getBroadphaseProxy()->m_collisionFilterGroup;
+
+	return body;
 }
 
 btTypedConstraint* Physics::JoinTwoObject(PhysicsObject* aObject1, PhysicsObject* aObject2) {
@@ -288,6 +334,13 @@ btTypedConstraint* Physics::JoinTwoObject(PhysicsObject* aObject1, PhysicsObject
 void Physics::RemoveContraintTemp(btTypedConstraint* aConstraint) {
 	mDynamicsWorld->removeConstraint(aConstraint);
 	delete aConstraint;
+}
+
+void Physics::RemovePhysicsObject(PhysicsObject* aObject) {
+	btRigidBody* rb = aObject->GetRigidBody();
+	mDynamicsWorld->removeRigidBody(rb);
+	aObject->AttachRigidBody(nullptr);
+	delete rb;
 }
 
 PhysicsObject* Physics::Raycast(const glm::vec3& aPosition, const glm::vec3& aDirection, const float aLength) const {

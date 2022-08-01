@@ -220,7 +220,7 @@ bool VulkanGraphics::Initalize() {
 				mFramebuffer[i].Create(mRenderPass, "Swapchain Framebuffer");
 			}
 		};
-		mResizeMessage.push_back(CreateFramebuffers);
+		mResizeMessage.AddCallback(CreateFramebuffers);
 		CreateFramebuffers();
 #if defined(ENABLE_XR)
 		mXrRenderPass.SetClearColors(clear);

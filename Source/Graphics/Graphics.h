@@ -12,6 +12,7 @@
 #include "Engine/IGraphicsBase.h"
 
 #include "PlatformDebug.h"
+#include "Engine/Callback.h"
 #include "Framebuffer.h"
 #include "Pipeline.h"
 #include "RenderPass.h"
@@ -154,14 +155,7 @@ public:
 		return mMaterialManager;
 	}
 
-	//start of messenging system
-	typedef std::function<void()> MessageCallback;
-	std::vector<MessageCallback> mResizeMessage;
-	void ResizeEvent() {
-		for(auto event: mResizeMessage) {
-			event();
-		}
-	}
+	Callback<void()> mResizeMessage;
 
 private:
 	bool CreateInstance();

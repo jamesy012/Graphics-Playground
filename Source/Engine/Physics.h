@@ -12,11 +12,13 @@ class btSequentialImpulseConstraintSolver;
 class btDiscreteDynamicsWorld;
 class btCollisionShape;
 class btTypedConstraint;
+class btRigidBody;
 
 class PhysicsObject;
 class Mesh;
 
-enum PhysicsFlags {
+enum PhysicsFlags
+{
 	//starting at 6 due to continuing CollisionFilterGroups from btBroadphaseProxy
 	Raycastable = (1 << 6),
 };
@@ -38,10 +40,11 @@ public:
 	void AddingObjectsTestSphere(PhysicsObject* aObject);
 	void AddingObjectsTestBox(PhysicsObject* aObject);
 	void AddingObjectsTestMesh(PhysicsObject* aObject, Mesh* aMesh);
-	void AddRigidBody(PhysicsObject* aObject, btCollisionShape* aShape, float mass);
+	btRigidBody* AddRigidBody(PhysicsObject* aObject, btCollisionShape* aShape, float mass);
 
 	btTypedConstraint* JoinTwoObject(PhysicsObject* aObject1, PhysicsObject* aObject2);
-	void RemoveContraintTemp(btTypedConstraint*aConstraint);
+	void RemoveContraintTemp(btTypedConstraint* aConstraint);
+	void RemovePhysicsObject(PhysicsObject* aObject);
 
 	PhysicsObject* Raycast(const glm::vec3& aPosition, const glm::vec3& aDirection, const float aLength) const;
 

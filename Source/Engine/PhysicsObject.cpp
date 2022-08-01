@@ -3,13 +3,14 @@
 #include <btBulletDynamicsCommon.h>
 
 #include "Transform.h"
-#include "Graphics\Conversions.h"
+#include "Graphics/Conversions.h"
 
 void PhysicsObject::AttachTransform(Transform* aTransform) {
 	ASSERT(mTransformLink == nullptr);
 	ASSERT(aTransform != nullptr);
 	mTransformLink = aTransform;
-	mTransformLink->SetUpdateCallback(std::bind(&PhysicsObject::TranformUpdated, this, aTransform));
+	mTransformLink->mUpdateCallback.AddCallback(std::bind(&PhysicsObject::TranformUpdated, this, aTransform));
+	//mTransformLink->mUpdateCallback.AddCallback(&PhysicsObject::TranformUpdated, this);
 }
 
 void PhysicsObject::SetMass(const float& aNewMass) {
@@ -87,7 +88,7 @@ void PhysicsObject::UpdateToPhysics() const {
 			//const btVector3 currScale = shape->getLocalScaling();
 			//shape->setLocalScaling(scale / (currScale * currMargin));
 			//shape->setLocalScaling(scale);
-			// 
+			//
 			//m_implicitShapeDimensions = (boxHalfExtents * m_localScaling) - margin;
 			shape->setImplicitShapeDimensions(scale);
 			shape->setSafeMargin(scale);
@@ -106,6 +107,13 @@ void PhysicsObject::UpdateToPhysics() const {
 			shape->setLocalScaling(scale / currScale);
 			break;
 		}
+		case TRIANGLE_MESH_SHAPE_PROXYTYPE: {
+			btBvhTriangleMeshShape* shape = (btBvhTriangleMeshShape*)mRigidBodyLink->getCollisionShape();
+			const btVector3 scale = GlmToBullet(mTransformLink->GetLocalScale());
+			const btVector3 currScale = shape->getLocalScaling();
+			shape->setLocalScaling(scale / currScale);
+			break;
+		}
 		default:
 			ASSERT(false);
 			break;
@@ -115,12 +123,18 @@ void PhysicsObject::UpdateToPhysics() const {
 }
 
 void PhysicsObject::AttachRigidBody(btRigidBody* aRigidBody) {
-	ASSERT(mRigidBodyLink == nullptr);
-	ASSERT(aRigidBody != nullptr);
+	//ASSERT(mRigidBodyLink == nullptr);
+	//ASSERT(aRigidBody != nullptr);
+	if(mRigidBodyLink) {
+		mRigidBodyLink->setUserPointer(nullptr);
+	}
+
 	mRigidBodyLink = aRigidBody;
 
-	ASSERT(mRigidBodyLink->getUserPointer() == nullptr);
-	mRigidBodyLink->setUserPointer(this);
+	if(aRigidBody) {
+		ASSERT(mRigidBodyLink->getUserPointer() == nullptr);
+		mRigidBodyLink->setUserPointer(this);
+	}
 }
 
 void PhysicsObject::AddAttachment(btTypedConstraint* aNewAttachment) {

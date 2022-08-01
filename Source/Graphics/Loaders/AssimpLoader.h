@@ -84,6 +84,7 @@ bool AssimpLoader::ProcessNode(const aiScene* aScene, const aiNode* aNode) {
 		this->ProcessMesh(aScene, aScene->mMeshes[meshId]);
 
 		mMesh->mMesh.back().mMatrix = transform.GetWorldMatrix();
+		//mMesh->mMesh.back().mTransform = transform.WorldToSimple();
 	}
 	for(uint16_t i = 0; i < aNode->mNumChildren; i++) {
 		this->ProcessNode(aScene, aNode->mChildren[i]);
