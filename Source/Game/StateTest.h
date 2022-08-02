@@ -32,8 +32,12 @@ private:
 	void ChangeMesh(int aIndex);
 	void SetupPhysicsObjects();
 
-	RenderPass* mainRenderPass;
-	Buffer* sceneDataBuffer;
+	RenderPass* mMainRenderPass;
+
+    MaterialBase mMeshSceneMaterialBase;
+	Buffer* mSceneDataBuffer;
+	SceneData mMeshSceneData;
+	Material mMeshSceneDataMaterial;
 
 	Framebuffer* mSelectMeshFramebuffer = nullptr;
 	RenderPass* mSelectMeshRenderPass = nullptr;
@@ -41,47 +45,40 @@ private:
 	Image* mSelectMeshDepthImage = nullptr;
 	Model* mSelectedModel = nullptr;
 
-	Image* fbImage;
-	Image* fbDepthImage;
-	Framebuffer* fb;
-	Pipeline* meshPipeline;
+	Image* mFbColorImage;
+	Image* mFbDepthImage;
+	Framebuffer* mMainFramebuffer;
+	Pipeline* mMeshPipeline;
 
-	Mesh* meshSceneTest;
-	Mesh* meshTest;
-	Mesh* handMesh;
-	Mesh* referenceMesh;
-	Mesh* physicsMesh;
+    //big model that has a physics collision
+	Mesh* mSceneMesh;
+	Model* mSceneModel;
+    PhysicsObject mScenePhysicsObject;
+	int mSceneSelectedMeshIndex = 0;
 
-	Model* modelSceneTest;
-    PhysicsObject modelScenePhysicsObj;
-
-	Model* modelTest1;
-	Model* modelTest2;
-	Model* mControllerTest[2];
+    //xr controllers
+	Mesh* mControllerMesh;
+	Model* mControllerModel[2];
 	PhysicsObject mControllerPhysObj[2];
-	Model* worldBase;
-	PhysicsObject mWorldBasePhysicsTest;
-	static const int numPhysicsObjects = 100;
-	Model* physicsModels[numPhysicsObjects];
-	PhysicsObject physicsObjects[numPhysicsObjects];
-	class btTypedConstraint* mPhysicsLinks[numPhysicsObjects] = {nullptr};
 
-	MaterialBase meshTestBase;
-	Material meshMaterial;
-	MaterialBase ssTestBase;
-	Screenspace* ssTest;
+    //XYZ marker in the world
+	Mesh* mWorldReferenceMesh;
+	Model* mWorldReferenceModel;
+	PhysicsObject mWorldBasePhysicsTest;
+
+    //common mesh for physics objects
+	Mesh* mPhysicsObjectMesh;
+	static const int cNumChainObjects = 100;
+	Model* mChainModels[cNumChainObjects];
+	PhysicsObject mChainPhysicsObjects[cNumChainObjects];
+	class btTypedConstraint* mChainPhysicsLinks[cNumChainObjects] = {nullptr};
+
+    //for coping mMainFramebuffer to the back buffer
+	MaterialBase mScreenspaceMaterialBase;
+	Screenspace* mScreenspaceBlit;
 
 	Transform mRootTransform;
-	FlyCamera camera;
-
-	PhysicsObject mGroundPlane;
-	Transform mGroundTransform;
-
-	SceneData sceneData;
-	int selectedMesh = 0;
-
-	bool mRenderTrees = false;
-
+	FlyCamera mFlyCamera;
 	struct PhyBall {
 		PhysicsObject pyObj;
 		Model* model;
@@ -90,7 +87,7 @@ private:
 
 #if defined(ENABLE_XR)
 	Transform mVrCharacter;
-	Screenspace* vrMirrorPass;
+	Screenspace* mVrBlitPass;
 	bool updateControllers = true;
 #endif
 };

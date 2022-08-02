@@ -65,43 +65,40 @@ void StateTest::Initalize() {
 	mSelectMeshPipeline = new Pipeline();
 	mSelectMeshDepthImage = new Image();
 
-	mainRenderPass = new RenderPass();
-	sceneDataBuffer = new Buffer();
-	fbImage = new Image();
-	fbDepthImage = new Image();
-	fb = new Framebuffer();
-	meshPipeline = new Pipeline();
-	ssTest = new Screenspace();
+	mMainRenderPass = new RenderPass();
+	mSceneDataBuffer = new Buffer();
+	mFbColorImage = new Image();
+	mFbDepthImage = new Image();
+	mMainFramebuffer = new Framebuffer();
+	mMeshPipeline = new Pipeline();
+	mScreenspaceBlit = new Screenspace();
 
-	meshSceneTest = new Mesh();
-	meshTest = new Mesh();
-	handMesh = new Mesh();
-	referenceMesh = new Mesh();
-	physicsMesh = new Mesh();
+	mSceneMesh = new Mesh();
+	mControllerMesh = new Mesh();
+	mWorldReferenceMesh = new Mesh();
+	mPhysicsObjectMesh = new Mesh();
 
-	modelSceneTest = new Model();
-	modelTest1 = new Model();
-	modelTest2 = new Model();
-	mControllerTest[0] = new Model();
-	mControllerTest[1] = new Model();
-	worldBase = new Model();
-	for(int i = 0; i < numPhysicsObjects; i++) {
-		physicsModels[i] = new Model();
+	mSceneModel = new Model();
+	mControllerModel[0] = new Model();
+	mControllerModel[1] = new Model();
+	mWorldReferenceModel = new Model();
+	for(int i = 0; i < cNumChainObjects; i++) {
+		mChainModels[i] = new Model();
 	}
 #if defined(ENABLE_XR)
-	vrMirrorPass = new Screenspace();
+	mVrBlitPass = new Screenspace();
 #endif
 }
 
 void StateTest::StartUp() {
 	//move to engine/graphics?
 #if defined(ENABLE_XR)
-	mainRenderPass->SetMultiViewSupport(true);
+	mMainRenderPass->SetMultiViewSupport(true);
 	mSelectMeshRenderPass->SetMultiViewSupport(true);
 #endif
-	mainRenderPass->AddColorAttachment(Graphics::GetDeafultColorFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
-	mainRenderPass->AddDepthAttachment(Graphics::GetDeafultDepthFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
-	mainRenderPass->Create("Main Render RP");
+	mMainRenderPass->AddColorAttachment(Graphics::GetDeafultColorFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
+	mMainRenderPass->AddDepthAttachment(Graphics::GetDeafultDepthFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
+	mMainRenderPass->Create("Main Render RP");
 
 	mSelectMeshRenderPass->AddColorAttachment(Graphics::GetDeafultColorFormat(), VK_ATTACHMENT_LOAD_OP_LOAD);
 	mSelectMeshRenderPass->AddDepthAttachment(Graphics::GetDeafultDepthFormat(), VK_ATTACHMENT_LOAD_OP_CLEAR);
@@ -115,7 +112,7 @@ void StateTest::StartUp() {
 		mainPassClear[0].color.float32[3] = 1.0f;
 		mainPassClear[1].depthStencil.depth = 1.0f;
 		mainPassClear[1].depthStencil.stencil = 0;
-		mainRenderPass->SetClearColors(mainPassClear);
+		mMainRenderPass->SetClearColors(mainPassClear);
 	}
 	{
 		std::vector<VkClearValue> selectModelClear(2);
@@ -127,15 +124,15 @@ void StateTest::StartUp() {
 	//FRAMEBUFFER TEST
 
 	auto CreateSizeDependentRenderObjects = [&]() {
-		fb->Destroy();
+		mMainFramebuffer->Destroy();
 		mSelectMeshFramebuffer->Destroy();
 
-		fbDepthImage->Destroy();
-		fbImage->Destroy();
-		fbImage->SetArrayLayers(gGraphics->GetNumActiveViews());
-		fbDepthImage->SetArrayLayers(gGraphics->GetNumActiveViews());
-		fbImage->CreateVkImage(Graphics::GetDeafultColorFormat(), gGraphics->GetDesiredSize(), true, "Main FB Image");
-		fbDepthImage->CreateVkImage(Graphics::GetDeafultDepthFormat(), gGraphics->GetDesiredSize(), true, "Main FB Depth Image");
+		mFbDepthImage->Destroy();
+		mFbColorImage->Destroy();
+		mFbColorImage->SetArrayLayers(gGraphics->GetNumActiveViews());
+		mFbDepthImage->SetArrayLayers(gGraphics->GetNumActiveViews());
+		mFbColorImage->CreateVkImage(Graphics::GetDeafultColorFormat(), gGraphics->GetDesiredSize(), true, "Main FB Image");
+		mFbDepthImage->CreateVkImage(Graphics::GetDeafultDepthFormat(), gGraphics->GetDesiredSize(), true, "Main FB Depth Image");
 
 		mSelectMeshDepthImage->Destroy();
 		mSelectMeshDepthImage->SetArrayLayers(gGraphics->GetNumActiveViews());
@@ -144,17 +141,17 @@ void StateTest::StartUp() {
 		//convert to correct layout
 		{
 			auto buffer = gGraphics->AllocateGraphicsCommandBuffer();
-			fbImage->SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-			fbDepthImage->SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+			mFbColorImage->SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+			mFbDepthImage->SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			mSelectMeshDepthImage->SetImageLayout(buffer, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 			gGraphics->EndGraphicsCommandBuffer(buffer);
 		}
 
-		//FB write to these images, following the layout from mainRenderPass
-		fb->AddImage(fbImage);
-		fb->AddImage(fbDepthImage);
-		fb->Create(*mainRenderPass, "Main Render FB");
-		mSelectMeshFramebuffer->AddImage(fbImage);
+		//FB write to these images, following the layout from mMainRenderPass
+		mMainFramebuffer->AddImage(mFbColorImage);
+		mMainFramebuffer->AddImage(mFbDepthImage);
+		mMainFramebuffer->Create(*mMainRenderPass, "Main Render FB");
+		mSelectMeshFramebuffer->AddImage(mFbColorImage);
 		mSelectMeshFramebuffer->AddImage(mSelectMeshDepthImage);
 		mSelectMeshFramebuffer->Create(*mSelectMeshRenderPass, "Select Mesh FB");
 	};
@@ -162,155 +159,144 @@ void StateTest::StartUp() {
 	gGraphics->mResizeMessage.AddCallback(CreateSizeDependentRenderObjects);
 
 	//SCREEN SPACE TEST
-	//used to copy fbImage to backbuffer
+	//used to copy mFbColorImage to backbuffer
 
-	ssTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-	//ssTestBase.AddBinding(1, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-	ssTestBase.Create();
-	ssTest->AddMaterialBase(&ssTestBase);
+	mScreenspaceMaterialBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+	//mScreenspaceMaterialBase.AddBinding(1, 1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
+	mScreenspaceMaterialBase.Create();
+	mScreenspaceBlit->AddMaterialBase(&mScreenspaceMaterialBase);
 	{
 		std::vector<VkClearValue> ssClear(1);
 		ssClear[0].color.float32[0] = 0.0f;
 		ssClear[0].color.float32[1] = 0.0f;
 		ssClear[0].color.float32[2] = 0.0f;
 		ssClear[0].color.float32[3] = 1.0f;
-		ssTest->SetClearColors(ssClear);
+		mScreenspaceBlit->SetClearColors(ssClear);
 	}
 #if defined(ENABLE_XR)
 	//xr needs the array version
-	ssTest->Create("/Shaders/Screenspace/ImageSingleArray.frag.spv", "ScreenSpace ImageCopy");
+	mScreenspaceBlit->Create("/Shaders/Screenspace/ImageSingleArray.frag.spv", "ScreenSpace ImageCopy");
 	//mirrors the left eye to the PC display
 
-	vrMirrorPass->mAttachmentFormat = gGraphics->GetSwapchainFormat();
-	vrMirrorPass->AddMaterialBase(&ssTestBase);
-	vrMirrorPass->Create("/Shaders/Screenspace/ImageTwoArray.frag.spv", "ScreenSpace Mirror ImageCopy");
+	mVrBlitPass->mAttachmentFormat = gGraphics->GetSwapchainFormat();
+	mVrBlitPass->AddMaterialBase(&mScreenspaceMaterialBase);
+	mVrBlitPass->Create("/Shaders/Screenspace/ImageTwoArray.frag.spv", "ScreenSpace Mirror ImageCopy");
 #else
 	//windows doesnt do multiview so just needs the non array version
-	ssTest->Create("/Shaders/Screenspace/ImageSingle.frag.spv", "ScreenSpace ImageCopy");
+	mScreenspaceBlit->Create("/Shaders/Screenspace/ImageSingle.frag.spv", "ScreenSpace ImageCopy");
 #endif
 	auto SetupSSImages = [&]() {
 #if defined(ENABLE_XR)
-		vrMirrorPass->GetMaterial(0).SetImages(*fbImage, 0, 0);
+		mVrBlitPass->GetMaterial(0).SetImages(*mFbColorImage, 0, 0);
 #endif
-		ssTest->GetMaterial(0).SetImages(*fbImage, 0, 0);
+		mScreenspaceBlit->GetMaterial(0).SetImages(*mFbColorImage, 0, 0);
 	};
 	SetupSSImages();
 	gGraphics->mResizeMessage.AddCallback(SetupSSImages);
 
-	//Mesh Test
-	meshTest->LoadMesh(std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/MapleTree_5.fbx",
-					   std::string(WORK_DIR_REL) + "/Assets/quanternius/tree/");
+	mControllerMesh->LoadMesh(std::string(WORK_DIR_REL) + "/Assets/handModel2.fbx");
 
-	handMesh->LoadMesh(std::string(WORK_DIR_REL) + "/Assets/handModel2.fbx");
+	mWorldReferenceMesh->LoadMesh(std::string(WORK_DIR_REL) + "/Assets/5m reference.fbx");
 
-	referenceMesh->LoadMesh(std::string(WORK_DIR_REL) + "/Assets/5m reference.fbx");
-
-	physicsMesh->LoadMesh(std::string(WORK_DIR_REL) + "/Assets/box.gltf");
+	mPhysicsObjectMesh->LoadMesh(std::string(WORK_DIR_REL) + "/Assets/box.gltf");
 
 	//inital load
-	ChangeMesh(selectedMesh);
+	ChangeMesh(mSceneSelectedMeshIndex);
 
-	meshPipeline->AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
-	meshPipeline->AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+	mMeshPipeline->AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+	mMeshPipeline->AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 	mSelectMeshPipeline->AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshSelect.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
 	mSelectMeshPipeline->AddShader(std::string(WORK_DIR_REL) + "/Shaders/MeshTest.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
 
 	{
-		meshPipeline->vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-		meshPipeline->vertexBinding.stride = sizeof(MeshVert);
-		meshPipeline->vertexAttribute = std::vector<VkVertexInputAttributeDescription>(4);
-		meshPipeline->vertexAttribute[0].location = 0;
-		meshPipeline->vertexAttribute[0].format = VK_FORMAT_R32G32B32_SFLOAT; //3
-		meshPipeline->vertexAttribute[0].offset = offsetof(MeshVert, mPos);
-		meshPipeline->vertexAttribute[1].location = 1;
-		meshPipeline->vertexAttribute[1].format = VK_FORMAT_R32G32B32_SFLOAT; //6
-		meshPipeline->vertexAttribute[1].offset = offsetof(MeshVert, mNorm);
-		meshPipeline->vertexAttribute[2].location = 2;
-		meshPipeline->vertexAttribute[2].format = VK_FORMAT_R32G32B32A32_SFLOAT; //10
-		meshPipeline->vertexAttribute[2].offset = offsetof(MeshVert, mColors[0]);
-		meshPipeline->vertexAttribute[3].location = 3;
-		meshPipeline->vertexAttribute[3].format = VK_FORMAT_R32G32_SFLOAT; //12
-		meshPipeline->vertexAttribute[3].offset = offsetof(MeshVert, mUVs[0]);
-		mSelectMeshPipeline->vertexBinding = meshPipeline->vertexBinding;
-		mSelectMeshPipeline->vertexAttribute = meshPipeline->vertexAttribute;
+		mMeshPipeline->vertexBinding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+		mMeshPipeline->vertexBinding.stride = sizeof(MeshVert);
+		mMeshPipeline->vertexAttribute = std::vector<VkVertexInputAttributeDescription>(4);
+		mMeshPipeline->vertexAttribute[0].location = 0;
+		mMeshPipeline->vertexAttribute[0].format = VK_FORMAT_R32G32B32_SFLOAT; //3
+		mMeshPipeline->vertexAttribute[0].offset = offsetof(MeshVert, mPos);
+		mMeshPipeline->vertexAttribute[1].location = 1;
+		mMeshPipeline->vertexAttribute[1].format = VK_FORMAT_R32G32B32_SFLOAT; //6
+		mMeshPipeline->vertexAttribute[1].offset = offsetof(MeshVert, mNorm);
+		mMeshPipeline->vertexAttribute[2].location = 2;
+		mMeshPipeline->vertexAttribute[2].format = VK_FORMAT_R32G32B32A32_SFLOAT; //10
+		mMeshPipeline->vertexAttribute[2].offset = offsetof(MeshVert, mColors[0]);
+		mMeshPipeline->vertexAttribute[3].location = 3;
+		mMeshPipeline->vertexAttribute[3].format = VK_FORMAT_R32G32_SFLOAT; //12
+		mMeshPipeline->vertexAttribute[3].offset = offsetof(MeshVert, mUVs[0]);
+		mSelectMeshPipeline->vertexBinding = mMeshPipeline->vertexBinding;
+		mSelectMeshPipeline->vertexAttribute = mMeshPipeline->vertexAttribute;
 	}
 
 	VkPushConstantRange meshPCRange {};
 	meshPCRange.size = sizeof(MeshPCTest);
 	meshPCRange.stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS;
-	meshPipeline->AddPushConstant(meshPCRange);
+	mMeshPipeline->AddPushConstant(meshPCRange);
 	mSelectMeshPipeline->AddPushConstant(meshPCRange);
 
-	sceneDataBuffer->Create(BufferType::UNIFORM, sizeof(SceneData), "Mesh Scene Uniform");
+	mSceneDataBuffer->Create(BufferType::UNIFORM, sizeof(SceneData), "Mesh Scene Uniform");
 
-	meshTestBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS);
-	meshTestBase.Create();
-	meshPipeline->AddMaterialBase(&meshTestBase);
-	meshPipeline->AddBindlessTexture();
-	meshPipeline->Create(mainRenderPass->GetRenderPass(), "Mesh");
-	mSelectMeshPipeline->AddMaterialBase(&meshTestBase);
+	mMeshSceneMaterialBase.AddBinding(0, 1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL_GRAPHICS);
+	mMeshSceneMaterialBase.Create();
+	mMeshPipeline->AddMaterialBase(&mMeshSceneMaterialBase);
+	mMeshPipeline->AddBindlessTexture();
+	mMeshPipeline->Create(mMainRenderPass->GetRenderPass(), "Mesh");
+	mSelectMeshPipeline->AddMaterialBase(&mMeshSceneMaterialBase);
 	mSelectMeshPipeline->AddBindlessTexture();
 	mSelectMeshPipeline->Create(mSelectMeshRenderPass->GetRenderPass(), "Select Mesh");
 
-	meshMaterial = meshTestBase.MakeMaterials()[0];
-	meshMaterial.SetBuffers(*sceneDataBuffer, 0, 0);
+	mMeshSceneDataMaterial = mMeshSceneMaterialBase.MakeMaterials()[0];
+	mMeshSceneDataMaterial.SetBuffers(*mSceneDataBuffer, 0, 0);
 
-	modelTest1->SetMesh(meshTest);
-	modelTest2->SetMesh(meshTest);
-	mControllerTest[0]->SetMesh(handMesh);
-	mControllerTest[1]->SetMesh(handMesh);
-	worldBase->SetMesh(referenceMesh);
+	mControllerModel[0]->SetMesh(mControllerMesh);
+	mControllerModel[1]->SetMesh(mControllerMesh);
+	mWorldReferenceModel->SetMesh(mWorldReferenceMesh);
 	{
 		//
-		mWorldBasePhysicsTest.AttachTransform(&worldBase->mLocation);
-		mWorldBasePhysicsTest.AttachOther(worldBase);
+		mWorldBasePhysicsTest.AttachTransform(&mWorldReferenceModel->mLocation);
+		mWorldBasePhysicsTest.AttachOther(mWorldReferenceModel);
 		const float scale = 1.0f;
 		std::vector<SimpleTransform> transforms = {
 			SimpleTransform(glm::vec3(5, 0, 0), scale), SimpleTransform(glm::vec3(0, 5, 0), scale), SimpleTransform(glm::vec3(0, 0, 5), scale)};
 		gPhysics->AddingObjectsTestCompoundBoxs(&mWorldBasePhysicsTest, transforms);
 	}
-	for(int i = 0; i < numPhysicsObjects; i++) {
-		physicsModels[i]->SetMesh(physicsMesh);
-		physicsModels[i]->mOverrideColor = true;
-		physicsModels[i]->mColorOverride = glm::vec4(glm::vec3(1.0f - (i / (float)numPhysicsObjects)), 1.0f);
+	for(int i = 0; i < cNumChainObjects; i++) {
+		mChainModels[i]->SetMesh(mPhysicsObjectMesh);
+		mChainModels[i]->mOverrideColor = true;
+		mChainModels[i]->mColorOverride = glm::vec4(glm::vec3(1.0f - (i / (float)cNumChainObjects)), 1.0f);
 
-		physicsObjects[i].AttachTransform(&physicsModels[i]->mLocation);
-		physicsObjects[i].AttachOther(physicsModels[i]);
-		gPhysics->AddingObjectsTestBox(&physicsObjects[i]);
+		mChainPhysicsObjects[i].AttachTransform(&mChainModels[i]->mLocation);
+		mChainPhysicsObjects[i].AttachOther(mChainModels[i]);
+		gPhysics->AddingObjectsTestBox(&mChainPhysicsObjects[i]);
 	}
-	physicsObjects[numPhysicsObjects - 1].SetMass(0.0f);
-	physicsObjects[numPhysicsObjects - 1].SetKinematic(true);
-	physicsObjects[0].SetKinematic(true);
-	physicsModels[numPhysicsObjects - 1]->mColorOverride = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
+	mChainPhysicsObjects[cNumChainObjects - 1].SetMass(0.0f);
+	mChainPhysicsObjects[cNumChainObjects - 1].SetKinematic(true);
+	//mChainPhysicsObjects[0].SetKinematic(true);
+	mChainModels[cNumChainObjects - 1]->mColorOverride = glm::vec4(1.0f, 1.0f, 0.0f, 1.0f);
 	SetupPhysicsObjects();
 
-	mGroundTransform.SetPosition(glm::vec3(0, -50, 0));
-	mGroundTransform.SetScale(glm::vec3(50));
-	mGroundPlane.AttachTransform(&mGroundTransform);
-	gPhysics->AddingObjectsTestGround(&mGroundPlane);
-	mGroundPlane.RemoveCollisionFlags(PhysicsFlags::Raycastable);
+	mSceneModel->SetMesh(mSceneMesh);
 
-	modelSceneTest->SetMesh(meshSceneTest);
-
-	modelTest1->mLocation.Set(glm::vec3(0, 0, 0), 1.0f, &mRootTransform);
-
-	gEngine->SetMainCamera(&camera);
+	gEngine->SetMainCamera(&mFlyCamera);
 #if defined(ENABLE_XR)
 	mVrCharacter.SetPosition(glm::vec3(8.0f, 0.2f, 0.0f));
 	camera.mTransform.SetParent(&mVrCharacter);
-	mControllerTest[0]->mLocation.SetParent(&mVrCharacter);
-	mControllerTest[0]->mLocation.SetScale(0);
-	mControllerTest[1]->mLocation.SetParent(&mVrCharacter);
-	mControllerTest[1]->mLocation.SetScale(0);
+	mControllerModel[0]->mLocation.SetParent(&mVrCharacter);
+	mControllerModel[0]->mLocation.SetScale(0);
+	mControllerModel[1]->mLocation.SetParent(&mVrCharacter);
+	mControllerModel[1]->mLocation.SetScale(0);
 	{
 		//SimpleTransform offset = SimpleTransform(glm::vec3(0, 0, -5), 10.0f);
-		//mControllerPhysObj[0].AttachTransform(&mControllerTest[0]->mLocation);
+		//mControllerPhysObj[0].AttachTransform(&mControllerModel[0]->mLocation);
 		//gPhysics->AddingObjectsTestCompoundBoxs(&mControllerPhysObj[0], {offset});
 		//mControllerPhysObj[0].SetMass(0.0f);
-		//mControllerPhysObj[1].AttachTransform(&mControllerTest[1]->mLocation);
+		//mControllerPhysObj[1].AttachTransform(&mControllerModel[1]->mLocation);
 		//gPhysics->AddingObjectsTestCompoundBoxs(&mControllerPhysObj[1], {offset});
 		//mControllerPhysObj[1].SetMass(0.0f);
 	}
+#else
+	mControllerModel[0]->mLocation.SetScale(0);
+	mControllerModel[1]->mLocation.SetScale(0);
 #endif
 
 	//Xr does not need to respond to resize messages
@@ -319,7 +305,7 @@ void StateTest::StartUp() {
 	auto SetupCameraAspect = [&]() {
 		const ImageSize size = gGraphics->GetDesiredSize();
 		float aspect = size.mWidth / (float)size.mHeight;
-		camera.SetFov(camera.GetFovDegrees(), aspect);
+		mFlyCamera.SetFov(mFlyCamera.GetFovDegrees(), aspect);
 	};
 	SetupCameraAspect();
 	gGraphics->mResizeMessage.AddCallback(SetupCameraAspect);
@@ -327,39 +313,39 @@ void StateTest::StartUp() {
 
 	//lighting test
 	{
-		sceneData.mDirectionalLight.mDirection = glm::vec4(-0.2f, -1.0f, -0.3f, 0);
-		sceneData.mDirectionalLight.mAmbient = glm::vec4(0.20f, 0.2f, 0.2f, 0);
-		sceneData.mDirectionalLight.mDiffuse = glm::vec4(0.8f, 0.8f, 0.8f, 0);
-		sceneData.mDirectionalLight.mSpecular = glm::vec4(0.5f, 0.5f, 0.5f, 0);
+		mMeshSceneData.mDirectionalLight.mDirection = glm::vec4(-0.2f, -1.0f, -0.3f, 0);
+		mMeshSceneData.mDirectionalLight.mAmbient = glm::vec4(0.20f, 0.2f, 0.2f, 0);
+		mMeshSceneData.mDirectionalLight.mDiffuse = glm::vec4(0.8f, 0.8f, 0.8f, 0);
+		mMeshSceneData.mDirectionalLight.mSpecular = glm::vec4(0.5f, 0.5f, 0.5f, 0);
 	}
 }
 
 void StateTest::ImGuiRender() {
 	if(ImGui::Begin("Camera")) {
-		glm::vec3 camPos = camera.mTransform.GetLocalPosition();
+		glm::vec3 camPos = mFlyCamera.mTransform.GetLocalPosition();
 		if(ImGui::DragFloat3("Pos", glm::value_ptr(camPos), 0.1f, -999, 999)) {
-			camera.mTransform.SetPosition(camPos);
+			mFlyCamera.mTransform.SetPosition(camPos);
 		}
-		glm::vec3 camRot = camera.mTransform.GetLocalRotationEuler();
+		glm::vec3 camRot = mFlyCamera.mTransform.GetLocalRotationEuler();
 		if(ImGui::DragFloat3("Rot", glm::value_ptr(camRot), 0.1f, -999, 999)) {
-			camera.mTransform.SetRotation(camRot);
+			mFlyCamera.mTransform.SetRotation(camRot);
 		}
 		glm::vec2 mousePos = gInput->GetMousePos();
 		ImGui::Text("MousePos (%f,%f)", mousePos.x, mousePos.y);
 		glm::vec2 mouseDelta = gInput->GetMouseDelta();
 		ImGui::Text("mouseDelta (%f,%f)", mouseDelta.x, mouseDelta.y);
-		ImGui::Text("Is Up? %i", camera.mTransform.IsUp());
+		ImGui::Text("Is Up? %i", mFlyCamera.mTransform.IsUp());
 		if(ImGui::Button("Look at 0")) {
-			camera.mTransform.SetLookAt(camera.mTransform.GetLocalPosition(), glm::vec3(0), CONSTANTS::UP);
+			mFlyCamera.mTransform.SetLookAt(mFlyCamera.mTransform.GetLocalPosition(), glm::vec3(0), CONSTANTS::UP);
 		}
 	}
 	ImGui::End();
 
 	if(ImGui::Begin("Lighting")) {
-		ImGui::DragFloat3("Direction", glm::value_ptr(sceneData.mDirectionalLight.mDirection), 0.01f, -1.0f, 1.0f);
-		ImGui::ColorEdit3("Ambient", glm::value_ptr(sceneData.mDirectionalLight.mAmbient));
-		ImGui::ColorEdit3("Diffuse", glm::value_ptr(sceneData.mDirectionalLight.mDiffuse));
-		ImGui::ColorEdit3("Specular", glm::value_ptr(sceneData.mDirectionalLight.mSpecular));
+		ImGui::DragFloat3("Direction", glm::value_ptr(mMeshSceneData.mDirectionalLight.mDirection), 0.01f, -1.0f, 1.0f);
+		ImGui::ColorEdit3("Ambient", glm::value_ptr(mMeshSceneData.mDirectionalLight.mAmbient));
+		ImGui::ColorEdit3("Diffuse", glm::value_ptr(mMeshSceneData.mDirectionalLight.mDiffuse));
+		ImGui::ColorEdit3("Specular", glm::value_ptr(mMeshSceneData.mDirectionalLight.mSpecular));
 	}
 	ImGui::End();
 
@@ -368,10 +354,10 @@ void StateTest::ImGuiRender() {
 #if defined(ENABLE_XR)
 		ImGui::Checkbox("updateControllers", &updateControllers);
 #endif
-		if(ImGui::BeginCombo("Scene Mesh", sceneMeshs[selectedMesh].mName.c_str())) {
+		if(ImGui::BeginCombo("Scene Mesh", sceneMeshs[mSceneSelectedMeshIndex].mName.c_str())) {
 
 			for(int i = 0; i < numMesh; i++) {
-				const bool is_selected = (selectedMesh == i);
+				const bool is_selected = (mSceneSelectedMeshIndex == i);
 				if(ImGui::Selectable(sceneMeshs[i].mName.c_str(), is_selected)) {
 					ChangeMesh(i);
 				}
@@ -379,10 +365,9 @@ void StateTest::ImGuiRender() {
 			ImGui::EndCombo();
 		}
 		ImGui::BeginDisabled();
-		bool loaded = meshSceneTest->HasLoaded();
+		bool loaded = mSceneMesh->HasLoaded();
 		ImGui::Checkbox("Has Loaded", &loaded);
 		ImGui::EndDisabled();
-		ImGui::Checkbox("Render Trees?", &mRenderTrees);
 		if(ImGui::Button("Reset Physics Objects")) {
 			SetupPhysicsObjects();
 		}
@@ -464,15 +449,15 @@ void StateTest::Update() {
 			proj = resultm;
 			proj[1][1] *= -1.0f;
 
-			sceneData.mPV[i] = proj * view;
-			sceneData.mViewPos[i] = view[3];
+			mMeshSceneData.mPV[i] = proj * view;
+			mMeshSceneData.mViewPos[i] = view[3];
 		}
 #else
-		sceneData.mPV[0] = camera.GetViewProjMatrix();
-		sceneData.mViewPos[0] = glm::vec4(camera.mTransform.GetWorldPosition(), 1);
+		mMeshSceneData.mPV[0] = camera.GetViewProjMatrix();
+		mMeshSceneData.mViewPos[0] = glm::vec4(camera.mTransform.GetWorldPosition(), 1);
 #endif
 
-		sceneDataBuffer->UpdateData(0, VK_WHOLE_SIZE, &sceneData);
+		mSceneDataBuffer->UpdateData(0, VK_WHOLE_SIZE, &mMeshSceneData);
 	}
 
 	{
@@ -500,16 +485,16 @@ void StateTest::Update() {
 
 				//move controller
 				if(info.mActive) {
-					mControllerTest[i]->mLocation.SetPosition(info.mPose.mPos + (-cameraMovement));
-					mControllerTest[i]->mLocation.SetRotation(info.mPose.mRot);
+					mControllerModel[i]->mLocation.SetPosition(info.mPose.mPos + (-cameraMovement));
+					mControllerModel[i]->mLocation.SetRotation(info.mPose.mRot);
 					if(i == 0) {
-						mControllerTest[i]->mLocation.SetScale(glm::vec3(-1.0f, 1.0f, 1.0f));
+						mControllerModel[i]->mLocation.SetScale(glm::vec3(-1.0f, 1.0f, 1.0f));
 					} else {
-						mControllerTest[i]->mLocation.SetScale(1.0f);
+						mControllerModel[i]->mLocation.SetScale(1.0f);
 					}
 					//mControllerPhysObj[i].UpdateToPhysics();
 				} else {
-					mControllerTest[i]->mLocation.SetScale(0.0f);
+					mControllerModel[i]->mLocation.SetScale(0.0f);
 				}
 			}
 		}
@@ -517,21 +502,21 @@ void StateTest::Update() {
 	}
 
 	static bool scenePhysicsTest = false;
-	if(meshSceneTest->HasLoaded() && meshSceneTest->GetNumMesh() != 0) {
+	if(mSceneMesh->HasLoaded() && mSceneMesh->GetNumMesh() != 0) {
 		if(scenePhysicsTest == false) {
-	        scenePhysicsTest = true;
-			if(modelScenePhysicsObj.GetTransform() == nullptr) {
-				modelScenePhysicsObj.AttachTransform(&modelSceneTest->mLocation);
-				modelScenePhysicsObj.AttachOther(modelSceneTest);
+			scenePhysicsTest = true;
+			if(mScenePhysicsObject.GetTransform() == nullptr) {
+				mScenePhysicsObject.AttachTransform(&mSceneModel->mLocation);
+				mScenePhysicsObject.AttachOther(mSceneModel);
 			}
 
-            //modelSceneTest->SetMesh(physicsMesh);
-			//gPhysics->AddingObjectsTestMesh(&modelScenePhysicsObj, physicsMesh);
-			gPhysics->AddingObjectsTestMesh(&modelScenePhysicsObj, meshSceneTest);
+			//mSceneModel->SetMesh(mPhysicsObjectMesh);
+			//gPhysics->AddingObjectsTestMesh(&mScenePhysicsObject, mPhysicsObjectMesh);
+			gPhysics->AddingObjectsTestMesh(&mScenePhysicsObject, mSceneMesh);
 		}
 	} else {
-		if(modelScenePhysicsObj.GetRigidBody() != nullptr) {
-			gPhysics->RemovePhysicsObject(&modelScenePhysicsObj);
+		if(mScenePhysicsObject.GetRigidBody() != nullptr) {
+			gPhysics->RemovePhysicsObject(&mScenePhysicsObject);
 		}
 		scenePhysicsTest = false;
 	}
@@ -540,20 +525,20 @@ void StateTest::Update() {
 		mPhyBalls.push_back(new PhyBall());
 		PhyBall& pyobj = *mPhyBalls.back();
 		pyobj.model = new Model();
-		pyobj.model->SetMesh(physicsMesh);
-		pyobj.model->mLocation.CopyTransform(camera.mTransform, Transform::POSITION);
+		pyobj.model->SetMesh(mPhysicsObjectMesh);
+		pyobj.model->mLocation.CopyTransform(mFlyCamera.mTransform, Transform::POSITION);
 		pyobj.model->mLocation.SetScale(0.2f);
 		pyobj.pyObj.AttachTransform(&pyobj.model->mLocation);
 		pyobj.pyObj.AttachOther(pyobj.model);
 		gPhysics->AddingObjectsTestBox(&pyobj.pyObj);
-        const float speed = 5.0f;
+		const float speed = 5.0f;
 		if(gInput->WasMouseButtonPressed(GLFW_MOUSE_BUTTON_1)) {
 			int width, height;
 			gEngine->GetWindow()->GetSize(&width, &height);
-			const glm::vec3 dir = camera.GetWorldDirFromScreen(gInput->GetMousePos(), glm::vec2(width, height));
+			const glm::vec3 dir = mFlyCamera.GetWorldDirFromScreen(gInput->GetMousePos(), glm::vec2(width, height));
 			pyobj.pyObj.SetVelocity(dir * speed);
 		} else {
-			pyobj.pyObj.SetVelocity(camera.mTransform.GetForward() * -speed);
+			pyobj.pyObj.SetVelocity(mFlyCamera.mTransform.GetForward() * -speed);
 		}
 		pyobj.model->mOverrideColor = true;
 		pyobj.model->mColorOverride = glm::vec4(1.0f, 0, 0, 1);
@@ -566,11 +551,12 @@ void StateTest::Update() {
 		for(int i = 0; i < VRGraphics::Side::COUNT; i++) {
 			gVrGraphics->GetHandInfo((VRGraphics::Side)i, info);
 			if(info.mActive) {
-				obj = gPhysics->Raycast(mControllerTest[i]->mLocation.GetWorldPosition(), -mControllerTest[i]->mLocation.GetWorldForward(), 1000.0f);
-				mControllerTest[(i + 1) % 2]->mLocation.SetWorldPosition(mControllerTest[i]->mLocation.GetWorldPosition() +
-																		 -mControllerTest[i]->mLocation.GetWorldForward());
-				//mControllerTest[(i + 1) % 2]->mLocation.SetWorldRotation(-mControllerTest[i]->mLocation.GetWorldForward());
-				mControllerTest[(i + 1) % 2]->mLocation.SetScale(0.5f);
+				obj =
+					gPhysics->Raycast(mControllerModel[i]->mLocation.GetWorldPosition(), -mControllerModel[i]->mLocation.GetWorldForward(), 1000.0f);
+				mControllerModel[(i + 1) % 2]->mLocation.SetWorldPosition(mControllerModel[i]->mLocation.GetWorldPosition() +
+																		  -mControllerModel[i]->mLocation.GetWorldForward());
+				//mControllerModel[(i + 1) % 2]->mLocation.SetWorldRotation(-mControllerModel[i]->mLocation.GetWorldForward());
+				mControllerModel[(i + 1) % 2]->mLocation.SetScale(0.5f);
 				break;
 			}
 		}
@@ -578,9 +564,9 @@ void StateTest::Update() {
 		int width, height;
 		gEngine->GetWindow()->GetSize(&width, &height);
 
-		const glm::vec3 viewDir = camera.GetWorldDirFromScreen(gInput->GetMousePos(), glm::vec2(width, height));
+		const glm::vec3 viewDir = mFlyCamera.GetWorldDirFromScreen(gInput->GetMousePos(), glm::vec2(width, height));
 
-		obj = gPhysics->Raycast(camera.mTransform.GetWorldPosition(), viewDir, 1000.0f);
+		obj = gPhysics->Raycast(mFlyCamera.mTransform.GetWorldPosition(), viewDir, 1000.0f);
 #endif
 		if(obj) {
 			//mSelectedModel = (Model*)obj->GetOther();
@@ -594,47 +580,43 @@ void StateTest::Render() {
 	VkCommandBuffer buffer = gGraphics->GetCurrentGraphicsCommandBuffer();
 
 	//mesh render test
-	mainRenderPass->Begin(buffer, *fb);
-	meshPipeline->Begin(buffer);
+	mMainRenderPass->Begin(buffer, *mMainFramebuffer);
+	mMeshPipeline->Begin(buffer);
 	//bind camera data
-	vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, meshPipeline->GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
+	vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mMeshPipeline->GetLayout(), 0, 1, mMeshSceneDataMaterial.GetSet(), 0, nullptr);
 	if(gGraphics->GetMaterialManager()->IsInLargeArrayMode()) {
 		vkCmdBindDescriptorSets(buffer,
 								VK_PIPELINE_BIND_POINT_GRAPHICS,
-								meshPipeline->GetLayout(),
+								mMeshPipeline->GetLayout(),
 								1,
 								1,
 								gGraphics->GetMaterialManager()->GetMainTextureSet(),
 								0,
 								nullptr);
 	}
-	if(mRenderTrees) {
-		//tree 1
-		modelTest1->Render(buffer, meshPipeline->GetLayout());
-		//tree 2
-		modelTest2->Render(buffer, meshPipeline->GetLayout());
-	}
+
 	//Hand 1
-	mControllerTest[0]->Render(buffer, meshPipeline->GetLayout());
+	mControllerModel[0]->Render(buffer, mMeshPipeline->GetLayout());
 	//Hand 2
-	mControllerTest[1]->Render(buffer, meshPipeline->GetLayout());
+	mControllerModel[1]->Render(buffer, mMeshPipeline->GetLayout());
 	//world base reference
-	worldBase->Render(buffer, meshPipeline->GetLayout());
-	for(int i = 0; i < numPhysicsObjects; i++) {
-		physicsModels[i]->Render(buffer, meshPipeline->GetLayout());
+	mWorldReferenceModel->Render(buffer, mMeshPipeline->GetLayout());
+	for(int i = 0; i < cNumChainObjects; i++) {
+		mChainModels[i]->Render(buffer, mMeshPipeline->GetLayout());
 	}
 	for(int i = 0; i < mPhyBalls.size(); i++) {
-		mPhyBalls[i]->model->Render(buffer, meshPipeline->GetLayout());
+		mPhyBalls[i]->model->Render(buffer, mMeshPipeline->GetLayout());
 	}
-	modelSceneTest->Render(buffer, meshPipeline->GetLayout());
-	meshPipeline->End(buffer);
-	mainRenderPass->End(buffer);
+	mSceneModel->Render(buffer, mMeshPipeline->GetLayout());
+	mMeshPipeline->End(buffer);
+	mMainRenderPass->End(buffer);
 
 	if(mSelectedModel != 0) {
 		mSelectMeshRenderPass->Begin(buffer, *mSelectMeshFramebuffer);
 		mSelectMeshPipeline->Begin(buffer);
 
-		vkCmdBindDescriptorSets(buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mSelectMeshPipeline->GetLayout(), 0, 1, meshMaterial.GetSet(), 0, nullptr);
+		vkCmdBindDescriptorSets(
+			buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, mSelectMeshPipeline->GetLayout(), 0, 1, mMeshSceneDataMaterial.GetSet(), 0, nullptr);
 		if(gGraphics->GetMaterialManager()->IsInLargeArrayMode()) {
 			vkCmdBindDescriptorSets(buffer,
 									VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -657,52 +639,49 @@ void StateTest::Render() {
 		mSelectMeshRenderPass->End(buffer);
 	}
 
-	fbImage->SetImageLayout(buffer,
-							VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-							VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-							VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-							VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+	mFbColorImage->SetImageLayout(buffer,
+								  VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+								  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+								  VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+								  VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
 
 	Screenspace::PushConstant pc;
 	pc.mEyeIndex = 0;
-	vkCmdPushConstants(buffer, ssTest->GetPipeline().GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Screenspace::PushConstant), &pc);
+	vkCmdPushConstants(buffer, mScreenspaceBlit->GetPipeline().GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Screenspace::PushConstant), &pc);
 #if defined(ENABLE_XR)
-	//copy fbImage to computer view (using two eye version)
-	vrMirrorPass->Render(buffer, gGraphics->GetCurrentFrameBuffer());
+	//copy mFbColorImage to computer view (using two eye version)
+	mVrBlitPass->Render(buffer, gGraphics->GetCurrentFrameBuffer());
 	//copy to headset views
 	for(int i = 0; i < gGraphics->GetNumActiveViews(); i++) {
 		pc.mEyeIndex = i;
-		vkCmdPushConstants(buffer, ssTest->GetPipeline().GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Screenspace::PushConstant), &pc);
-		//copies fbImage to framebuffer
-		ssTest->Render(buffer, gGraphics->GetCurrentXrFrameBuffer(i));
+		vkCmdPushConstants(
+			buffer, mScreenspaceBlit->GetPipeline().GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(Screenspace::PushConstant), &pc);
+		//copies mFbColorImage to framebuffer
+		mScreenspaceBlit->Render(buffer, gGraphics->GetCurrentXrFrameBuffer(i));
 	}
 #else
-	ssTest->Render(buffer, gGraphics->GetCurrentFrameBuffer());
+	mScreenspaceBlit->Render(buffer, gGraphics->GetCurrentFrameBuffer());
 #endif
 
-	fbImage->SetImageLayout(buffer,
-							VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-							VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-							VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-							VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+	mFbColorImage->SetImageLayout(buffer,
+								  VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+								  VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+								  VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+								  VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 }
 
 void StateTest::Finish() {
 	mRootTransform.Clear();
 
-	modelTest1->Destroy();
-	delete modelTest1;
-	modelTest2->Destroy();
-	delete modelTest2;
-	mControllerTest[0]->Destroy();
-	delete mControllerTest[0];
-	mControllerTest[1]->Destroy();
-	delete mControllerTest[1];
-	worldBase->Destroy();
-	delete worldBase;
-	for(int i = 0; i < numPhysicsObjects; i++) {
-		physicsModels[i]->Destroy();
-		delete physicsModels[i];
+	mControllerModel[0]->Destroy();
+	delete mControllerModel[0];
+	mControllerModel[1]->Destroy();
+	delete mControllerModel[1];
+	mWorldReferenceModel->Destroy();
+	delete mWorldReferenceModel;
+	for(int i = 0; i < cNumChainObjects; i++) {
+		mChainModels[i]->Destroy();
+		delete mChainModels[i];
 	}
 	for(int i = 0; i < mPhyBalls.size(); i++) {
 		mPhyBalls[i]->model->Destroy();
@@ -710,21 +689,19 @@ void StateTest::Finish() {
 	}
 	mPhyBalls.clear();
 
-	meshPipeline->Destroy();
-	delete meshPipeline;
+	mMeshPipeline->Destroy();
+	delete mMeshPipeline;
 
-	physicsMesh->Destroy();
-	delete physicsMesh;
-	referenceMesh->Destroy();
-	delete referenceMesh;
-	handMesh->Destroy();
-	delete handMesh;
-	meshSceneTest->Destroy();
-	delete meshSceneTest;
-	meshTest->Destroy();
-	delete meshTest;
-	sceneDataBuffer->Destroy();
-	delete sceneDataBuffer;
+	mPhysicsObjectMesh->Destroy();
+	delete mPhysicsObjectMesh;
+	mWorldReferenceMesh->Destroy();
+	delete mWorldReferenceMesh;
+	mControllerMesh->Destroy();
+	delete mControllerMesh;
+	mSceneMesh->Destroy();
+	delete mSceneMesh;
+	mSceneDataBuffer->Destroy();
+	delete mSceneDataBuffer;
 
 	mSelectMeshDepthImage->Destroy();
 	delete mSelectMeshDepthImage;
@@ -735,55 +712,54 @@ void StateTest::Finish() {
 	mSelectMeshRenderPass->Destroy();
 	delete mSelectMeshRenderPass;
 
-	mainRenderPass->Destroy();
-	delete mainRenderPass;
-	fb->Destroy();
-	delete fb;
-	fbDepthImage->Destroy();
-	delete fbDepthImage;
-	fbImage->Destroy();
-	delete fbImage;
+	mMainRenderPass->Destroy();
+	delete mMainRenderPass;
+	mMainFramebuffer->Destroy();
+	delete mMainFramebuffer;
+	mFbDepthImage->Destroy();
+	delete mFbDepthImage;
+	mFbColorImage->Destroy();
+	delete mFbColorImage;
 
 #if defined(ENABLE_XR)
 	mVrCharacter.Clear(true);
-	vrMirrorPass->Destroy();
-	delete vrMirrorPass;
+	mVrBlitPass->Destroy();
+	delete mVrBlitPass;
 #endif
-	ssTest->Destroy();
-	delete ssTest;
+	mScreenspaceBlit->Destroy();
+	delete mScreenspaceBlit;
 
-	meshTestBase.Destroy();
-	ssTestBase.Destroy();
+	mMeshSceneMaterialBase.Destroy();
+	mScreenspaceMaterialBase.Destroy();
 }
 
 void StateTest::ChangeMesh(int aIndex) {
-	selectedMesh = aIndex;
-	meshSceneTest->Destroy();
-	meshSceneTest->LoadMesh(std::string(WORK_DIR_REL) + sceneMeshs[selectedMesh].mFilePath,
-							std::string(WORK_DIR_REL) + sceneMeshs[selectedMesh].mTexturePath);
+	mSceneSelectedMeshIndex = aIndex;
+	mSceneMesh->Destroy();
+	mSceneMesh->LoadMesh(std::string(WORK_DIR_REL) + sceneMeshs[mSceneSelectedMeshIndex].mFilePath,
+						 std::string(WORK_DIR_REL) + sceneMeshs[mSceneSelectedMeshIndex].mTexturePath);
 }
 
 void StateTest::SetupPhysicsObjects() {
 	float offset = 10.0f;
-	for(int i = 0; i < numPhysicsObjects; i++) {
-		if(mPhysicsLinks[i]) {
-			gPhysics->RemoveContraintTemp(mPhysicsLinks[i]);
-			mPhysicsLinks[i] = nullptr;
+	for(int i = 0; i < cNumChainObjects; i++) {
+		if(mChainPhysicsLinks[i]) {
+			gPhysics->RemoveContraintTemp(mChainPhysicsLinks[i]);
+			mChainPhysicsLinks[i] = nullptr;
 		}
-		physicsObjects[i].RemoveAttachmentsTemp();
+		mChainPhysicsObjects[i].RemoveAttachmentsTemp();
 	}
-	for(int i = 0; i < numPhysicsObjects; i++) {
+	for(int i = 0; i < cNumChainObjects; i++) {
 		float scale = 0.5f + rand() % 1000 / 2000.0f;
-		if(i == 0 || i == numPhysicsObjects - 1) {
+		if(i == 0 || i == cNumChainObjects - 1) {
 			scale = 0.1f;
 		}
-		offset += ((rand() % 1000 / 1000.0f) * 0.5f) + scale;
-		physicsModels[i]->mLocation.SetPosition(glm::vec3((rand() % 1000 / 1000.0f) * 1.0f, offset, (rand() % 1000 / 1000.0f) * 1.0f));
-		physicsModels[i]->mLocation.SetScale(scale);
+		offset += ((rand() % 1000 / 1000.0f) * 1.0f) + scale;
+		mChainModels[i]->mLocation.SetPosition(glm::vec3((rand() % 1000 / 1000.0f) * 1.0f, offset, (rand() % 1000 / 1000.0f) * 1.0f));
+		mChainModels[i]->mLocation.SetScale(scale);
 		if(i != 0) {
-			mPhysicsLinks[i] = gPhysics->JoinTwoObject(&physicsObjects[i - 1], &physicsObjects[i]);
+			mChainPhysicsLinks[i] = gPhysics->JoinTwoObject(&mChainPhysicsObjects[i - 1], &mChainPhysicsObjects[i]);
 		}
-        physicsObjects[i].SetMass(0.0f);
-		physicsObjects[i].ResetPhysics();
+		mChainPhysicsObjects[i].ResetPhysics();
 	}
 }

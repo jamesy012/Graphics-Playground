@@ -14,7 +14,7 @@ namespace CONSTANTS {
 		Image* gBlack = nullptr;
 		Image* gChecker = nullptr;
 	}; // namespace IMAGE
-}; // namespace CONSTANT
+}; // namespace CONSTANTS
 
 //https://www.khronos.org/registry/vulkan/specs/1.3-extensions/html/vkspec.html#formats-compatibility-classes
 uint32_t ConvertImageSizeToByteSize(ImageSize aSize, VkFormat aFormat) {
@@ -22,9 +22,12 @@ uint32_t ConvertImageSizeToByteSize(ImageSize aSize, VkFormat aFormat) {
 		case VK_FORMAT_BC7_UNORM_BLOCK:
 		case VK_FORMAT_BC5_UNORM_BLOCK:
 			return ((aSize.mWidth / 4) * (aSize.mHeight / 4)) * 16;
+		case VK_FORMAT_R8G8B8A8_SRGB:
+			return aSize.mWidth * aSize.mHeight * sizeof(char) * 4;
+		default:
+			ASSERT(false);
+			return 0;
 	}
-
-	return aSize.mWidth * aSize.mHeight * sizeof(char) * 4;
 }
 
 void Image::CreateVkImage(const VkFormat aFormat, const ImageSize aSize, const bool aAttachment, const char* aName /* = 0*/) {
